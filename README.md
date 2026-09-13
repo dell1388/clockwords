@@ -112,6 +112,9 @@ not dilute what the chambers pull.
   twentieth over two minutes and a hundred and twenty. Each wave starts before
   the last has finished, so the pressure never really lifts.
 
+When the last bug is off the floor the room holds for a beat with **LEVEL
+CLEARED** — or **LEVEL FAILED** — across it before the panel comes up.
+
 ### Twenty nights, and a level select
 
 The campaign is twenty levels. **Failing one costs you that night, not the

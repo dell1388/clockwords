@@ -212,8 +212,10 @@ function frame(ts) {
   if (!game) return;
   if (state === 'play') {
     game.update(dt);
-    if (game.over) toOver();
-    else if (game.won) toBoiler();
+    if (game.outroDone()) {
+      if (game.over) toOver();
+      else if (game.won) toBoiler();
+    }
   } else {
     game.decay(dt * 0.4);
   }

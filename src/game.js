@@ -93,6 +93,7 @@ export class Game {
     this.recoil = 0;
     this.rackFlash = 0;
     this.holding = false;
+    this.outro = null;
     this.levelSecrets = 0;
     this.levelKills = 0;
     this.spawns = this.spawns || [];
@@ -127,7 +128,7 @@ export class Game {
 
   // ── typing ───────────────────────────────────────────────────────────────
   type(ch) {
-    if (this.over || this.won) return;
+    if (this.over || this.won || this.outro) return;
     if (this.typed.length >= 28) return;
     this.typed += ch.toLowerCase();
     sfx.key();
@@ -139,7 +140,7 @@ export class Game {
   submit() {
     const word = this.typed.toLowerCase();
     this.typed = '';
-    if (this.over || this.won) return;
+    if (this.over || this.won || this.outro) return;
     if (word.length < MIN_WORD) { this.reject(word, `${MIN_WORD} letters minimum`); return; }
     if (!isWord(word)) { this.reject(word, 'not in the lexicon'); return; }
 
@@ -184,6 +185,7 @@ export class Game {
 
   // ── simulation ───────────────────────────────────────────────────────────
   update(dt) {
+    if (this.outro) this.outro.t += dt;
     if (this.over) { this.decay(dt); return; }
     this.time += dt;
     this.shake = Math.max(0, this.shake - dt * 3.2);
@@ -204,6 +206,7 @@ export class Game {
       this.won = true;
       this.fireQueue.length = 0;
       this.typed = '';
+      this.outro = { kind: 'won', t: 0, hold: 2.4 };
       this.levelSecrets = 2 + Math.floor(this.levelNo / 2) + (this.level.boss ? 5 : 0) + this.pages;
       this.secrets += this.levelSecrets;
       this.score += 250 + this.pages * 100;
@@ -371,6 +374,7 @@ export class Game {
     const tgt = this.aim ? this.nearest(this.aim) : this.target();
     if (!tgt) { this.holding = true; return; }
     this.holding = false;
+    this.outro = null;
     if (this.fireTimer > 0) return;
 
     const shot = this.fireQueue.shift();
@@ -529,9 +533,15 @@ export class Game {
 
   gameOver() {
     this.over = true;
+    this.typed = '';
+    this.fireQueue.length = 0;
+    this.outro = { kind: 'lost', t: 0, hold: 2.8 };
     sfx.boom();
     this.shake = 1.4;
   }
+
+  // The panel only comes up once the room has had a moment to settle.
+  outroDone() { return !!this.outro && this.outro.t >= this.outro.hold; }
 
   dropStep(dt) {
     for (const p of this.pageDrops) {

@@ -223,6 +223,7 @@ export function draw(ctx, g, t) {
   for (const f of g.floaters) drawFloater(ctx, f);
   if (g.aim) drawReticle(ctx, g.aim, t);
   drawBossBar(ctx, g);
+  drawOutro(ctx, g);
   ctx.restore();
   ctx.restore();
 
@@ -408,6 +409,55 @@ function drawMachine(ctx, g, t) {
     g.particles.push({ x: x + (Math.random() - 0.5) * 50, y: y - 20, vx: (Math.random() - 0.5) * 14,
       vy: -26 - Math.random() * 20, t: 0.9, r: 4 + Math.random() * 5, c: 'rgba(230,220,200,0.42)', soft: true });
   }
+}
+
+// A beat over the battlefield before the panel comes up.
+function drawOutro(ctx, g) {
+  const o = g.outro;
+  if (!o) return;
+  const won = o.kind === 'won';
+  const inK = Math.min(1, o.t / 0.4);
+  const outK = Math.max(0, Math.min(1, (o.hold - o.t) / 0.45));
+  const a = inK * outK;
+  if (a <= 0) return;
+
+  ctx.save();
+  ctx.globalAlpha = 0.6 * a;
+  ctx.fillStyle = '#0b0805';
+  ctx.fillRect(0, 0, W, PLAY_H);
+
+  const cx = W / 2, cy = PLAY_H * 0.44;
+  const grow = 1 - Math.pow(1 - inK, 3);
+  ctx.globalAlpha = a;
+  ctx.translate(cx, cy);
+  ctx.scale(0.88 + 0.12 * grow, 0.88 + 0.12 * grow);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+  const glow = won ? '#ffd66b' : '#e2563a';
+  const rule = won ? 'rgba(255,214,107,0.55)' : 'rgba(226,86,58,0.5)';
+  const w = 270;
+  ctx.strokeStyle = rule; ctx.lineWidth = 2;
+  for (const dy of [-46, 46]) {
+    ctx.beginPath(); ctx.moveTo(-w, dy); ctx.lineTo(-26, dy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(26, dy); ctx.lineTo(w, dy); ctx.stroke();
+  }
+  ctx.fillStyle = rule;
+  for (const dy of [-46, 46]) { ctx.beginPath(); ctx.arc(0, dy, 4, 0, TAU); ctx.fill(); }
+
+  ctx.font = "56px 'IM Fell English SC', Georgia, serif";
+  ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+  ctx.strokeText(won ? 'LEVEL CLEARED' : 'LEVEL FAILED', 0, 0);
+  ctx.shadowColor = glow; ctx.shadowBlur = 26;
+  ctx.fillStyle = won ? '#ffe9a8' : '#ff8a6b';
+  ctx.fillText(won ? 'LEVEL CLEARED' : 'LEVEL FAILED', 0, 0);
+  ctx.shadowBlur = 0;
+
+  ctx.font = "italic 19px 'IM Fell English', Georgia, serif";
+  ctx.fillStyle = 'rgba(232,220,189,0.85)';
+  ctx.fillText(won
+    ? `${g.pages} of ${START_PAGES} pages still on the rack`
+    : 'every page of the formula is gone', 0, 74);
+  ctx.restore();
 }
 
 function drawBossBar(ctx, g) {
@@ -757,7 +807,7 @@ function drawHud(ctx, g, t) {
   } else if (g.message) {
     ctx.fillStyle = '#e39a78'; ctx.font = "italic 17px 'IM Fell English', Georgia, serif"; ctx.textAlign = 'center';
     ctx.fillText(g.message.text, W / 2, ry + 23);
-  } else {
+  } else if (!g.outro) {
     ctx.fillStyle = 'rgba(230,214,180,0.35)';
     ctx.font = "italic 16px 'IM Fell English', Georgia, serif"; ctx.textAlign = 'center';
     ctx.fillText('type a word, then press Enter', W / 2, ry + 23);
