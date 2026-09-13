@@ -1,14 +1,21 @@
 // boiler.js — the letter economy: inventory, the bag the boiler draws from,
-// the eight chambers, transmutation, and turning a typed word into shots.
+// the chambers (which unseal one at a time), combining, and turning a typed
+// word into shots.
 
-import { MATERIALS, TIERS, MAX_TIER, BLANK_DMG, CHAMBERS } from './content.js';
+import {
+  MATERIALS, BLANK_DMG, CHAMBERS, START_CHAMBERS,
+  LETTER_LEVELS, MAX_LEVEL, levelOf, levelDamage,
+} from './content.js';
 
 let nextId = 1;
-export const makeLetter = (letter, mat) => ({ id: nextId++, letter, mat });
+export const makeLetter = (letter, mat = 'iron', level = null) =>
+  ({ id: nextId++, letter, mat, level: level || levelOf(letter) });
 
 export class Boiler {
-  constructor(inventory = []) {
+  constructor(inventory = [], open = START_CHAMBERS) {
     this.inventory = inventory;
+    this.open = Math.max(1, Math.min(CHAMBERS, open));
+    this.spentSinceUnlock = 0;
     this.bag = [];
     this.chambers = new Array(CHAMBERS).fill(null);
     this.reshuffle();
@@ -24,20 +31,22 @@ export class Boiler {
     }
   }
 
-  // The boiler feeds empty chambers one at a time; the bag recycles when spent.
+  // Only the unsealed chambers are fed; the bag recycles when it runs out.
   refill() {
-    for (let i = 0; i < this.chambers.length; i++) {
+    for (let i = 0; i < CHAMBERS; i++) {
+      if (i >= this.open) { this.chambers[i] = null; continue; }
       if (this.chambers[i]) continue;
       if (!this.bag.length) this.reshuffle();
-      if (!this.bag.length) break;              // inventory smaller than 8
+      if (!this.bag.length) break;              // inventory smaller than the open count
       this.chambers[i] = this.bag.pop();
     }
   }
 
   loaded() { return this.chambers.filter(Boolean).length; }
+  sealed() { return CHAMBERS - this.open; }
 
-  add(letter, mat) {
-    const l = makeLetter(letter, mat);
+  add(letter, mat = 'iron', level = null) {
+    const l = makeLetter(letter, mat, level);
     this.inventory.push(l);
     this.bag.push(l);
     this.refill();
@@ -52,39 +61,51 @@ export class Boiler {
     this.refill();
   }
 
-  // Two letters of the same tier fuse into one of the next tier up.
-  canTransmute(a, b) {
-    if (!a || !b || a.id === b.id) return false;
-    const ta = MATERIALS[a.mat].tier, tb = MATERIALS[b.mat].tier;
-    return ta === tb && ta < MAX_TIER;
+  // Two letters of the same level fuse into one letter of the level above,
+  // in the same material. You choose which letter of that level you get.
+  canCombine(a, b) {
+    return !!a && !!b && a.id !== b.id && a.level === b.level && a.level < MAX_LEVEL;
   }
 
-  transmute(a, b, mat, letter) {
-    if (!this.canTransmute(a, b)) return null;
+  combine(a, b, letter) {
+    if (!this.canCombine(a, b)) return null;
+    const level = a.level + 1;
+    if (!LETTER_LEVELS[level].pool.includes(letter)) return null;
+    const mat = a.mat !== 'iron' ? a.mat : b.mat;
     this.remove(a.id); this.remove(b.id);
-    return this.add(letter, mat);
+    return this.add(letter, mat, level);
+  }
+
+  // A letter has to reach level 5 before it is rare enough to hold a material.
+  canRefit(l) { return !!l && l.level >= MAX_LEVEL; }
+
+  refit(id, mat) {
+    const l = this.inventory.find(x => x.id === id);
+    if (!l || !this.canRefit(l) || !MATERIALS[mat]) return false;
+    l.mat = mat;
+    return true;
   }
 
   /**
    * Work out what a word actually fires.
-   * Every character becomes one projectile. If a chamber holds that character
-   * the projectile takes the chamber's material and the chamber empties;
-   * otherwise it is a blank worth 1 damage.
+   * Every character becomes one projectile. If an unsealed chamber holds that
+   * character the chamber fires — damage from the letter's level, effect from
+   * its material — and then empties. Any other character is a blank worth 1.
    */
   resolve(word, { repeats = 0, wotd = false } = {}) {
     const chars = word.toLowerCase().split('');
     const taken = new Set();
     const picks = chars.map(ch => {
-      for (let i = 0; i < this.chambers.length; i++) {
+      for (let i = 0; i < this.open; i++) {
         const c = this.chambers[i];
-        if (c && c.letter === ch && !taken.has(i)) { taken.add(i); return { slot: i, mat: c.mat }; }
+        if (c && c.letter === ch && !taken.has(i)) { taken.add(i); return { slot: i, l: c }; }
       }
-      return { slot: -1, mat: null };
+      return { slot: -1, l: null };
     });
 
     const len = chars.length;
-    const jade = picks.filter(p => p.mat && MATERIALS[p.mat].lengthBonus).length;
-    const brass = picks.some(p => p.mat === 'brass');
+    const jade = picks.filter(p => p.l && MATERIALS[p.l.mat].lengthBonus).length;
+    const brass = picks.some(p => p.l && p.l.mat === 'brass');
 
     let mult = 1 + Math.max(0, len - 4) * 0.15;                  // longer word bonus
     mult = Math.min(mult, 4);
@@ -94,50 +115,61 @@ export class Boiler {
     mult *= penalty;
 
     const loaded = this.loaded();
-    const overload = loaded > 0 && taken.size === loaded && loaded >= CHAMBERS;
+    const overload = loaded > 0 && taken.size === loaded && loaded >= this.open;
 
     const shots = picks.map((p, i) => {
-      const m = p.mat ? MATERIALS[p.mat] : null;
-      const base = m ? m.dmg : BLANK_DMG;
+      const l = p.l;
+      const m = l ? MATERIALS[l.mat] : null;
+      const base = l ? levelDamage(l.level) * m.mul : BLANK_DMG;
+      const dmg = Math.max(1, Math.round(base * mult));
       const shot = {
-        ch: chars[i],
-        mat: p.mat,
-        dmg: Math.max(1, Math.round(base * mult)),
+        ch: chars[i], mat: l ? l.mat : null, level: l ? l.level : 0, dmg,
         pierce: m && m.pierce ? m.pierce : 0,
         freeze: m && m.freeze ? m.freeze : 0,
-        burn: m && m.burn ? { ...m.burn } : null,
+        burn: m && m.burn ? { dps: (dmg * m.burn.frac) / m.burn.time, time: m.burn.time } : null,
         splash: m && m.splash ? m.splash : 0,
         chain: m && m.chain ? m.chain : 0,
         chainRange: m && m.chainRange ? m.chainRange : 0,
       };
       // Brass arms every Iron letter in the same word. (canon)
-      if (brass && p.mat === 'iron') shot.splash = MATERIALS.brass.splash * 0.8;
-      if (wotd) { shot.splash = Math.max(shot.splash, 70); }
+      if (brass && l && l.mat === 'iron') shot.splash = MATERIALS.brass.splash * 0.8;
+      if (wotd) shot.splash = Math.max(shot.splash, 70);
       return shot;
     });
 
     return { shots, slots: [...taken], mult, penalty, overload, jade, brass, wotd };
   }
 
-  // Called after the word has actually been committed to the cannon.
+  // Called once the word has been committed to the cannon. Spending everything
+  // the open chambers held unseals the next one.
   spend(slots) {
     for (const i of slots) this.chambers[i] = null;
+    this.spentSinceUnlock += slots.length;
+    let unsealed = 0;
+    while (this.spentSinceUnlock >= this.open && this.open < CHAMBERS) {
+      this.spentSinceUnlock -= this.open;
+      this.open++;
+      unsealed++;
+    }
     this.refill();
+    return unsealed;
   }
 
-  serialize() { return this.inventory.map(l => l.letter + ':' + l.mat); }
-  static deserialize(arr) {
-    return new Boiler((arr || []).map(s => {
-      const [letter, mat] = s.split(':');
-      return makeLetter(letter, MATERIALS[mat] ? mat : 'iron');
-    }));
+  serialize() {
+    return { open: this.open, letters: this.inventory.map(l => `${l.letter}:${l.mat}:${l.level}`) };
+  }
+
+  static deserialize(data) {
+    const d = Array.isArray(data) ? { open: START_CHAMBERS, letters: data } : (data || {});
+    const letters = (d.letters || []).map(s => {
+      const [letter, mat, lvl] = s.split(':');
+      return makeLetter(letter, MATERIALS[mat] ? mat : 'iron', +lvl || undefined);
+    });
+    return new Boiler(letters, d.open || START_CHAMBERS);
   }
 }
 
-// The boiler you start the game with: a handful of Iron on common letters.
+// The boiler you start with: ten plain Iron letters off the common rack.
 export function startingInventory() {
-  return ['e', 'a', 'r', 's', 't', 'o', 'i', 'n', 'l', 'd']
-    .map(ch => makeLetter(ch, 'iron'));
+  return ['e', 'a', 'r', 's', 't', 'o', 'i', 'n', 'l', 'd'].map(ch => makeLetter(ch));
 }
-
-export const tierMaterials = t => (TIERS[t] || []).map(id => MATERIALS[id]);

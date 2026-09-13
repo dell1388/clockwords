@@ -23,36 +23,62 @@ lexicon is fetched and the code is ES modules.
 ## How it plays
 
 Type any English word and press <kbd>Enter</kbd>. Every letter of the word is
-fired at the bugs, one after another.
+fired at the bugs, one after another. A word that is not in the lexicon just
+clears the rack and says so — no pause, no penalty.
 
-The boiler keeps **8 chambers** loaded with your special letters. If a character
-you type is sitting in a chamber, that chamber fires — with its material's
-damage and effect — and then empties and refills from the bag. Any character
-*not* in a chamber is a **blank** worth 1 damage. So the game is not "type fast",
-it is "type the word that spends your boiler well".
+**Chambers unseal as you use them.** The boiler has 8 chambers but starts with
+only **one** open. Spend everything the open chambers hold and the next one
+unseals, so the engine widens under you as the night goes on.
 
-| Material | Tier | Cost | Effect |
+If a character you type is sitting in an open chamber, that chamber fires and
+then empties and refills from the bag. Any character *not* in a chamber is a
+**blank** worth 1 damage. So the game is not "type fast", it is "type the word
+that spends your boiler well".
+
+### Letters have levels
+
+Letters are graded the way Scrabble grades them, and the grade is drawn as
+**dots under the glyph**. The level is what sets the damage — a rare letter is
+worth a great many common ones.
+
+| Level | Damage | Letters |
+|---|---|---|
+| ●     | 8   | A E I O U L N S T R |
+| ●●    | 24  | D G |
+| ●●●   | 60  | B C M P |
+| ●●●●  | 140 | F H V W Y |
+| ●●●●● | 320 | K J X Q Z |
+
+Bugs only ever drop plain **Iron**. In the boiler room you **combine** two
+letters of the same level into one letter of the level above — same material,
+and you choose which letter of that level you get. A letter has to reach level 5
+before it is rare enough to be **refitted** with a material, which costs secrets.
+
+### Materials are colour, not labels
+
+Nothing on the rack is labelled: you read a material off its colour.
+
+| Material | Cost | Damage | Effect |
 |---|---|---|---|
-| Iron | 1 | 1 | 25 damage, no special effect |
-| Thermite | 2 | 3 | sets bugs alight — 20 damage over 4 seconds |
-| Amethyst | 2 | 4 | 15 damage, passes through up to 2 targets |
-| Lazurite | 3 | 5 | freezes bugs for 4 seconds |
-| Brass | 3 | 6 | splash damage, and detonates every Iron letter in the same word |
-| Jade | 4 | 8 | every letter in the word hits harder, scaling with word length |
-| Aetherium | 5 | 12 | 90 damage, arcs to 3 nearby bugs |
+| Iron | — | ×1.0 | plain shot |
+| Thermite | 6 | ×0.5 | sets bugs alight, burning for 4 seconds |
+| Amethyst | 8 | ×0.7 | passes through up to 2 targets |
+| Lazurite | 10 | ×0.4 | freezes bugs for 4 seconds |
+| Brass | 12 | ×0.9 | splash, and detonates every Iron letter in the same word |
+| Jade | 15 | ×0.8 | every letter in the word hits harder, +5% per letter of the word |
+| Aetherium | 20 | ×1.2 | the charge arcs to 3 nearby bugs |
 
-Other rules that matter:
+### Other rules that matter
 
 - **Longer words hit harder** (+15% per letter past four, capped at ×4).
 - **Repeating a word** halves its power each time you reuse it, down to 20%.
 - **Boiler overload** — spend every loaded chamber in one word for a bonus barrage.
 - **Word of the day** — one word, the same for everyone, doubles everything and explodes.
-- Bugs take a page of the formula from the machine and run for a door. Kill the
+- Bugs sweep the room in lanes — across, down, back across — reach the machine,
+  take a page of the formula and retrace the whole route to get out. Kill the
   carrier and the page comes home. Lose all **5 pages** and the night is over.
-
-Between levels you spend **secrets** in the boiler room: *forge* a letter the bugs
-dropped into any material you can afford, or *transmute* two letters of the same
-tier into one of the tier above.
+- Loot is tabled by night: common letters fall constantly early on, and the rare
+  ones only start appearing once you are deep enough — and off tougher bugs.
 
 ### Controls
 

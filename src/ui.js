@@ -1,7 +1,7 @@
 // ui.js — DOM screens layered over the canvas: title, level cards, the boiler
 // room between levels, and the end-of-run summary.
 
-import { MATERIALS, TIERS, MAX_TIER, CHAMBERS, START_PAGES, getLevel } from './content.js';
+import { MATERIALS, SPECIAL_MATERIALS, LETTER_LEVELS, MAX_LEVEL, CHAMBERS, START_CHAMBERS, START_PAGES, getLevel } from './content.js';
 import { dictSize } from './dict.js';
 import { BADGES, earned } from './achievements.js';
 import { sfx } from './audio.js';
@@ -19,11 +19,18 @@ export function show(id) {
   document.body.classList.toggle('modal', id !== 'none');
 }
 
-export function chip(letter, mat, extra = '') {
+// A letter reads as its glyph, its level in dots, and its material as colour —
+// never as a written label.
+export function chip(letter, mat, level, extra = '') {
   const m = MATERIALS[mat];
-  return `<span class="chip ${extra}" style="--body:${m.body};--edge:${m.edge};--ink:${m.ink};--glow:${m.glow}">
-    <b>${letter.toUpperCase()}</b><i>${m.name}</i></span>`;
+  const dots = `<i>${'<s></s>'.repeat(level)}</i>`;
+  return `<span class="chip ${extra}" style="--body:${m.body};--edge:${m.edge};--ink:${m.ink};--glow:${m.glow};--dot:${m.dot}">
+    <b>${letter.toUpperCase()}</b>${dots}</span>`;
 }
+const swatch = mat => {
+  const m = MATERIALS[mat];
+  return `<span class="swatch" style="--body:${m.body};--edge:${m.edge};--glow:${m.glow}"></span>`;
+};
 
 // ── title ──────────────────────────────────────────────────────────────────
 export function renderTitle(hasSave, onPlay, onContinue, onHow) {
@@ -54,43 +61,60 @@ export function renderTitle(hasSave, onPlay, onContinue, onHow) {
 }
 
 export function renderHow(onBack) {
-  const s = $('#howto');
-  const mats = Object.values(MATERIALS).map(m => `
-    <li>${chip('a', m.id)} <b>${m.name}</b> <span class="tier">tier ${m.tier}</span>
-    <span class="cost">${m.cost} secrets</span><br><span class="d">${m.desc}</span></li>`).join('');
-  s.innerHTML = `
+  const t = $('#howto');
+  const levels = LETTER_LEVELS.slice(1).map(L => `
+    <li>${chip(L.pool[0], 'iron', L.level)}
+      <b>Level ${L.level}</b> — <span class="num">${L.dmg}</span> damage
+      <br><span class="d">${L.pool.toUpperCase().split('').join(' ')}</span></li>`).join('');
+  const mats = [MATERIALS.iron, ...SPECIAL_MATERIALS].map(m => `
+    <li>${swatch(m.id)} <b>${m.name}</b>${m.base ? '' : ` <span class="cost">${m.cost}⚙</span>`}
+    <br><span class="d">${m.desc}</span></li>`).join('');
+  t.innerHTML = `
     <div class="plate wide">
       <h2>How to play</h2>
       <div class="cols">
         <div>
           <h3>The engine</h3>
           <p>Type any English word and press <kbd>Enter</kbd>. Every letter of the word is
-          fired at the bugs, one after another.</p>
-          <p>The boiler keeps <b>${CHAMBERS} chambers</b> loaded with your special letters.
-          If a character you type is sitting in a chamber, that chamber fires &mdash; with its
-          material's damage and effect &mdash; and then empties and refills.
-          Any character <i>not</i> in a chamber is a <b>blank</b>, worth 1 damage.</p>
-          <p>Longer words hit harder. A word you have already used this run does less each
-          time you repeat it. Use every loaded chamber in one word for a <b>boiler
-          overload</b>. The <b>word of the day</b> doubles everything and explodes.</p>
+          fired at the bugs, one after another. A word that is not in the lexicon simply
+          clears and tells you so — it costs you nothing but the typing.</p>
+          <p>The boiler has <b>${CHAMBERS} chambers</b>, but it starts with
+          <b>${START_CHAMBERS === 1 ? 'only one unsealed' : `${START_CHAMBERS} unsealed`}</b>.
+          Spend everything the unsealed chambers hold and the next one opens, so the engine
+          widens as you use it.</p>
+          <p>If a character you type is sitting in an unsealed chamber, that chamber fires
+          and then empties and refills from the bag. Any character <i>not</i> in a chamber is
+          a <b>blank</b>, worth 1 damage.</p>
+          <p>Longer words hit harder. A word you have already used does less each time you
+          repeat it. Use every loaded chamber in one word for a <b>boiler overload</b>. The
+          <b>word of the day</b> doubles everything and explodes.</p>
           <h3>The bugs</h3>
-          <p>They come through the grates, cross the floor, take a page of your formula
-          from the machine and run for the door. Kill a carrier and the page comes back.
-          Lose all ${START_PAGES} pages and the night is over.</p>
+          <p>They come through the grates and sweep the room — across, down a lane, back
+          across — until they reach the machine, take a page of the formula and retrace the
+          whole route to get out. Kill a carrier and the page comes home. Lose all
+          ${START_PAGES} pages and the night is over.</p>
           <h3>Controls</h3>
           <p><kbd>A&ndash;Z</kbd> type &middot; <kbd>Enter</kbd> or <kbd>Space</kbd> fire &middot;
-          <kbd>Backspace</kbd> delete &middot; <kbd>Esc</kbd> clears the rack, and clears again to
-          pause. Every letter key belongs to the word, so the sound toggle is the gear in the corner.
-          Hold the <b>right mouse button</b> over the room to aim the cannon by hand;
-          otherwise it picks its own target.</p>
+          <kbd>Backspace</kbd> delete &middot; <kbd>Esc</kbd> clears the rack, and clears again
+          to pause. Every letter key belongs to the word, so the sound toggle is the gear in
+          the corner. Hold the <b>right mouse button</b> over the room to aim the cannon by
+          hand; otherwise it picks its own target.</p>
         </div>
         <div>
+          <h3>Letter levels</h3>
+          <p>Letters are graded the way Scrabble grades them, and the grade is drawn as dots
+          under the glyph. The level is what sets the damage — a rare letter is worth many
+          common ones.</p>
+          <ul class="mats">${levels}</ul>
           <h3>Materials</h3>
+          <p>Materials are read by <b>colour</b> alone. Bugs only ever drop plain Iron; a
+          letter has to reach <b>level ${MAX_LEVEL}</b> before it is rare enough to be refitted
+          with anything else.</p>
           <ul class="mats">${mats}</ul>
           <h3>The boiler room</h3>
-          <p>Between levels you spend <b>secrets</b>. Bugs drop letters as they die; forge a
-          dropped letter into any material you can afford, or <b>transmute</b> two letters of
-          the same tier into one of the tier above.</p>
+          <p>Between levels: <b>combine</b> two letters of the same level into one letter of
+          the level above, in the same material and of your choosing — or spend
+          <b>secrets</b> to refit a level-${MAX_LEVEL} letter, or scrap what you do not want.</p>
         </div>
       </div>
       <div class="btns"><button id="b-back" class="big">Back</button></div>
@@ -119,37 +143,41 @@ export function renderIntro(n, onGo) {
 // ── boiler room ────────────────────────────────────────────────────────────
 export function renderBoiler(game, onNext) {
   const s = $('#boiler');
-  let selected = [];         // letter ids picked for transmuting
-  let forgeLetter = null, forgeMat = null;
+  let selected = [];         // letter ids picked out of the boiler
+  let pickLetter = null, pickMat = null;
+
+  // Whatever the bugs dropped tonight goes into the boiler now.
+  const recovered = game.pending.slice();
+  for (const loot of game.pending) game.boiler.add(loot.letter, 'iron', loot.level);
+  game.pending = [];
 
   function draw() {
     const inv = game.boiler.inventory;
-    const invHtml = inv.map(l => {
-      const sel = selected.includes(l.id) ? 'sel' : '';
-      return `<button class="chipbtn ${sel}" data-id="${l.id}">${chip(l.letter, l.mat)}</button>`;
-    }).join('') || '<p class="d">Your boiler is empty.</p>';
+    const byLevel = [...inv].sort((a, b) => b.level - a.level || a.letter.localeCompare(b.letter));
+    const invHtml = byLevel.map(l =>
+      `<button class="chipbtn ${selected.includes(l.id) ? 'sel' : ''}" data-id="${l.id}">
+        ${chip(l.letter, l.mat, l.level)}</button>`).join('')
+      || '<p class="d">Your boiler is empty.</p>';
 
     const a = inv.find(l => l.id === selected[0]);
     const b = inv.find(l => l.id === selected[1]);
-    const can = game.boiler.canTransmute(a, b);
-    const nextTier = a ? MATERIALS[a.mat].tier + 1 : 0;
-    const outMats = can ? TIERS[nextTier].map(id => `
-        <button class="matbtn ${forgeMat === id ? 'sel' : ''}" data-tmat="${id}">
-          ${chip('?', id)}<span class="d">${MATERIALS[id].desc}</span></button>`).join('') : '';
-    const outLetters = can ? [...new Set([a.letter, b.letter])].map(ch =>
-      `<button class="letbtn ${forgeLetter === ch ? 'sel' : ''}" data-tlet="${ch}">${ch.toUpperCase()}</button>`).join('') : '';
+    const canCombine = game.boiler.canCombine(a, b);
+    const nextLevel = a ? a.level + 1 : 0;
+    const outLetters = canCombine ? LETTER_LEVELS[nextLevel].pool.split('').map(ch =>
+      `<button class="letbtn ${pickLetter === ch ? 'sel' : ''}" data-clet="${ch}">${ch.toUpperCase()}</button>`).join('') : '';
 
-    const discovered = Object.entries(game.discovered).filter(([, n]) => n > 0)
-      .sort(([x], [y]) => x.localeCompare(y));
-    const discHtml = discovered.map(([ch, n]) =>
-      `<button class="letbtn ${forgeLetter === ch ? 'sel' : ''}" data-flet="${ch}">${ch.toUpperCase()}<sup>${n}</sup></button>`).join('')
-      || '<p class="d">No letters recovered yet — kill more bugs.</p>';
+    const one = selected.length === 1 ? a : null;
+    const canRefit = game.boiler.canRefit(one);
+    const matHtml = canRefit ? SPECIAL_MATERIALS.map(m => {
+      const afford = game.secrets >= m.cost && one.mat !== m.id;
+      return `<button class="matbtn ${pickMat === m.id ? 'sel' : ''} ${afford ? '' : 'off'}" data-rmat="${m.id}">
+        ${swatch(m.id)}<b>${m.name}</b><span class="cost">${m.cost}⚙</span>
+        <span class="d">${m.desc}</span></button>`;
+    }).join('') : '';
 
-    const shopHtml = Object.values(MATERIALS).map(m => {
-      const afford = game.secrets >= m.cost;
-      return `<button class="matbtn ${forgeMat === m.id ? 'sel' : ''} ${afford ? '' : 'off'}" data-fmat="${m.id}">
-        ${chip('?', m.id)}<span class="cost">${m.cost}⚙</span><span class="d">${m.desc}</span></button>`;
-    }).join('');
+    const recHtml = recovered.length
+      ? recovered.map(r => chip(r.letter, 'iron', r.level)).join(' ')
+      : '<span class="d">Nothing fell tonight.</span>';
 
     s.innerHTML = `
       <div class="plate wide boilerroom">
@@ -162,39 +190,45 @@ export function renderBoiler(game, onNext) {
             <span class="big-num">⚙ ${game.secrets}</span><span class="d">secrets</span>
           </div>
         </div>
-        <p class="d recap">+${game.levelSecrets} secrets · ${game.levelKills} bugs · ${game.pages}/${START_PAGES} pages intact</p>
+        <p class="d recap">+${game.levelSecrets} secrets · ${game.levelKills} bugs ·
+          ${game.pages}/${START_PAGES} pages intact · ${game.boiler.open}/${CHAMBERS} chambers unsealed</p>
+        <p class="recovered"><span class="lbl">Recovered tonight</span> ${recHtml}</p>
 
         <div class="cols3">
           <section>
-            <h3>Your boiler <span class="d">&middot; ${game.boiler.inventory.length} letters</span></h3>
-            <p class="d">Pick two of the same tier to transmute, or one to scrap.</p>
+            <h3>Your boiler <span class="d">&middot; ${inv.length} letters</span></h3>
+            <p class="d">Dots are the level. Colour is the material. Pick two of the same
+            level to combine, or one on its own to refit or scrap.</p>
             <div class="inv">${invHtml}</div>
-            <button id="b-scrap" class="small" ${selected.length === 1 ? '' : 'disabled'}>Scrap selected</button>
+            <button id="b-scrap" class="small" ${one ? '' : 'disabled'}>Scrap for 1 ⚙</button>
           </section>
 
           <section>
-            <h3>Transmute</h3>
+            <h3>Combine</h3>
             <div class="slots">
-              <div class="slot">${a ? chip(a.letter, a.mat) : '<span class="d">slot</span>'}</div>
+              <div class="slot">${a ? chip(a.letter, a.mat, a.level) : '<span class="d">slot</span>'}</div>
               <span class="plus">+</span>
-              <div class="slot">${b ? chip(b.letter, b.mat) : '<span class="d">slot</span>'}</div>
+              <div class="slot">${b ? chip(b.letter, b.mat, b.level) : '<span class="d">slot</span>'}</div>
             </div>
-            ${can ? `<p class="d">Fuses into tier ${nextTier}. Choose the material and which letter it keeps.</p>
-              <div class="matlist">${outMats}</div>
+            ${canCombine ? `<p class="d">Two level ${a.level} letters make one level
+              ${nextLevel}. Choose which letter you get.</p>
               <div class="letrow">${outLetters}</div>
-              <button id="b-fuse" class="big" ${forgeMat && forgeLetter ? '' : 'disabled'}>Fuse</button>`
-              : `<p class="d">${selected.length < 2 ? 'Select two letters.' :
-                  a && b && MATERIALS[a.mat].tier === MAX_TIER ? 'Already at the highest tier.' :
-                  'Both letters must be the same tier.'}</p>`}
+              <button id="b-fuse" class="big" ${pickLetter ? '' : 'disabled'}>Combine</button>`
+              : `<p class="d">${selected.length < 2 ? 'Select two letters of the same level.'
+                  : a && b && a.level >= MAX_LEVEL ? `Level ${MAX_LEVEL} is the top of the rack — refit it instead.`
+                  : 'Both letters must be the same level.'}</p>`}
           </section>
 
           <section>
-            <h3>Forge</h3>
-            <p class="d">Letters recovered from the bugs:</p>
-            <div class="letrow">${discHtml}</div>
-            <div class="matlist">${shopHtml}</div>
-            <button id="b-forge" class="big" ${forgeLetter && forgeMat && game.discovered[forgeLetter] > 0
-              && game.secrets >= MATERIALS[forgeMat].cost ? '' : 'disabled'}>Forge</button>
+            <h3>Refit</h3>
+            ${one ? (canRefit
+              ? `<p class="d">${one.letter.toUpperCase()} is rare enough to hold a material.</p>
+                 <div class="matlist">${matHtml}</div>
+                 <button id="b-refit" class="big" ${pickMat && game.secrets >= MATERIALS[pickMat].cost
+                   && one.mat !== pickMat ? '' : 'disabled'}>Refit</button>`
+              : `<p class="d">Only a level ${MAX_LEVEL} letter can be refitted.
+                 ${one.letter.toUpperCase()} is level ${one.level} — combine it up first.</p>`)
+              : '<p class="d">Select a single letter.</p>'}
           </section>
         </div>
 
@@ -205,31 +239,26 @@ export function renderBoiler(game, onNext) {
       const id = +n.dataset.id;
       if (selected.includes(id)) selected = selected.filter(x => x !== id);
       else { selected.push(id); if (selected.length > 2) selected.shift(); }
-      forgeMat = null; forgeLetter = null;
+      pickLetter = null; pickMat = null;
       sfx.key(); draw();
     });
-    s.querySelectorAll('[data-tmat]').forEach(n => n.onclick = () => { forgeMat = n.dataset.tmat; sfx.key(); draw(); });
-    s.querySelectorAll('[data-tlet]').forEach(n => n.onclick = () => { forgeLetter = n.dataset.tlet; sfx.key(); draw(); });
-    s.querySelectorAll('[data-flet]').forEach(n => n.onclick = () => { forgeLetter = n.dataset.flet; sfx.key(); draw(); });
-    s.querySelectorAll('[data-fmat]').forEach(n => n.onclick = () => { forgeMat = n.dataset.fmat; sfx.key(); draw(); });
+    s.querySelectorAll('[data-clet]').forEach(n => n.onclick = () => { pickLetter = n.dataset.clet; sfx.key(); draw(); });
+    s.querySelectorAll('[data-rmat]').forEach(n => n.onclick = () => { pickMat = n.dataset.rmat; sfx.key(); draw(); });
 
     const scrap = $('#b-scrap');
     if (scrap) scrap.onclick = () => {
-      game.boiler.remove(selected[0]); selected = []; sfx.clank(); draw();
+      game.boiler.remove(one.id); game.secrets += 1; selected = []; sfx.clank(); draw();
     };
     const fuse = $('#b-fuse');
     if (fuse) fuse.onclick = () => {
-      game.boiler.transmute(a, b, forgeMat, forgeLetter);
-      selected = []; forgeMat = null; forgeLetter = null;
-      sfx.overload(); draw();
+      game.boiler.combine(a, b, pickLetter);
+      selected = []; pickLetter = null; sfx.overload(); draw();
     };
-    const forge = $('#b-forge');
-    if (forge) forge.onclick = () => {
-      game.secrets -= MATERIALS[forgeMat].cost;
-      game.discovered[forgeLetter]--;
-      game.boiler.add(forgeLetter, forgeMat);
-      forgeMat = null; forgeLetter = null;
-      sfx.steam(); draw();
+    const refit = $('#b-refit');
+    if (refit) refit.onclick = () => {
+      game.secrets -= MATERIALS[pickMat].cost;
+      game.boiler.refit(one.id, pickMat);
+      pickMat = null; sfx.steam(); draw();
     };
     $('#b-next').onclick = () => { sfx.clank(); onNext(); };
   }

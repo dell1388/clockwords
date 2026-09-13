@@ -44,13 +44,25 @@ Sources: ¹ [WonderHowTo, "Turning Letters into Pesticide"](https://scrabble.won
 Everything below is a judgement call made to sit consistently around the facts
 above. Change it freely.
 
-- **Tier ladder.** Sources give each material a "level" number that does not line
-  up with its cost, so the ladder here is ours: Iron (1) → Thermite/Amethyst (2)
-  → Brass/Lazurite (3) → Jade (4) → Aetherium (5). Two letters of a tier fuse
-  into one of the next. Aetherium is invented outright to cap the ladder.
+- **Letter levels.** Grading letters 1–5 Scrabble-fashion, drawing the grade as
+  dots under the glyph, and making the level (not the material) set the damage:
+  8 / 24 / 60 / 140 / 320. The original's dots meant a flat 5 damage each; the
+  steep curve here is a deliberate departure, so a rare letter feels rare.
+- **Combining by level.** Two letters of the same level fuse into one of the
+  level above, keeping the material, with the resulting letter chosen from that
+  level's pool. The original transmuted by material value; this transmutes by
+  letter rarity instead.
+- **Materials are level-5 only**, are read by colour with no written label, and
+  are applied as a *multiplier* on the letter's level damage rather than as a
+  flat damage of their own. Aetherium is invented outright to cap the ladder.
+- **Chambers unseal one at a time**, starting from one, each time the open
+  chambers have been spent through. The original ran all eight from the start.
+- **Bug pathing.** The serpentine sweep — across, down a lane, back across, and
+  the same route in reverse on the way out — and all the speeds that go with it.
+- **Loot tables** weighted by night number and by how tough the bug was.
 - **Exact numbers** for the long-word bonus (+15% per letter past four, ×4 cap),
-  the repeat penalty (halving, floor 20%), Jade's scaling (+5% per letter of the
-  word, per Jade), Brass's radius, and Aetherium's chain.
+  the repeat penalty (halving, floor 20%), Jade's scaling, Brass's radius, and
+  Aetherium's chain.
 - **Boiler overload** — the bonus for spending every loaded chamber in one word.
   The Jay Is Games review mentions that using all your special letters unlocks
   extra high-power ammunition; the shape of the bonus is ours.
@@ -64,4 +76,3 @@ above. Change it freely.
 - **The room.** Three arched service doors on the back wall, the perspective, the
   depth scaling, the machine design, and the whole visual and audio treatment.
   Nothing here is traced from the original art.
-- **Letter drops.** Which letter a bug drops is weighted by how tough it was.

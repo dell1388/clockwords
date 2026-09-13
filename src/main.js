@@ -38,7 +38,7 @@ function saveGame() {
   if (!game) return;
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
-      levelNo: game.levelNo, secrets: game.secrets, discovered: game.discovered,
+      levelNo: game.levelNo, secrets: game.secrets, pending: game.pending,
       score: game.score, inventory: game.boiler.serialize(), stats: game.stats,
       used: [...game.usedWords.entries()],
     }));
@@ -69,7 +69,7 @@ function continueGame() {
   if (!s) return newGame();
   game = new Game({
     boiler: Boiler.deserialize(s.inventory),
-    secrets: s.secrets, discovered: s.discovered || {}, score: s.score,
+    secrets: s.secrets, pending: s.pending || [], score: s.score,
     levelNo: s.levelNo, stats: s.stats, usedWords: new Map(s.used || []),
   });
   toIntro(s.levelNo);

@@ -1,6 +1,6 @@
 // game.js — the simulation. Pure state + update(); drawing lives in render.js.
 
-import { SPECIES, MATERIALS, getLevel, START_PAGES, MIN_WORD } from './content.js';
+import { SPECIES, MATERIALS, getLevel, START_PAGES, MIN_WORD, rollLoot, levelOf } from './content.js';
 import { Boiler, startingInventory } from './boiler.js';
 import { isWord, wordOfTheDay } from './dict.js';
 import { sfx } from './audio.js';
@@ -9,32 +9,57 @@ import * as badges from './achievements.js';
 export const W = 960, H = 640;
 export const PLAY_H = 470;
 export const MACHINE = { x: 480, y: 418 };
-export const MUZZLE = { x: 480, y: 356 };
+export const MUZZLE = { x: 480, y: 318 };
+export const PIVOT = { x: 480, y: 394 };
+
+// The barrel is mounted on top of the boiler: it swings, but never below level.
+export const clampAim = a => {
+  let n = Math.atan2(Math.sin(a), Math.cos(a));
+  if (n > -0.22 && n < Math.PI / 2) n = -0.22;
+  else if (n >= Math.PI / 2 || n < -Math.PI + 0.22) n = -Math.PI + 0.22;
+  return n;
+};
 export const HORIZON = 158;
 export const DOORS = [{ x: 150, y: 168 }, { x: 480, y: 168 }, { x: 810, y: 168 }];
 
 // Things further up the room are further away.
 export const depthAt = y => 0.5 + 0.5 * Math.max(0, Math.min(1, (y - HORIZON) / (MACHINE.y - HORIZON)));
+// The bugs do not walk straight at you. They sweep the room: across, down a
+// lane, back across, down again — and the same way in reverse on the way out.
+export const LANES = [
+  { y: 210, x0: 96, x1: 864 },
+  { y: 270, x0: 168, x1: 792 },
+  { y: 332, x0: 258, x1: 702 },
+];
+
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+export function buildPath(door) {
+  const wps = [{ x: door.x, y: door.y }];
+  let dir = door.x < W / 2 ? 1 : -1;
+  for (const ln of LANES) {
+    const prev = wps[wps.length - 1];
+    wps.push({ x: clamp(prev.x, ln.x0, ln.x1), y: ln.y });
+    wps.push({ x: dir > 0 ? ln.x1 : ln.x0, y: ln.y });
+    dir = -dir;
+  }
+  wps.push({ x: MACHINE.x, y: MACHINE.y - 26 });
+  return wps;
+}
+
 const FIRE_GAP = 0.105;           // seconds between letters of a word
 const SHOT_SPEED = 640;
-const STEAL_RANGE = 34;
+const WP_RADIUS = 13;
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
-// Rarer letters drop from tougher bugs.
-const COMMON = 'eaiorntslucdpmhgbfywkvxzjq';
-function rollLetter(tier) {
-  const spread = Math.max(4, Math.round(COMMON.length * (0.35 + 0.65 * Math.random())));
-  const bias = Math.min(COMMON.length - 1, Math.floor(Math.pow(Math.random(), 2.2 - tier * 0.35) * spread));
-  return COMMON[bias];
-}
 
 export class Game {
   constructor(opts = {}) {
     this.boiler = opts.boiler || new Boiler(startingInventory());
     this.secrets = opts.secrets ?? 0;
-    this.discovered = opts.discovered || {};      // letter -> count
+    this.pending = opts.pending || [];            // letters recovered this night
     this.score = opts.score ?? 0;
     this.levelNo = opts.levelNo || 1;
     this.usedWords = opts.usedWords || new Map();
@@ -62,6 +87,7 @@ export class Game {
     this.won = false;
     this.muzzleFlash = 0;
     this.recoil = 0;
+    this.rackFlash = 0;
     this.levelSecrets = 0;
     this.levelKills = 0;
     this.spawns = this.spawns || [];
@@ -108,7 +134,11 @@ export class Game {
     const repeats = this.usedWords.get(word) || 0;
     const wotd = word === this.wotd;
     const res = this.boiler.resolve(word, { repeats, wotd });
-    this.boiler.spend(res.slots);
+    const unsealed = this.boiler.spend(res.slots);
+    if (unsealed) {
+      this.note(unsealed > 1 ? `${unsealed} CHAMBERS UNSEALED` : 'CHAMBER UNSEALED', '#9be8ff');
+      sfx.steam();
+    }
     this.usedWords.set(word, repeats + 1);
 
     let total = 0;
@@ -133,9 +163,12 @@ export class Game {
     this.lastWord = { word, res, total, at: this.time };
   }
 
+  // A bad word costs nothing but the word: it clears and says so, and you can
+  // start typing again in the same breath.
   reject(word, why) {
     sfx.bad();
-    this.message = { text: word ? `"${word}" — ${why}` : why, t: 1.6, bad: true };
+    this.message = { text: word ? `${word} — ${why}` : why, t: 1.1, bad: true };
+    this.rackFlash = 1;
   }
 
   note(text, color) { this.floaters.push({ text, color, x: MACHINE.x, y: 396, vy: -26, t: 1.6, big: true }); }
@@ -147,9 +180,11 @@ export class Game {
     this.shake = Math.max(0, this.shake - dt * 3.2);
     this.muzzleFlash = Math.max(0, this.muzzleFlash - dt * 6);
     this.recoil = Math.max(0, this.recoil - dt * 5);
+    this.rackFlash = Math.max(0, this.rackFlash - dt * 3);
     if (this.message) { this.message.t -= dt; if (this.message.t <= 0) this.message = null; }
 
     this.spawnStep();
+    this.aimStep(dt);
     this.fireStep(dt);
     this.bugStep(dt);
     this.shotStep(dt);
@@ -191,10 +226,11 @@ export class Game {
     const d = DOORS[doorIdx >= 0 ? doorIdx : (Math.random() * DOORS.length) | 0];
     const hp = Math.round(sp.hp * this.scale);
     const bug = {
-      sp, x: d.x + rand(-22, 22), y: d.y + rand(-6, 6),
+      sp, x: d.x + rand(-16, 16), y: d.y + rand(-4, 4),
       hp, maxHp: hp, r: sp.r, door: d,
       speed: sp.speed * (0.9 + Math.random() * 0.25),
       armor: sp.armor || 0, phase: 'in', carrying: false,
+      path: buildPath(d), wi: 1, step: 1,
       freeze: 0, burn: null, wob: Math.random() * 6.28, legPhase: Math.random() * 6.28,
       flash: 0, tilt: 0, spawnT: 0,
     };
@@ -237,7 +273,8 @@ export class Game {
           const sp = SPECIES[b.sp.spawns];
           const hp = Math.round(sp.hp * this.scale);
           this.bugs.push({ sp, x: b.x + rand(-20, 20), y: b.y + 18, hp, maxHp: hp, r: sp.r,
-            door: b.door, speed: sp.speed, armor: 0, phase: 'in', carrying: false,
+            door: b.door, speed: sp.speed, armor: 0, phase: b.phase, carrying: false,
+            path: b.path, wi: b.wi, step: b.step,
             freeze: 0, burn: null, wob: Math.random() * 6.28, legPhase: 0, flash: 0, tilt: 0, spawnT: 0 });
           sfx.clank();
         }
@@ -246,44 +283,46 @@ export class Game {
       if (b.freeze > 0) { b.frost = Math.min(1, (b.frost || 0) + dt * 4); continue; }
       b.frost = Math.max(0, (b.frost || 0) - dt * 2);
 
-      const goal = b.phase === 'in' ? MACHINE : b.door;
-      let dx = goal.x - b.x, dy = goal.y - b.y;
+      const wp = b.path[b.wi];
+      let dx = wp.x - b.x, dy = wp.y - b.y;
       const d = Math.hypot(dx, dy) || 1;
       dx /= d; dy /= d;
 
-      b.wob += dt * (b.sp.gait === 'flit' ? 5.5 : 2.2);
-      const sway = Math.sin(b.wob) * (b.sp.gait === 'flit' ? 46 : b.sp.gait === 'scurry' ? 16 : 8);
+      b.wob += dt * (b.sp.gait === 'flit' ? 5.5 : b.sp.gait === 'scurry' ? 3.4 : 2.2);
+      const sway = Math.sin(b.wob) * (b.sp.gait === 'flit' ? 26 : b.sp.gait === 'scurry' ? 11 : 6);
       const px = -dy, py = dx;
-      const sp = b.speed * (b.carrying ? 1.15 : 1);
-      b.x += (dx * sp + px * sway * 0.5) * dt;
-      b.y += (dy * sp + py * sway * 0.5) * dt;
+      const sp = b.speed * (b.carrying ? 1.2 : 1);
+      b.x += (dx * sp + px * sway) * dt;
+      b.y += (dy * sp + py * sway) * dt;
       b.tilt = Math.atan2(dy, dx) + Math.PI / 2;
-      b.legPhase += dt * sp * 0.22;
+      b.legPhase += dt * sp * 0.09;
       b.x = Math.max(14, Math.min(W - 14, b.x));
       b.depth = b.sp.boss ? Math.max(0.82, depthAt(b.y)) : depthAt(b.y);
       b.r = b.sp.r * b.depth;
 
-      if (b.phase === 'in' && d < STEAL_RANGE + b.r) {
-        if (this.pages > 0) {
-          this.pages--;
-          b.carrying = true;
+      if (d < WP_RADIUS + b.r * 0.3) {
+        b.wi += b.step;
+        if (b.wi >= b.path.length) {                       // reached the machine
+          b.wi = b.path.length - 1;
+          b.step = -1;
           b.phase = 'out';
-          sfx.steal();
-          this.shake = Math.max(this.shake, 0.5);
-          this.floaters.push({ text: 'A page!', color: '#ff8f6b', x: b.x, y: b.y - 20, vy: -30, t: 1.4 });
-        } else {
-          b.phase = 'out';
+          if (this.pages > 0) {
+            this.pages--;
+            b.carrying = true;
+            sfx.steal();
+            this.shake = Math.max(this.shake, 0.5);
+            this.floaters.push({ text: 'A page!', color: '#ff8f6b', x: b.x, y: b.y - 20, vy: -30, t: 1.4 });
+          }
+        } else if (b.wi < 0) {                             // back out through the door
+          if (b.carrying) {
+            this.lost++;
+            sfx.lost();
+            this.shake = 1;
+            this.floaters.push({ text: 'PAGE LOST', color: '#ff5a3c', x: b.x, y: b.y + 10, vy: -20, t: 2, big: true });
+            if (this.lost >= START_PAGES) this.gameOver();
+          }
+          b.dead = true;
         }
-      }
-      if (b.phase === 'out' && d < 26) {
-        if (b.carrying) {
-          this.lost++;
-          sfx.lost();
-          this.shake = 1;
-          this.floaters.push({ text: 'PAGE LOST', color: '#ff5a3c', x: b.x, y: b.y + 10, vy: -20, t: 2, big: true });
-          if (this.lost >= START_PAGES) this.gameOver();
-        }
-        b.dead = true;
       }
     }
     this.bugs = this.bugs.filter(b => !b.dead);
@@ -295,10 +334,25 @@ export class Game {
     for (const b of this.bugs) {
       if (b.spawnT < 0.15) continue;
       // prefer whatever is closest to stealing, then carriers on their way out
-      const prog = b.phase === 'out' && b.carrying ? 4000 - dist(b, b.door) : 2000 - dist(b, MACHINE);
+      const prog = b.carrying ? 10000 - b.wi * 10 : b.wi * 10 - dist(b, b.path[b.wi]) / 100;
       if (prog > bestScore) { bestScore = prog; best = b; }
     }
     return best;
+  }
+
+  // The barrel tracks whatever it would shoot at, so it never sits pointing at
+  // an empty corner of the room.
+  aimStep(dt) {
+    const t = this.target();
+    let want = -Math.PI / 2;
+    if (this.aim) want = Math.atan2(this.aim.y - PIVOT.y, this.aim.x - PIVOT.x);
+    else if (t) want = Math.atan2(t.y - PIVOT.y, t.x - PIVOT.x);
+    want = clampAim(want);
+    const cur = this.cannonAngle ?? want;
+    let d = want - cur;
+    while (d > Math.PI) d -= 2 * Math.PI;
+    while (d < -Math.PI) d += 2 * Math.PI;
+    this.cannonAngle = clampAim(cur + d * Math.min(1, dt * 9));
   }
 
   fireStep(dt) {
@@ -308,12 +362,14 @@ export class Game {
     this.fireTimer = FIRE_GAP;
     const tgt = this.target();
     let ang;
-    if (this.aim) ang = Math.atan2(this.aim.y - MUZZLE.y, this.aim.x - MUZZLE.x);
-    else if (tgt) ang = Math.atan2(tgt.y - MUZZLE.y, tgt.x - MUZZLE.x);
+    if (this.aim) ang = Math.atan2(this.aim.y - PIVOT.y, this.aim.x - PIVOT.x);
+    else if (tgt) ang = Math.atan2(tgt.y - PIVOT.y, tgt.x - PIVOT.x);
     else ang = -Math.PI / 2 + rand(-0.2, 0.2);
+    ang = clampAim(ang);
     this.cannonAngle = ang;
+    const reach = MUZZLE.y - PIVOT.y;            // barrel length, as a radius
     this.shots.push({
-      x: MUZZLE.x, y: MUZZLE.y,
+      x: PIVOT.x + Math.cos(ang) * -reach, y: PIVOT.y + Math.sin(ang) * -reach,
       vx: Math.cos(ang) * SHOT_SPEED, vy: Math.sin(ang) * SHOT_SPEED,
       shot, target: tgt, hit: new Set(), life: 2.4, spin: rand(-6, 6), rot: 0, trail: [],
     });
@@ -428,6 +484,7 @@ export class Game {
         const hp = Math.round(sp.hp * this.scale);
         this.bugs.push({ sp, x: b.x + rand(-12, 12), y: b.y + rand(-8, 8), hp, maxHp: hp, r: sp.r,
           door: b.door, speed: sp.speed, armor: 0, phase: b.phase, carrying: false,
+          path: b.path, wi: b.wi, step: b.step,
           freeze: 0, burn: null, wob: Math.random() * 6.28, legPhase: 0, flash: 0, tilt: 0, spawnT: 0 });
       }
     }
@@ -437,9 +494,11 @@ export class Game {
       this.floaters.push({ text: `+${n} secret`, color: '#ffd66b', x: b.x, y: b.y - 26, vy: -30, t: 1.3 });
     }
     if (Math.random() < b.sp.drop) {
-      const ch = rollLetter(b.sp.boss ? 4 : b.sp.hp > 80 ? 3 : b.sp.hp > 30 ? 2 : 1);
-      this.discovered[ch] = (this.discovered[ch] || 0) + 1;
-      this.floaters.push({ text: ch.toUpperCase(), color: '#e8d7ae', x: b.x, y: b.y - 12, vy: -40, t: 1.5, big: true });
+      const tier = b.sp.boss ? 4 : b.sp.hp > 80 ? 3 : b.sp.hp > 30 ? 2 : 1;
+      const loot = rollLoot(this.levelNo, tier);
+      this.pending.push(loot);
+      this.floaters.push({ text: loot.letter.toUpperCase() + ' ' + '•'.repeat(loot.level),
+        color: '#e8d7ae', x: b.x, y: b.y - 12, vy: -40, t: 1.6, big: true });
     }
     if (b.sp.boss) { this.shake = 1.2; sfx.boom(); this.blast(b.x, b.y, 160, '#ffc857'); }
     badges.checkKill(b.sp);

@@ -1,7 +1,7 @@
 // render.js — all drawing. Sepia, brass and gaslight.
 
-import { W, H, PLAY_H, MACHINE, MUZZLE, DOORS } from './game.js';
-import { MATERIALS, CHAMBERS, START_PAGES } from './content.js';
+import { W, H, PLAY_H, MACHINE, MUZZLE, PIVOT, DOORS } from './game.js';
+import { MATERIALS, CHAMBERS, START_PAGES, MAX_LEVEL } from './content.js';
 
 const TAU = Math.PI * 2;
 let bg = null;
@@ -221,6 +221,16 @@ function drawPage(ctx, px, py, alpha, t = 0) {
   ctx.restore();
 }
 
+// A letter's level is read off the dots under its glyph, Scrabble-fashion.
+export function drawDots(ctx, cx, cy, level, r, color) {
+  const gap = r * 2.6;
+  const x0 = cx - ((level - 1) * gap) / 2;
+  ctx.fillStyle = color;
+  for (let i = 0; i < level; i++) {
+    ctx.beginPath(); ctx.arc(x0 + i * gap, cy, r, 0, TAU); ctx.fill();
+  }
+}
+
 // ── the machine ────────────────────────────────────────────────────────────
 function gear(ctx, cx, cy, r, teeth, rot, fill, stroke) {
   ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot);
@@ -253,8 +263,9 @@ function drawMachine(ctx, g, t) {
     drawPage(ctx, -56 + i * 28, -34 - Math.abs(i - 2) * 3, i < g.pages ? 1 : 0.13, t + i * 0.4);
   }
 
-  // barrel
+  // barrel, mounted on a yoke above the boiler
   ctx.save();
+  ctx.translate(0, PIVOT.y - MACHINE.y);
   ctx.rotate(ang + Math.PI / 2);
   ctx.translate(0, rec);
   const bar = ctx.createLinearGradient(-14, 0, 14, 0);
@@ -288,6 +299,14 @@ function drawMachine(ctx, g, t) {
   gear(ctx, -46, 8, 13, 9, t * 1.1, '#d7ab4d', '#4a3718');
   gear(ctx, 46, 8, 13, 9, -t * 1.1, '#d7ab4d', '#4a3718');
   gear(ctx, 0, 16, 9, 8, t * 1.8, '#9c7c34', '#2a1f0d');
+
+  // trunnion the barrel swings in
+  ctx.fillStyle = '#7a5c24';
+  roundRect(ctx, -16, -30, 32, 20, 6); ctx.fill();
+  ctx.strokeStyle = '#2a1f0d'; ctx.lineWidth = 2;
+  roundRect(ctx, -16, -30, 32, 20, 6); ctx.stroke();
+  ctx.fillStyle = '#e7c368';
+  ctx.beginPath(); ctx.arc(0, -20, 4, 0, TAU); ctx.fill();
 
   // pressure gauge
   ctx.save(); ctx.translate(0, -2);
@@ -506,37 +525,46 @@ function drawBug(ctx, b, t) {
 // ── projectiles ────────────────────────────────────────────────────────────
 function drawShot(ctx, s) {
   const m = s.shot.mat ? MATERIALS[s.shot.mat] : null;
+  const lvl = s.shot.level || 0;
+  const rad = m ? 9 + lvl * 1.6 : 7;
   ctx.save();
-  ctx.lineCap = 'round';
   for (let i = 0; i < s.trail.length; i++) {
     const p = s.trail[i];
     ctx.globalAlpha = (i / s.trail.length) * 0.4;
     ctx.fillStyle = m ? m.glow : '#cdbf9f';
-    ctx.beginPath(); ctx.arc(p.x, p.y, 3 + i * 0.6, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(p.x, p.y, 2.5 + i * 0.55, 0, TAU); ctx.fill();
   }
   ctx.globalAlpha = 1;
   ctx.translate(s.x, s.y);
-  ctx.rotate(s.rot * 0.25);
+  ctx.rotate(Math.sin(s.rot) * 0.16);
 
   if (m) {
-    ctx.shadowColor = m.glow; ctx.shadowBlur = 14;
+    ctx.shadowColor = m.glow; ctx.shadowBlur = 16;
     ctx.fillStyle = m.body;
-    roundRect(ctx, -11, -11, 22, 22, 5); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, rad, 0, TAU); ctx.fill();
     ctx.shadowBlur = 0;
+    const sh = ctx.createRadialGradient(-rad * 0.35, -rad * 0.4, 1, 0, 0, rad);
+    sh.addColorStop(0, 'rgba(255,255,255,0.35)');
+    sh.addColorStop(1, 'rgba(0,0,0,0.28)');
+    ctx.fillStyle = sh;
+    ctx.beginPath(); ctx.arc(0, 0, rad, 0, TAU); ctx.fill();
     ctx.strokeStyle = m.edge; ctx.lineWidth = 2;
-    roundRect(ctx, -11, -11, 22, 22, 5); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, rad, 0, TAU); ctx.stroke();
     ctx.fillStyle = m.ink;
-    ctx.font = "15px 'Special Elite', 'Courier New', monospace";
+    ctx.font = `${Math.round(rad * 1.25)}px 'Special Elite', 'Courier New', monospace`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(s.shot.ch.toUpperCase(), 0, -rad * 0.16);
+    drawDots(ctx, 0, rad * 0.6, lvl, Math.max(1, rad * 0.11), m.dot);
   } else {
     ctx.fillStyle = '#b9ac8d';
-    roundRect(ctx, -8, -8, 16, 16, 4); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, rad, 0, TAU); ctx.fill();
     ctx.strokeStyle = '#4a4030'; ctx.lineWidth = 1.5;
-    roundRect(ctx, -8, -8, 16, 16, 4); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, rad, 0, TAU); ctx.stroke();
     ctx.fillStyle = '#33291a';
-    ctx.font = "12px 'Special Elite', 'Courier New', monospace";
+    ctx.font = "11px 'Special Elite', 'Courier New', monospace";
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(s.shot.ch.toUpperCase(), 0, 0);
   }
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(s.shot.ch.toUpperCase(), 0, 1);
   ctx.restore();
 }
 
@@ -551,39 +579,53 @@ function drawHud(ctx, g, t) {
   ctx.fillStyle = '#c9a04a'; ctx.fillRect(0, top, W, 4);
   ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, top + 4, W, 3);
 
-  // chambers
+  // chambers — colour is the only mark of material; the dots are the level
   const n = CHAMBERS, cw = 64, gap = 8;
   const total = n * cw + (n - 1) * gap;
   let cx = (W - total) / 2;
   const cy = top + 18;
   for (let i = 0; i < n; i++) {
-    const letter = g.boiler.chambers[i];
+    const open = i < g.boiler.open;
+    const letter = open ? g.boiler.chambers[i] : null;
     ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillStyle = open ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.72)';
     roundRect(ctx, cx, cy, cw, 56, 8); ctx.fill();
-    ctx.strokeStyle = '#8d6f35'; ctx.lineWidth = 2;
+    ctx.strokeStyle = open ? '#8d6f35' : '#4a3a1c'; ctx.lineWidth = 2;
     roundRect(ctx, cx, cy, cw, 56, 8); ctx.stroke();
-    if (letter) {
+
+    if (!open) {
+      // sealed: a riveted plate over the tank
+      ctx.fillStyle = 'rgba(120,96,48,0.22)';
+      roundRect(ctx, cx + 7, cy + 7, cw - 14, 42, 5); ctx.fill();
+      ctx.fillStyle = 'rgba(190,160,96,0.35)';
+      for (const dx of [12, cw - 12]) for (const dy of [13, 43]) {
+        ctx.beginPath(); ctx.arc(cx + dx, cy + dy, 2.2, 0, TAU); ctx.fill();
+      }
+      ctx.strokeStyle = 'rgba(190,160,96,0.30)'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(cx + 16, cy + 28); ctx.lineTo(cx + cw - 16, cy + 28); ctx.stroke();
+    } else if (letter) {
       const m = MATERIALS[letter.mat];
-      ctx.shadowColor = m.glow; ctx.shadowBlur = 10;
+      ctx.shadowColor = m.glow; ctx.shadowBlur = 11;
       ctx.fillStyle = m.body;
-      roundRect(ctx, cx + 6, cy + 6, cw - 12, 44, 6); ctx.fill();
+      roundRect(ctx, cx + 6, cy + 6, cw - 12, 44, 7); ctx.fill();
       ctx.shadowBlur = 0;
+      const sh = ctx.createLinearGradient(0, cy + 6, 0, cy + 50);
+      sh.addColorStop(0, 'rgba(255,255,255,0.22)');
+      sh.addColorStop(1, 'rgba(0,0,0,0.25)');
+      ctx.fillStyle = sh;
+      roundRect(ctx, cx + 6, cy + 6, cw - 12, 44, 7); ctx.fill();
       ctx.strokeStyle = m.edge; ctx.lineWidth = 2;
-      roundRect(ctx, cx + 6, cy + 6, cw - 12, 44, 6); ctx.stroke();
+      roundRect(ctx, cx + 6, cy + 6, cw - 12, 44, 7); ctx.stroke();
       ctx.fillStyle = m.ink;
-      ctx.font = "24px 'Special Elite', 'Courier New', monospace";
+      ctx.font = "26px 'Special Elite', 'Courier New', monospace";
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(letter.letter.toUpperCase(), cx + cw / 2 - 7, cy + 27);
-      ctx.font = "9px 'IM Fell English SC', Georgia, serif";
-      ctx.save();
-      ctx.translate(cx + cw - 13, cy + 28); ctx.rotate(Math.PI / 2);
-      ctx.fillText(m.name.toUpperCase(), 0, 0);
-      ctx.restore();
+      ctx.fillText(letter.letter.toUpperCase(), cx + cw / 2, cy + 24);
+      drawDots(ctx, cx + cw / 2, cy + 42, letter.level, 2.4, m.dot);
     } else {
       ctx.fillStyle = 'rgba(255,230,180,0.12)';
-      ctx.font = "11px 'IM Fell English', Georgia, serif"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('— empty —', cx + cw / 2, cy + 28);
+      ctx.font = "11px 'IM Fell English', Georgia, serif";
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('refilling', cx + cw / 2, cy + 28);
     }
     ctx.restore();
     cx += cw + gap;
@@ -593,35 +635,34 @@ function drawHud(ctx, g, t) {
   const rx = (W - total) / 2, ry = cy + 66;
   ctx.fillStyle = 'rgba(0,0,0,0.55)';
   roundRect(ctx, rx, ry, total, 46, 8); ctx.fill();
-  ctx.strokeStyle = g.message && g.message.bad ? '#b3492b' : '#8d6f35';
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = g.rackFlash > 0 ? '#c95330' : '#8d6f35';
+  ctx.lineWidth = 2 + g.rackFlash * 2;
   roundRect(ctx, rx, ry, total, 46, 8); ctx.stroke();
 
   ctx.textBaseline = 'middle';
-  if (g.message) {
-    ctx.fillStyle = '#e39a78'; ctx.font = "italic 17px 'IM Fell English', Georgia, serif"; ctx.textAlign = 'center';
-    ctx.fillText(g.message.text, W / 2, ry + 23);
-  } else if (g.typed) {
+  if (g.typed) {
     ctx.textAlign = 'left';
     let tx = rx + 16;
     ctx.font = "26px 'Special Elite', 'Courier New', monospace";
     const lit = new Set();
     for (const ch of g.typed) {
       let mat = null;
-      for (let i = 0; i < g.boiler.chambers.length; i++) {
+      for (let i = 0; i < g.boiler.open; i++) {
         const c = g.boiler.chambers[i];
         if (c && c.letter === ch && !lit.has(i)) { lit.add(i); mat = c.mat; break; }
       }
       const m = mat ? MATERIALS[mat] : null;
-      if (m) {
-        ctx.fillStyle = m.glow; ctx.shadowColor = m.glow; ctx.shadowBlur = 10;
-      } else { ctx.fillStyle = '#d8cbaa'; ctx.shadowBlur = 0; }
+      if (m) { ctx.fillStyle = m.glow; ctx.shadowColor = m.glow; ctx.shadowBlur = 10; }
+      else { ctx.fillStyle = '#d8cbaa'; ctx.shadowBlur = 0; }
       ctx.fillText(ch.toUpperCase(), tx, ry + 23);
       tx += ctx.measureText(ch.toUpperCase()).width + 1;
       ctx.shadowBlur = 0;
     }
     ctx.fillStyle = (t * 2) % 1 > 0.5 ? '#ffd66b' : 'transparent';
     ctx.fillRect(tx + 2, ry + 10, 12, 26);
+  } else if (g.message) {
+    ctx.fillStyle = '#e39a78'; ctx.font = "italic 17px 'IM Fell English', Georgia, serif"; ctx.textAlign = 'center';
+    ctx.fillText(g.message.text, W / 2, ry + 23);
   } else {
     ctx.fillStyle = 'rgba(230,214,180,0.35)';
     ctx.font = "italic 16px 'IM Fell English', Georgia, serif"; ctx.textAlign = 'center';
@@ -640,8 +681,10 @@ function drawHud(ctx, g, t) {
   ctx.fillText(`score ${g.score}`, 16, top + 92);
   ctx.fillStyle = '#d79a7a';
   ctx.fillText(`pages ${g.pages}/${START_PAGES}   lost ${g.lost}`, 16, top + 112);
+  ctx.fillStyle = '#9ec0d8';
+  ctx.fillText(`chambers ${g.boiler.open}/${CHAMBERS}`, 16, top + 132);
   ctx.fillStyle = '#9fb6a0'; ctx.font = "italic 13px 'IM Fell English', Georgia, serif";
-  ctx.fillText(`word of the day: ${g.wotd}`, 16, top + 132);
+  ctx.fillText(`word of the day: ${g.wotd}`, 16, top + 152);
 
   // right readouts
   ctx.textAlign = 'right';
@@ -658,7 +701,7 @@ function drawHud(ctx, g, t) {
   ctx.textAlign = 'left'; ctx.font = "13px 'Special Elite', 'Courier New', monospace";
   if (g.fireQueue.length) {
     ctx.fillStyle = '#ffd66b';
-    ctx.fillText('in the breech: ' + g.fireQueue.slice(0, 22).map(s => s.ch.toUpperCase()).join(' '), 16, top + 155);
+    ctx.fillText('in the breech: ' + g.fireQueue.slice(0, 18).map(s => s.ch.toUpperCase()).join(' '), 300, top + 152);
   }
   ctx.textAlign = 'right';
   ctx.fillStyle = 'rgba(230,214,180,0.4)'; ctx.font = "italic 13px 'IM Fell English', Georgia, serif";

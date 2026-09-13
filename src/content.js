@@ -3,97 +3,136 @@
 // Flash game; the rest is reconstructed to sit consistently around them.
 // See docs/FIDELITY.md.
 
+// ── letters ────────────────────────────────────────────────────────────────
+// Letters are graded the way Scrabble grades them: the commonest letters are
+// level 1, the rarest are level 5. A letter's level is drawn as dots under the
+// glyph, and it is the level — not the material — that sets the damage.
+
+export const LETTER_LEVELS = [
+  null,
+  { level: 1, dmg: 8,   pool: 'aeioulnstr' },
+  { level: 2, dmg: 24,  pool: 'dg' },
+  { level: 3, dmg: 60,  pool: 'bcmp' },
+  { level: 4, dmg: 140, pool: 'fhvwy' },
+  { level: 5, dmg: 320, pool: 'kjxqz' },
+];
+export const MAX_LEVEL = 5;
+
+const LEVEL_OF = {};
+for (let i = 1; i <= MAX_LEVEL; i++) for (const ch of LETTER_LEVELS[i].pool) LEVEL_OF[ch] = i;
+export const levelOf = ch => LEVEL_OF[ch] || 1;
+export const levelDamage = lvl => LETTER_LEVELS[lvl].dmg;
+
+// ── materials ──────────────────────────────────────────────────────────────
+// Only a level-5 letter is rare enough to hold anything but Iron. Materials
+// are read by colour alone — the tanks are never labelled.
+
 export const MATERIALS = {
   iron: {
-    id: 'iron', name: 'Iron', tier: 1, dmg: 25, cost: 1,
-    body: '#6d6a63', edge: '#2b2a27', ink: '#e9e2d2', glow: '#9a958a',
-    desc: '25 damage. No special effect. The honest workhorse of the boiler.',
+    id: 'iron', name: 'Iron', mul: 1, cost: 0, base: true,
+    body: '#6d6a63', edge: '#2b2a27', ink: '#e9e2d2', glow: '#9a958a', dot: '#efe7d4',
+    desc: 'Plain shot. No special effect.',
   },
   thermite: {
-    id: 'thermite', name: 'Thermite', tier: 2, dmg: 10, cost: 3,
-    burn: { dps: 5, time: 4 },
-    body: '#b8471f', edge: '#4a1607', ink: '#ffe6c2', glow: '#ff8a3c',
-    desc: 'Sets bugs alight: 20 damage over 4 seconds.',
+    id: 'thermite', name: 'Thermite', mul: 0.5, cost: 6, burn: { frac: 0.8, time: 4 },
+    body: '#b8471f', edge: '#4a1607', ink: '#ffe6c2', glow: '#ff8a3c', dot: '#ffd9a8',
+    desc: 'Sets bugs alight, burning for four seconds.',
   },
   amethyst: {
-    id: 'amethyst', name: 'Amethyst', tier: 2, dmg: 15, cost: 4,
-    pierce: 2,
-    body: '#7a4bbd', edge: '#2d1750', ink: '#f0e2ff', glow: '#c08bff',
-    desc: '15 damage. Passes through up to 2 targets.',
-  },
-  brass: {
-    id: 'brass', name: 'Brass', tier: 3, dmg: 30, cost: 6,
-    armsIron: true, splash: 62,
-    body: '#c08b2e', edge: '#4d3208', ink: '#fff3d0', glow: '#ffc857',
-    desc: 'Splash damage — and every Iron letter in the same word detonates too.',
+    id: 'amethyst', name: 'Amethyst', mul: 0.7, cost: 8, pierce: 2,
+    body: '#7a4bbd', edge: '#2d1750', ink: '#f0e2ff', glow: '#c08bff', dot: '#e8d4ff',
+    desc: 'Passes clean through up to two targets.',
   },
   lazurite: {
-    id: 'lazurite', name: 'Lazurite', tier: 3, dmg: 12, cost: 5,
-    freeze: 4,
-    body: '#2f63b5', edge: '#0d2148', ink: '#dcecff', glow: '#7fc4ff',
-    desc: 'Freezes bugs, stopping all movement for 4 seconds.',
+    id: 'lazurite', name: 'Lazurite', mul: 0.4, cost: 10, freeze: 4,
+    body: '#2f63b5', edge: '#0d2148', ink: '#dcecff', glow: '#7fc4ff', dot: '#cfe6ff',
+    desc: 'Freezes bugs, stopping all movement for four seconds.',
+  },
+  brass: {
+    id: 'brass', name: 'Brass', mul: 0.9, cost: 12, splash: 68, armsIron: true,
+    body: '#c08b2e', edge: '#4d3208', ink: '#fff3d0', glow: '#ffc857', dot: '#ffe6ab',
+    desc: 'Splash damage — and every Iron letter in the same word detonates too.',
   },
   jade: {
-    id: 'jade', name: 'Jade', tier: 4, dmg: 28, cost: 8,
-    lengthBonus: 0.05,
-    body: '#2f8f6b', edge: '#0c3a2a', ink: '#dcfff0', glow: '#61e6b0',
+    id: 'jade', name: 'Jade', mul: 0.8, cost: 15, lengthBonus: 0.05,
+    body: '#2f8f6b', edge: '#0c3a2a', ink: '#dcfff0', glow: '#61e6b0', dot: '#b6f5da',
     desc: 'Every letter in the word hits harder — +5% per letter of the word.',
   },
   aetherium: {
-    id: 'aetherium', name: 'Aetherium', tier: 5, dmg: 90, cost: 12,
-    chain: 3, chainRange: 130,
-    body: '#d8d2c0', edge: '#5c5647', ink: '#3a3528', glow: '#fff6c9',
-    desc: '90 damage, and the charge arcs to 3 nearby bugs.',
+    id: 'aetherium', name: 'Aetherium', mul: 1.2, cost: 20, chain: 3, chainRange: 140,
+    body: '#d8d2c0', edge: '#5c5647', ink: '#3a3528', glow: '#fff6c9', dot: '#6a6252',
+    desc: 'The charge arcs on to three nearby bugs.',
   },
 };
-
-export const TIERS = [[], ['iron'], ['thermite', 'amethyst'], ['brass', 'lazurite'], ['jade'], ['aetherium']];
-export const MAX_TIER = 5;
+export const SPECIAL_MATERIALS = Object.values(MATERIALS).filter(m => !m.base);
 
 // A letter that is NOT loaded in a chamber is a blank and deals 1 damage. (canon)
 export const BLANK_DMG = 1;
 export const CHAMBERS = 8;          // the boiler feeds eight chambers (canon)
+export const START_CHAMBERS = 1;    // but only one of them is unsealed to begin with
 export const MIN_WORD = 3;
 export const START_PAGES = 5;
 
+// ── loot ───────────────────────────────────────────────────────────────────
+// Common letters fall constantly on the early nights; the rare ones only start
+// showing up once you are deep enough for the bugs to be carrying them.
+export function rollLoot(nightNo, bugTier = 1) {
+  const n = nightNo, t = bugTier;
+  const w = [
+    0,
+    100,
+    18 + n * 5 + t * 6,
+    4 + n * 3.4 + t * 5,
+    0.8 + n * 2.0 + t * 4,
+    0.15 + n * 0.95 + t * 2.4,
+  ];
+  let total = 0;
+  for (let i = 1; i <= MAX_LEVEL; i++) total += w[i];
+  let r = Math.random() * total;
+  let lvl = 1;
+  for (let i = 1; i <= MAX_LEVEL; i++) { r -= w[i]; if (r <= 0) { lvl = i; break; } }
+  const pool = LETTER_LEVELS[lvl].pool;
+  return { letter: pool[(Math.random() * pool.length) | 0], level: lvl };
+}
+
 export const SPECIES = {
   spider: {
-    id: 'spider', name: 'Clockwork Spider', hp: 30, speed: 17, r: 13,
+    id: 'spider', name: 'Clockwork Spider', hp: 30, speed: 74, r: 13,
     legs: 8, gait: 'crawl', bounty: 1, secret: 0.10, drop: 0.16,
     body: '#8a7a5c', trim: '#d8c489',
   },
   roach: {
-    id: 'roach', name: 'Brass Roach', hp: 22, speed: 28, r: 11,
+    id: 'roach', name: 'Brass Roach', hp: 22, speed: 118, r: 11,
     legs: 6, gait: 'scurry', bounty: 1, secret: 0.10, drop: 0.14,
     body: '#9c6a2c', trim: '#f0b451',
   },
   tick: {
-    id: 'tick', name: 'Gear Tick', hp: 10, speed: 22, r: 8,
+    id: 'tick', name: 'Gear Tick', hp: 10, speed: 98, r: 8,
     legs: 6, gait: 'scurry', bounty: 0, secret: 0.04, drop: 0.05,
     body: '#6f6152', trim: '#c3b191',
   },
   beetle: {
-    id: 'beetle', name: 'Ironclad Beetle', hp: 130, speed: 11, r: 19,
+    id: 'beetle', name: 'Ironclad Beetle', hp: 130, speed: 47, r: 19,
     legs: 6, gait: 'lumber', armor: 0.5, bounty: 3, secret: 0.35, drop: 0.34,
     body: '#4d5259', trim: '#98a3ad',
   },
   moth: {
-    id: 'moth', name: 'Cinder Moth', hp: 40, speed: 34, r: 13,
+    id: 'moth', name: 'Cinder Moth', hp: 40, speed: 146, r: 13,
     legs: 6, gait: 'flit', flying: true, bounty: 2, secret: 0.22, drop: 0.24,
     body: '#7b4a63', trim: '#e3b7d0',
   },
   centipede: {
-    id: 'centipede', name: 'Copper Centipede', hp: 95, speed: 20, r: 14,
+    id: 'centipede', name: 'Copper Centipede', hp: 95, speed: 86, r: 14,
     legs: 12, gait: 'crawl', splitOnDeath: ['tick', 'tick'], bounty: 3,
     secret: 0.30, drop: 0.30, body: '#a4552b', trim: '#efa070',
   },
   weaver: {
-    id: 'weaver', name: 'Steam Weaver', hp: 70, speed: 16, r: 15,
+    id: 'weaver', name: 'Steam Weaver', hp: 70, speed: 68, r: 15,
     legs: 8, gait: 'crawl', heals: { rate: 9, range: 120 }, bounty: 3,
     secret: 0.32, drop: 0.30, body: '#5d6b4a', trim: '#b9cf92',
   },
   box: {
-    id: 'box', name: 'The Diabolical Box', hp: 2600, speed: 7, r: 46,
+    id: 'box', name: 'The Diabolical Box', hp: 2600, speed: 31, r: 46,
     legs: 8, gait: 'lumber', armor: 0.25, boss: true, spawns: 'tick',
     bounty: 25, secret: 6, drop: 1, body: '#3f3a33', trim: '#d8ab4c',
   },
