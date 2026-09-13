@@ -98,7 +98,24 @@ function enterLevel(n) {
 function toIntro(n) {
   state = 'intro';
   ui.show('intro');
-  introGo = ui.renderIntro(n, () => beginLevel(n));
+  introGo = ui.renderIntro(n, {
+    onGo: () => beginLevel(n),
+    onBoiler: () => toWorkshop(n),
+  });
+}
+
+// The boiler room on its own, before a level rather than after one.
+function toWorkshop(n) {
+  game.levelNo = n;
+  state = 'boiler';
+  ui.show('boiler');
+  const stash = () => progress.checkpoint(n, snapshot(game));
+  ui.renderBoiler(game, {
+    standalone: true,
+    onNext: () => { stash(); beginLevel(n); },
+    onChange: stash,
+    onMenu: () => { stash(); toTitle(); },
+  });
 }
 
 function beginLevel(n) {
@@ -118,12 +135,16 @@ function toBoiler() {
   ui.show('boiler');
   const stash = () => { if (next <= CAMPAIGN) progress.checkpoint(next, snapshot(game)); };
   stash();
-  ui.renderBoiler(game, () => {
-    if (next > CAMPAIGN) return toWin();
-    game.levelNo = next;
-    stash();
-    toIntro(next);
-  }, stash, () => { stash(); toTitle(); });
+  ui.renderBoiler(game, {
+    onNext: () => {
+      if (next > CAMPAIGN) return toWin();
+      game.levelNo = next;
+      stash();
+      toIntro(next);
+    },
+    onChange: stash,
+    onMenu: () => { stash(); toTitle(); },
+  });
 }
 
 function toWin() {

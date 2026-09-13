@@ -93,6 +93,10 @@ Nothing on the rack is labelled: you read a material off its colour.
 | Jade | ×0.8 | every letter in the word hits harder, +5% per letter of the word |
 | Aetherium | ×1.2 | the charge arcs to 3 nearby bugs |
 
+The boiler room is also reachable without playing a level: the card in front of
+every night has a **Boiler room** button, so you can rearrange the loadout you
+are about to walk in with. Anything you change is checkpointed straight away.
+
 ### Boiler and storage
 
 The boiler runs on between **15 and 50** letters. Everything else lives in

@@ -157,6 +157,9 @@ export function renderHow(onBack) {
           the crucible. Level that letter up and it keeps its material.</p>
           <ul class="mats">${mats}</ul>
           <h3>The boiler room</h3>
+          <p>The boiler room is reachable without playing: the level card in front of every
+          night has a <b>Boiler room</b> button, so you can rearrange the loadout you are about
+          to walk in with.</p>
           <p>Between levels the <b>crucible</b> takes any even number of letters of one level and
           works through them in pairs: each pair becomes one letter of the level above in the
           same material, or — for level ${MAX_LEVEL} pairs — a material on a fresh level 1
@@ -172,20 +175,24 @@ export function renderHow(onBack) {
 }
 
 // ── level card ─────────────────────────────────────────────────────────────
-export function renderIntro(n, onGo) {
+export function renderIntro(n, { onGo, onBoiler }) {
   const def = getLevel(n);
-  const s = $('#intro');
-  s.innerHTML = `
+  const t = $('#intro');
+  t.innerHTML = `
     <div class="plate">
       <div class="crest">${def.boss ? '☠' : '⚙'}</div>
       <p class="kicker">Level ${n}</p>
       <h2>${def.name}</h2>
       <p class="story">${def.flavour}</p>
-      <div class="btns"><button id="b-go" class="big">Open the workshop</button></div>
-      <p class="fine">press Enter</p>
+      <div class="btns">
+        <button id="b-boiler">Boiler room</button>
+        <button id="b-go" class="big">Open the workshop</button>
+      </div>
+      <p class="fine">press Enter to begin &middot; the boiler room is open until you do</p>
     </div>`;
   const go = () => { sfx.clank(); onGo(); };
   $('#b-go').onclick = go;
+  $('#b-boiler').onclick = () => { sfx.clank(); onBoiler(); };
   return go;
 }
 
@@ -201,7 +208,7 @@ function firedWord(entry) {
   }).join('');
 }
 
-export function renderBoiler(game, onNext, onChange, onMenu) {
+export function renderBoiler(game, { onNext, onChange, onMenu, standalone = false } = {}) {
   const s = $('#boiler');
   let selected = [];         // letter ids picked out of either rack
 
@@ -212,6 +219,7 @@ export function renderBoiler(game, onNext, onChange, onMenu) {
     return { ...loot, where: r.where };
   });
   game.pending = [];
+  const nextLevel = standalone ? game.levelNo : game.levelNo + 1;
 
   function draw() {
     const bo = game.boiler;
@@ -252,16 +260,21 @@ export function renderBoiler(game, onNext, onChange, onMenu) {
       <div class="plate wide boilerroom">
         <div class="brhead">
           <div>
-            <p class="kicker">Level ${game.levelNo} cleared</p>
+            <p class="kicker">${standalone
+              ? `Before level ${game.levelNo} — ${getLevel(game.levelNo).name}`
+              : `Level ${game.levelNo} cleared`}</p>
             <h2>The Boiler Room</h2>
           </div>
           <div class="tally">
             <span class="big-num">⚙ ${game.secrets}</span><span class="d">secrets</span>
           </div>
         </div>
-        <p class="d recap">+${game.levelSecrets} secrets · ${game.levelKills} bugs ·
-          ${game.pages}/${START_PAGES} pages intact · the chambers bolt shut again at the next level</p>
-        <p class="recovered"><span class="lbl">Recovered tonight</span> ${recHtml}</p>
+        ${standalone
+          ? `<p class="d recap">Set the boiler up however you like. The chambers bolt shut
+             to one when the level starts, and unseal as you spend them.</p>`
+          : `<p class="d recap">+${game.levelSecrets} secrets · ${game.levelKills} bugs ·
+             ${game.pages}/${START_PAGES} pages intact · the chambers bolt shut again at the next level</p>
+             <p class="recovered"><span class="lbl">Recovered tonight</span> ${recHtml}</p>`}
 
         <div class="cols3">
           <section>
@@ -321,19 +334,19 @@ export function renderBoiler(game, onNext, onChange, onMenu) {
           </section>
         </div>
 
-        <div class="afteraction">
+        ${standalone ? '' : `<div class="afteraction">
           <section>
             <h3>The night in figures</h3>
             ${statsBlock(game.summary())}
           </section>
           ${wordLogHtml(game)}
-        </div>
+        </div>`}
 
         ${short ? `<p class="warn">The boiler needs ${short} more letter${short > 1 ? 's' : ''}
           before it will run.</p>` : ''}
         <div class="btns">
           <button id="b-menu">Main menu</button>
-          <button id="b-next" class="big" ${short ? 'disabled' : ''}>${game.levelNo >= CAMPAIGN ? "Finish" : `To level ${game.levelNo + 1}`} &rarr;</button>
+          <button id="b-next" class="big" ${short ? 'disabled' : ''}>${!standalone && game.levelNo >= CAMPAIGN ? "Finish" : `To level ${nextLevel}`} &rarr;</button>
         </div>
       </div>`;
 
