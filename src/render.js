@@ -198,7 +198,7 @@ function drawParticle(ctx, p) {
 function drawFloater(ctx, f) {
   ctx.save();
   ctx.globalAlpha = Math.min(1, f.t * 1.6);
-  ctx.font = `bold ${f.big ? 20 : 15}px "Courier New", monospace`;
+  ctx.font = `${f.big ? 20 : 16}px 'Special Elite', 'Courier New', monospace`;
   ctx.textAlign = 'center';
   ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,0.75)';
   ctx.strokeText(f.text, f.x, f.y);
@@ -330,7 +330,7 @@ function drawBossBar(ctx, g) {
   const gr = ctx.createLinearGradient(x0, 0, x0 + w, 0);
   gr.addColorStop(0, '#a5381f'); gr.addColorStop(1, '#e6a23c');
   ctx.fillStyle = gr; ctx.fillRect(x0, y0, w * k, 16);
-  ctx.fillStyle = '#f2e6c8'; ctx.font = 'bold 12px Georgia, serif';
+  ctx.fillStyle = '#f2e6c8'; ctx.font = "13px 'IM Fell English SC', Georgia, serif";
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(boss.sp.name.toUpperCase(), W / 2, y0 + 8);
   ctx.restore();
@@ -526,14 +526,14 @@ function drawShot(ctx, s) {
     ctx.strokeStyle = m.edge; ctx.lineWidth = 2;
     roundRect(ctx, -11, -11, 22, 22, 5); ctx.stroke();
     ctx.fillStyle = m.ink;
-    ctx.font = 'bold 15px Georgia, serif';
+    ctx.font = "15px 'Special Elite', 'Courier New', monospace";
   } else {
     ctx.fillStyle = '#b9ac8d';
     roundRect(ctx, -8, -8, 16, 16, 4); ctx.fill();
     ctx.strokeStyle = '#4a4030'; ctx.lineWidth = 1.5;
     roundRect(ctx, -8, -8, 16, 16, 4); ctx.stroke();
     ctx.fillStyle = '#33291a';
-    ctx.font = 'bold 11px Georgia, serif';
+    ctx.font = "12px 'Special Elite', 'Courier New', monospace";
   }
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(s.shot.ch.toUpperCase(), 0, 1);
@@ -572,17 +572,17 @@ function drawHud(ctx, g, t) {
       ctx.strokeStyle = m.edge; ctx.lineWidth = 2;
       roundRect(ctx, cx + 6, cy + 6, cw - 12, 44, 6); ctx.stroke();
       ctx.fillStyle = m.ink;
-      ctx.font = 'bold 24px Georgia, serif';
+      ctx.font = "24px 'Special Elite', 'Courier New', monospace";
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(letter.letter.toUpperCase(), cx + cw / 2 - 7, cy + 27);
-      ctx.font = '8px Georgia, serif';
+      ctx.font = "9px 'IM Fell English SC', Georgia, serif";
       ctx.save();
       ctx.translate(cx + cw - 13, cy + 28); ctx.rotate(Math.PI / 2);
       ctx.fillText(m.name.toUpperCase(), 0, 0);
       ctx.restore();
     } else {
       ctx.fillStyle = 'rgba(255,230,180,0.12)';
-      ctx.font = '11px Georgia, serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = "11px 'IM Fell English', Georgia, serif"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText('— empty —', cx + cw / 2, cy + 28);
     }
     ctx.restore();
@@ -599,12 +599,12 @@ function drawHud(ctx, g, t) {
 
   ctx.textBaseline = 'middle';
   if (g.message) {
-    ctx.fillStyle = '#e39a78'; ctx.font = 'italic 17px Georgia, serif'; ctx.textAlign = 'center';
+    ctx.fillStyle = '#e39a78'; ctx.font = "italic 17px 'IM Fell English', Georgia, serif"; ctx.textAlign = 'center';
     ctx.fillText(g.message.text, W / 2, ry + 23);
   } else if (g.typed) {
     ctx.textAlign = 'left';
     let tx = rx + 16;
-    ctx.font = 'bold 26px "Courier New", monospace';
+    ctx.font = "26px 'Special Elite', 'Courier New', monospace";
     const lit = new Set();
     for (const ch of g.typed) {
       let mat = null;
@@ -624,43 +624,43 @@ function drawHud(ctx, g, t) {
     ctx.fillRect(tx + 2, ry + 10, 12, 26);
   } else {
     ctx.fillStyle = 'rgba(230,214,180,0.35)';
-    ctx.font = 'italic 16px Georgia, serif'; ctx.textAlign = 'center';
+    ctx.font = "italic 16px 'IM Fell English', Georgia, serif"; ctx.textAlign = 'center';
     ctx.fillText('type a word, then press Enter', W / 2, ry + 23);
   }
 
   // left readouts
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = '#e8d7ae'; ctx.font = 'bold 15px Georgia, serif';
+  ctx.fillStyle = '#e8d7ae'; ctx.font = "17px 'IM Fell English SC', Georgia, serif";
   ctx.fillText(`LEVEL ${g.levelNo}`, 16, top + 28);
-  ctx.font = 'italic 13px Georgia, serif'; ctx.fillStyle = '#bfa87c';
+  ctx.font = "italic 14px 'IM Fell English', Georgia, serif"; ctx.fillStyle = '#bfa87c';
   ctx.fillText(g.level ? g.level.name : '', 16, top + 47);
-  ctx.font = 'bold 14px Georgia, serif'; ctx.fillStyle = '#ffd66b';
+  ctx.font = "14px 'Special Elite', 'Courier New', monospace"; ctx.fillStyle = '#ffd66b';
   ctx.fillText(`⚙ ${g.secrets} secrets`, 16, top + 72);
-  ctx.fillStyle = '#e8d7ae'; ctx.font = '13px Georgia, serif';
+  ctx.fillStyle = '#e8d7ae'; ctx.font = "13px 'Special Elite', 'Courier New', monospace";
   ctx.fillText(`score ${g.score}`, 16, top + 92);
   ctx.fillStyle = '#d79a7a';
   ctx.fillText(`pages ${g.pages}/${START_PAGES}   lost ${g.lost}`, 16, top + 112);
-  ctx.fillStyle = '#9fb6a0'; ctx.font = 'italic 12px Georgia, serif';
+  ctx.fillStyle = '#9fb6a0'; ctx.font = "italic 13px 'IM Fell English', Georgia, serif";
   ctx.fillText(`word of the day: ${g.wotd}`, 16, top + 132);
 
   // right readouts
   ctx.textAlign = 'right';
   const left = Math.max(0, g.spawns.length - g.spawnIdx) + g.bugs.length;
-  ctx.fillStyle = '#e8d7ae'; ctx.font = 'bold 15px Georgia, serif';
+  ctx.fillStyle = '#e8d7ae'; ctx.font = "17px 'IM Fell English SC', Georgia, serif";
   ctx.fillText(`${left} bugs remain`, W - 16, top + 28);
-  ctx.font = '13px Georgia, serif'; ctx.fillStyle = '#bfa87c';
+  ctx.font = "13px 'Special Elite', 'Courier New', monospace"; ctx.fillStyle = '#bfa87c';
   ctx.fillText(`${g.stats.words} words · ${g.stats.kills} killed`, W - 16, top + 48);
   if (g.lastWord) {
     ctx.fillStyle = '#ffd66b';
     ctx.fillText(`"${g.lastWord.word}" ×${g.lastWord.res.mult.toFixed(2)} → ${g.lastWord.total}`, W - 16, top + 68);
   }
   // bottom strip: queued letters on the left, controls on the right
-  ctx.textAlign = 'left'; ctx.font = 'bold 13px "Courier New", monospace';
+  ctx.textAlign = 'left'; ctx.font = "13px 'Special Elite', 'Courier New', monospace";
   if (g.fireQueue.length) {
     ctx.fillStyle = '#ffd66b';
     ctx.fillText('in the breech: ' + g.fireQueue.slice(0, 22).map(s => s.ch.toUpperCase()).join(' '), 16, top + 155);
   }
   ctx.textAlign = 'right';
-  ctx.fillStyle = 'rgba(230,214,180,0.4)'; ctx.font = 'italic 12px Georgia, serif';
+  ctx.fillStyle = 'rgba(230,214,180,0.4)'; ctx.font = "italic 13px 'IM Fell English', Georgia, serif";
   ctx.fillText('right-mouse aims by hand · Esc clears, Esc again pauses', W - 16, top + 155);
 }

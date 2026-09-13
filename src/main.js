@@ -184,6 +184,8 @@ function frame(ts) {
   syncMute();
   ui.show('loading');
   ui.setLoading(0, 'Opening the lexicon…');
+  // Wait for the period faces, but never let a slow font host hold up the game.
+  try { await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 2500))]); } catch (_) {}
   const n = await loadDictionary(p => ui.setLoading(p, `Opening the lexicon… ${Math.round(p * 100)}%`));
   ui.setLoading(1, `${n.toLocaleString()} words ready`);
   makeBackground();
