@@ -16,11 +16,19 @@ export class Boiler {
     this.inventory = inventory;
     this.store = store;
     this.open = Math.max(1, Math.min(CHAMBERS, open));
-    this.usedSinceUnlock = new Set();
+    this.awaiting = new Set();
     this.bag = [];
     this.chambers = new Array(CHAMBERS).fill(null);
     this.reshuffle();
     this.refill();
+    this.arm();
+  }
+
+  // Remember exactly which letters are loaded right now. Every one of them has
+  // to be fired before another chamber unseals — a chamber that refills in the
+  // meantime does not count, so you really do have to clear the board.
+  arm() {
+    this.awaiting = new Set(this.chambers.slice(0, this.open).filter(Boolean).map(c => c.id));
   }
 
   reshuffle() {
@@ -80,10 +88,10 @@ export class Boiler {
   // by spending what the open ones hold.
   reseal() {
     this.open = START_CHAMBERS;
-    this.usedSinceUnlock.clear();
     this.chambers.fill(null);
     this.reshuffle();
     this.refill();
+    this.arm();
   }
 
   find(id) {
@@ -134,6 +142,7 @@ export class Boiler {
   remove(id) {
     this.inventory = this.inventory.filter(l => l.id !== id);
     this.bag = this.bag.filter(l => l.id !== id);
+    this.awaiting.delete(id);
     const i = this.chambers.findIndex(c => c && c.id === id);
     if (i >= 0) this.chambers[i] = null;
     this.refill();
@@ -166,6 +175,36 @@ export class Boiler {
     return toBoiler && !this.full()
       ? this.add(letter, mat, level)
       : this.stow(letter, mat, level).letter;
+  }
+
+  // Any even number of letters of one level can go in at once — the crucible
+  // just works through them two at a time.
+  canCombineMany(list) {
+    if (!list || list.length < 2 || list.length % 2) return false;
+    const lvl = list[0].level;
+    return list.every(l => l.level === lvl);
+  }
+
+  // Conservative: only a pair drawn entirely from the boiler is assumed to put
+  // something back into it, so the minimum can never be undershot by surprise.
+  strandsMany(list) {
+    const out = list.filter(l => this.inBoiler(l.id)).length;
+    let back = 0;
+    for (let i = 0; i + 1 < list.length; i += 2) {
+      if (this.inBoiler(list[i].id) && this.inBoiler(list[i + 1].id)) back++;
+    }
+    back = Math.min(back, Math.max(0, MAX_BOILER - (this.inventory.length - out)));
+    return this.inventory.length - out + back < MIN_BOILER;
+  }
+
+  combineMany(list) {
+    if (!this.canCombineMany(list)) return [];
+    const made = [];
+    for (let i = 0; i + 1 < list.length; i += 2) {
+      const r = this.combine(list[i], list[i + 1]);
+      if (r) made.push(r);
+    }
+    return made;
   }
 
   // Secrets keep the boiler topped up when the bugs have not been generous.
@@ -241,22 +280,27 @@ export class Boiler {
   }
 
   // Called once the word has been committed to the cannon. A chamber unseals
-  // only when every chamber currently open has been drained since the last one
-  // opened — never more than one at a time, and never on a partial sweep.
+  // only when every letter that was loaded when the last one opened has been
+  // fired — one chamber at a time, and never on a partial sweep.
   spend(slots) {
     for (const i of slots) {
+      const c = this.chambers[i];
+      if (c) this.awaiting.delete(c.id);
       this.chambers[i] = null;
-      this.usedSinceUnlock.add(i);
     }
-    let unsealed = 0;
-    if (this.open < CHAMBERS && this.inventory.length > this.open) {
-      let all = true;
-      for (let i = 0; i < this.open; i++) if (!this.usedSinceUnlock.has(i)) { all = false; break; }
-      if (all) { this.open++; this.usedSinceUnlock.clear(); unsealed = 1; }
+    const canOpen = this.open < CHAMBERS && this.inventory.length > this.open;
+    if (canOpen && this.awaiting.size === 0) {
+      this.open++;
+      this.refill();
+      this.arm();
+      return 1;
     }
     this.refill();
-    return unsealed;
+    return 0;
   }
+
+  // How much of the current set is still loaded, for the readout.
+  awaitingCount() { return this.awaiting.size; }
 
   serialize() {
     const pack = l => `${l.letter}:${l.mat}:${l.level}`;

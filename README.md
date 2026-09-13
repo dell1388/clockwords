@@ -32,8 +32,9 @@ next one; with nothing in the room the breech simply holds until something walks
 in.
 
 **Chambers unseal as you use them, and bolt shut again every level.** The boiler
-has 8 chambers but each level opens with only **one**. Drain *every* open chamber
-and exactly one more unseals — a partial sweep opens nothing. The boiler will not
+has 8 chambers but each level opens with only **one**. Fire *every letter that was
+loaded when the last chamber opened* and exactly one more unseals — letters that
+refill in the meantime don't count, so you really do have to clear the board. The boiler will not
 load the same letter into two chambers at once unless it has nothing else to
 load, and never fills more chambers than it has letters.
 
@@ -66,14 +67,15 @@ drawn as **dots under the glyph**, and it is the level that sets the damage.
 
 ### The crucible
 
-Bugs only ever drop plain **Iron**. In the boiler room you put two letters of
-the same level in the crucible:
+Bugs only ever drop plain **Iron**. In the boiler room the crucible takes any
+**even number of letters of one level** and works through them in pairs:
 
-- **Levels 1–4** → one letter of the level above, same material.
-- **Two level 5s** → they burn away and leave a **material** behind, seeded on a
+- **Levels 1–4** → each pair becomes one letter of the level above, same material.
+- **Level 5 pairs** → they burn away and leave a **material** behind, seeded on a
   fresh level 1 letter. This is the only way a material is ever made.
 
-The crucible chooses which letter comes out, not you. Level a materialised
+The crucible chooses what comes out, not you. A row of level buttons selects
+every letter of a grade at once, so a big batch is one click. Level a materialised
 letter up and it keeps its material.
 
 Secrets buy a fresh level 1 Iron letter (3 ⚙) and come back from scrapping (1 ⚙).

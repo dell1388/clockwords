@@ -25,7 +25,8 @@ export function show(id) {
 export function chip(letter, mat, level, extra = '') {
   const m = MATERIALS[mat];
   const dots = `<i>${'<s></s>'.repeat(level)}</i>`;
-  return `<span class="chip ${extra}" style="--body:${m.body};--edge:${m.edge};--ink:${m.ink};--glow:${m.glow};--dot:${m.dot}">
+  return `<span class="chip ${extra}" title="level ${level} · ${m.name}"
+    style="--body:${m.body};--edge:${m.edge};--ink:${m.ink};--glow:${m.glow};--dot:${m.dot}">
     <b>${letter.toUpperCase()}</b>${dots}</span>`;
 }
 const swatch = mat => {
@@ -115,8 +116,10 @@ export function renderHow(onBack) {
           clears and tells you so — it costs you nothing but the typing.</p>
           <p>The boiler has <b>${CHAMBERS} chambers</b>, but every level starts with
           <b>${START_CHAMBERS === 1 ? 'only one unsealed' : `${START_CHAMBERS} unsealed`}</b>.
-          Drain <i>every</i> open chamber and exactly one more unseals — a partial sweep opens
-          nothing. At the top of the next level they all bolt shut again.</p>
+          Fire <i>every letter that was loaded when the last chamber opened</i> and exactly one
+          more unseals. Letters that refill in the meantime do not count towards it, so you
+          really do have to clear the board. At the top of the next level they all bolt shut
+          again.</p>
           <p>The boiler never loads the same letter into two chambers at once unless it has
           nothing else left to load, and it never fills more chambers than it has letters.</p>
           <p>If a character you type is sitting in an unsealed chamber, the chamber reads as
@@ -154,10 +157,11 @@ export function renderHow(onBack) {
           the crucible. Level that letter up and it keeps its material.</p>
           <ul class="mats">${mats}</ul>
           <h3>The boiler room</h3>
-          <p>Between levels: <b>combine</b> two letters of the same level into one of the level
-          above in the same material — the crucible picks which letter, not you. Two level
-          ${MAX_LEVEL}s instead yield a material. Scrap what you do not want for a secret, and
-          spend <b>${STOKE_COST} secrets</b> to stoke one fresh level 1 letter out of the boiler.</p>
+          <p>Between levels the <b>crucible</b> takes any even number of letters of one level and
+          works through them in pairs: each pair becomes one letter of the level above in the
+          same material, or — for level ${MAX_LEVEL} pairs — a material on a fresh level 1
+          letter. The crucible picks what comes out, not you. Scrap what you do not want for a
+          secret, and spend <b>${STOKE_COST} secrets</b> to stoke one fresh level 1 letter.</p>
           <p>The boiler runs on between <b>${MIN_BOILER}</b> and <b>${MAX_BOILER}</b> letters.
           Anything else lives in <b>storage</b>, out of the mix, until you draw it back.</p>
         </div>
@@ -206,13 +210,16 @@ export function renderBoiler(game, onNext, onChange) {
         ${chip(l.letter, l.mat, l.level)}</button>`).join('');
 
     const picked = selected.map(id => bo.find(id)).filter(Boolean);
-    const a = picked[0], b = picked[1];
-    const pairOk = bo.canCombine(a, b);
-    const combineStrands = pairOk &&
-      bo.wouldStrand([a.id, b.id], bo.combineLandsInBoiler(a, b) ? 1 : 0);
-    const canCombine = pairOk && !combineStrands;
-    const one = picked.length === 1 ? a : null;
+    const evenOk = bo.canCombineMany(picked);
+    const combineStrands = evenOk && bo.strandsMany(picked);
+    const canCombine = evenOk && !combineStrands;
+    const pickedLevel = picked.length ? picked[0].level : 0;
+    const sameLevel = picked.length > 0 && picked.every(l => l.level === pickedLevel);
+    const one = picked.length === 1 ? picked[0] : null;
     const scrapStrands = !!one && bo.wouldStrand([one.id]);
+    const all = [...bo.inventory, ...bo.store];
+    const byLevel = {};
+    for (const l of all) byLevel[l.level] = (byLevel[l.level] || 0) + 1;
 
     const fromBoiler = picked.filter(l => bo.inBoiler(l.id));
     const fromStore = picked.filter(l => !bo.inBoiler(l.id));
@@ -264,27 +271,35 @@ export function renderBoiler(game, onNext, onChange) {
 
           <section>
             <h3>Crucible</h3>
-            <div class="slots">
-              <div class="slot">${a ? chip(a.letter, a.mat, a.level) : '<span class="d">slot</span>'}</div>
-              <span class="plus">+</span>
-              <div class="slot">${b ? chip(b.letter, b.mat, b.level) : '<span class="d">slot</span>'}</div>
+            <p class="d">Feed it any <b>even</b> number of letters of one level and it works
+            through them two at a time.</p>
+            <div class="levelpicks">
+              ${Object.keys(byLevel).sort().map(lv => `
+                <button class="letbtn ${pickedLevel === +lv && sameLevel ? 'sel' : ''}"
+                  data-all="${lv}">${'•'.repeat(+lv)} <sup>${byLevel[lv]}</sup></button>`).join('')}
+              ${selected.length ? '<button class="letbtn" data-clear="1">clear</button>' : ''}
             </div>
+            <div class="feed">${picked.length
+              ? picked.map(l => chip(l.letter, l.mat, l.level)).join('')
+              : '<span class="d">nothing loaded</span>'}</div>
             ${canCombine
-              ? (a.level >= MAX_LEVEL
-                ? `<p class="d hot">Two level ${MAX_LEVEL} letters burn away and leave a
-                   <b>material</b> behind, seeded on a fresh level 1 letter. This is the only
-                   way a material is ever made — and the crucible chooses both.</p>
+              ? (pickedLevel >= MAX_LEVEL
+                ? `<p class="d hot">${picked.length} level ${MAX_LEVEL} letters burn away and
+                   leave <b>${picked.length / 2} material${picked.length > 2 ? 's' : ''}</b>
+                   behind, each on a fresh level 1 letter. This is the only way a material is
+                   ever made — and the crucible chooses both.</p>
                    <div class="matrow">${SPECIAL_MATERIALS.map(m => swatch(m.id)).join('')}</div>
                    <button id="b-fuse" class="big">Fire the crucible</button>`
-                : `<p class="d">Two level ${a.level} letters make one level ${a.level + 1} in the
-                   same material. The crucible decides which letter comes out.</p>
+                : `<p class="d">${picked.length} × level ${pickedLevel} &rarr;
+                   <b>${picked.length / 2} × level ${pickedLevel + 1}</b>, same material.
+                   The crucible decides which letters come out.</p>
                    <button id="b-fuse" class="big">Combine</button>`)
               : `<p class="d">${combineStrands
-                  ? `Combining these would leave the boiler under ${MIN_BOILER} letters.
-                     Draw one back out of storage, or stoke a new one, first.`
-                  : picked.length < 2
-                    ? 'Select two letters of the same level. Two level 5s make a material.'
-                    : 'Both letters must be the same level.'}</p>`}
+                  ? `That would leave the boiler under ${MIN_BOILER} letters. Draw one back out
+                     of storage, or stoke a new one, first.`
+                  : !picked.length ? 'Pick a level above, or click letters directly.'
+                    : !sameLevel ? 'Every letter must be the same level.'
+                      : 'Load an even number — the crucible works in pairs.'}</p>`}
             <div class="benchrow">
               <button id="b-stoke" class="small" ${game.secrets >= STOKE_COST ? '' : 'disabled'}
                 >Stoke for ${STOKE_COST} ⚙</button>
@@ -305,9 +320,18 @@ export function renderBoiler(game, onNext, onChange) {
     s.querySelectorAll('[data-id]').forEach(n => n.onclick = () => {
       const id = +n.dataset.id;
       if (selected.includes(id)) selected = selected.filter(x => x !== id);
-      else { selected.push(id); if (selected.length > 2) selected.shift(); }
+      else selected.push(id);
       sfx.key(); draw();
     });
+
+    s.querySelectorAll('[data-all]').forEach(n => n.onclick = () => {
+      const lv = +n.dataset.all;
+      const ids = all.filter(l => l.level === lv).map(l => l.id);
+      if (ids.length % 2) ids.pop();                    // the crucible works in pairs
+      selected = ids;
+      sfx.key(); draw();
+    });
+    s.querySelectorAll('[data-clear]').forEach(n => n.onclick = () => { selected = []; sfx.key(); draw(); });
 
     const on = (id, fn) => { const n = $(id); if (n) n.onclick = fn; };
     on('#b-stow', () => { for (const l of fromBoiler) bo.toStore(l.id); selected = []; sfx.clank(); draw(); });
@@ -315,11 +339,17 @@ export function renderBoiler(game, onNext, onChange) {
     on('#b-scrap', () => { if (scrapStrands) return; bo.discard(one.id); game.secrets += 1; selected = []; sfx.clank(); draw(); });
     on('#b-fuse', () => {
       if (!canCombine) return;
-      const made = bo.combine(a, b);
+      const made = bo.combineMany(picked);
       selected = []; sfx.overload();
-      if (made) toast({ name: `${made.letter.toUpperCase()} — level ${made.level}`,
-        desc: made.mat === 'iron' ? 'out of the crucible'
-          : `out of the crucible in ${MATERIALS[made.mat].name}`, pts: made.level });
+      if (made.length === 1) {
+        const m = made[0];
+        toast({ name: `${m.letter.toUpperCase()} — level ${m.level}`,
+          desc: m.mat === 'iron' ? 'out of the crucible'
+            : `out of the crucible in ${MATERIALS[m.mat].name}`, pts: m.level });
+      } else if (made.length) {
+        toast({ name: made.map(m => m.letter.toUpperCase()).join(' '),
+          desc: `${made.length} out of the crucible`, pts: made.length });
+      }
       draw();
     });
     on('#b-stoke', () => {

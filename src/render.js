@@ -4,6 +4,8 @@ import { W, H, PLAY_H, MACHINE, MUZZLE, PIVOT, DOORS, SEALED_DOORS, buildPath } 
 import { MATERIALS, CHAMBERS, START_PAGES, MAX_LEVEL } from './content.js';
 
 const TAU = Math.PI * 2;
+const SHOT_R = 13;          // one radius for every letter fired
+const CHAMBER_R = 27;       // and one for every tank on the rack
 let bg = null;
 
 export function roundRect(x, px, py, w, h, r) {
@@ -598,7 +600,7 @@ function drawBug(ctx, b, t) {
 function drawShot(ctx, s) {
   const m = s.shot.mat ? MATERIALS[s.shot.mat] : null;
   const lvl = s.shot.level || 0;
-  const rad = m ? 9 + lvl * 1.6 : 7;
+  const rad = SHOT_R;                     // every letter is the same size
   ctx.save();
   for (let i = 0; i < s.trail.length; i++) {
     const p = s.trail[i];
@@ -623,17 +625,17 @@ function drawShot(ctx, s) {
     ctx.strokeStyle = m.edge; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(0, 0, rad, 0, TAU); ctx.stroke();
     ctx.fillStyle = m.ink;
-    ctx.font = `${Math.round(rad * 1.25)}px 'Special Elite', 'Courier New', monospace`;
+    ctx.font = "15px 'Special Elite', 'Courier New', monospace";
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(s.shot.ch.toUpperCase(), 0, -rad * 0.16);
-    drawDots(ctx, 0, rad * 0.6, lvl, Math.max(1, rad * 0.11), m.dot);
+    ctx.fillText(s.shot.ch.toUpperCase(), 0, -3);
+    drawDots(ctx, 0, 8, lvl, 1.5, m.dot);
   } else {
     ctx.fillStyle = '#b9ac8d';
     ctx.beginPath(); ctx.arc(0, 0, rad, 0, TAU); ctx.fill();
     ctx.strokeStyle = '#4a4030'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(0, 0, rad, 0, TAU); ctx.stroke();
     ctx.fillStyle = '#33291a';
-    ctx.font = "11px 'Special Elite', 'Courier New', monospace";
+    ctx.font = "14px 'Special Elite', 'Courier New', monospace";
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(s.shot.ch.toUpperCase(), 0, 0);
   }
@@ -651,81 +653,75 @@ function drawHud(ctx, g, t) {
   ctx.fillStyle = '#c9a04a'; ctx.fillRect(0, top, W, 4);
   ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, top + 4, W, 3);
 
-  // chambers — colour is the only mark of material; the dots are the level
-  const n = CHAMBERS, cw = 64, gap = 8;
-  const total = n * cw + (n - 1) * gap;
-  let cx = (W - total) / 2;
-  const cy = top + 18;
+  // chambers — circular tanks, every one the same size; colour is the only
+  // mark of material and the dots are the level
+  const n = CHAMBERS, gap = 74;
+  const total = (n - 1) * gap + CHAMBER_R * 2;
+  const cy = top + 20 + CHAMBER_R;
+  const first = (W - total) / 2 + CHAMBER_R;
   const reserved = g.boiler.preview(g.typed || '');
   for (let i = 0; i < n; i++) {
+    const cx = first + i * gap;
     const open = i < g.boiler.open;
     const letter = open ? g.boiler.chambers[i] : null;
     const spent = reserved.has(i);
     ctx.save();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+    // the tank itself
     ctx.fillStyle = open ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.72)';
-    roundRect(ctx, cx, cy, cw, 56, 8); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy, CHAMBER_R, 0, TAU); ctx.fill();
     ctx.strokeStyle = open ? '#8d6f35' : '#4a3a1c'; ctx.lineWidth = 2;
-    roundRect(ctx, cx, cy, cw, 56, 8); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, CHAMBER_R, 0, TAU); ctx.stroke();
 
     if (!open) {
-      // sealed: a riveted plate over the tank
-      ctx.fillStyle = 'rgba(120,96,48,0.22)';
-      roundRect(ctx, cx + 7, cy + 7, cw - 14, 42, 5); ctx.fill();
-      ctx.fillStyle = 'rgba(190,160,96,0.35)';
-      for (const dx of [12, cw - 12]) for (const dy of [13, 43]) {
-        ctx.beginPath(); ctx.arc(cx + dx, cy + dy, 2.2, 0, TAU); ctx.fill();
-      }
       ctx.strokeStyle = 'rgba(190,160,96,0.30)'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(cx + 16, cy + 28); ctx.lineTo(cx + cw - 16, cy + 28); ctx.stroke();
-    } else if (letter && spent) {
-      // Typed, not yet fired: the tank already reads as drawn down.
-      const m = MATERIALS[letter.mat];
-      ctx.fillStyle = 'rgba(0,0,0,0.55)';
-      roundRect(ctx, cx + 6, cy + 6, cw - 12, 44, 7); ctx.fill();
-      ctx.save();
-      ctx.setLineDash([5, 4]);
-      ctx.strokeStyle = m.glow; ctx.lineWidth = 2;
-      roundRect(ctx, cx + 6, cy + 6, cw - 12, 44, 7); ctx.stroke();
-      ctx.restore();
-      ctx.globalAlpha = 0.26;
-      ctx.fillStyle = m.glow;
-      ctx.font = "26px 'Special Elite', 'Courier New', monospace";
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(letter.letter.toUpperCase(), cx + cw / 2, cy + 24);
-      drawDots(ctx, cx + cw / 2, cy + 42, letter.level, 2.4, m.dot);
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = m.glow;
-      ctx.beginPath(); ctx.arc(cx + cw - 12, cy + 12, 3, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(cx - 13, cy); ctx.lineTo(cx + 13, cy); ctx.stroke();
+      ctx.fillStyle = 'rgba(190,160,96,0.35)';
+      for (const a of [0, 1, 2, 3]) {
+        const th = Math.PI / 4 + a * Math.PI / 2;
+        ctx.beginPath(); ctx.arc(cx + Math.cos(th) * 17, cy + Math.sin(th) * 17, 2.2, 0, TAU); ctx.fill();
+      }
     } else if (letter) {
       const m = MATERIALS[letter.mat];
-      ctx.shadowColor = m.glow; ctx.shadowBlur = 11;
-      ctx.fillStyle = m.body;
-      roundRect(ctx, cx + 6, cy + 6, cw - 12, 44, 7); ctx.fill();
-      ctx.shadowBlur = 0;
-      const sh = ctx.createLinearGradient(0, cy + 6, 0, cy + 50);
-      sh.addColorStop(0, 'rgba(255,255,255,0.22)');
-      sh.addColorStop(1, 'rgba(0,0,0,0.25)');
-      ctx.fillStyle = sh;
-      roundRect(ctx, cx + 6, cy + 6, cw - 12, 44, 7); ctx.fill();
-      ctx.strokeStyle = m.edge; ctx.lineWidth = 2;
-      roundRect(ctx, cx + 6, cy + 6, cw - 12, 44, 7); ctx.stroke();
-      ctx.fillStyle = m.ink;
-      ctx.font = "26px 'Special Elite', 'Courier New', monospace";
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(letter.letter.toUpperCase(), cx + cw / 2, cy + 24);
-      drawDots(ctx, cx + cw / 2, cy + 42, letter.level, 2.4, m.dot);
+      const r = CHAMBER_R - 5;
+      if (spent) {
+        // typed, not yet fired: the tank already reads as drawn down
+        ctx.save();
+        ctx.setLineDash([5, 4]);
+        ctx.strokeStyle = m.glow; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.stroke();
+        ctx.restore();
+        ctx.globalAlpha = 0.26;
+      } else {
+        ctx.shadowColor = m.glow; ctx.shadowBlur = 11;
+        ctx.fillStyle = m.body;
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.fill();
+        ctx.shadowBlur = 0;
+        const sh = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.4, 1, cx, cy, r);
+        sh.addColorStop(0, 'rgba(255,255,255,0.3)');
+        sh.addColorStop(1, 'rgba(0,0,0,0.3)');
+        ctx.fillStyle = sh;
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.fill();
+        ctx.strokeStyle = m.edge; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.stroke();
+      }
+      ctx.fillStyle = spent ? m.glow : m.ink;
+      ctx.font = "23px 'Special Elite', 'Courier New', monospace";
+      ctx.fillText(letter.letter.toUpperCase(), cx, cy - 5);
+      drawDots(ctx, cx, cy + 13, letter.level, 2.3, spent ? m.glow : m.dot);
+      ctx.globalAlpha = 1;
+      if (spent) { ctx.fillStyle = m.glow; ctx.beginPath(); ctx.arc(cx + 19, cy - 19, 3, 0, TAU); ctx.fill(); }
     } else {
-      ctx.fillStyle = 'rgba(255,230,180,0.12)';
-      ctx.font = "11px 'IM Fell English', Georgia, serif";
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('refilling', cx + cw / 2, cy + 28);
+      ctx.fillStyle = 'rgba(255,230,180,0.14)';
+      ctx.font = "10px 'IM Fell English', Georgia, serif";
+      ctx.fillText('refilling', cx, cy);
     }
     ctx.restore();
-    cx += cw + gap;
   }
 
   // typed word rack
-  const rx = (W - total) / 2, ry = cy + 66;
+  const rx = (W - total) / 2, ry = cy + CHAMBER_R + 10;
   ctx.fillStyle = 'rgba(0,0,0,0.55)';
   roundRect(ctx, rx, ry, total, 46, 8); ctx.fill();
   ctx.strokeStyle = g.rackFlash > 0 ? '#c95330' : '#8d6f35';

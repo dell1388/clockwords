@@ -49,9 +49,9 @@ above. Change it freely.
   making the level (not the material) set the damage: 8 / 24 / 60 / 140 / 320.
   The original's dots meant a flat 5 damage each; the steep curve here is a
   deliberate departure, so a rare letter feels rare.
-- **The crucible.** Two letters of the same level fuse into one of the level
-  above, keeping the material, with the resulting letter chosen at random from
-  that level's pool. Two level 5s instead yield a material on a fresh level 1
+- **The crucible.** Any even number of letters of one level goes in at once and is
+  worked through in pairs: each pair fuses into one of the level above, keeping the
+  material, with the resulting letter chosen at random from that level's pool. Two level 5s instead yield a material on a fresh level 1
   letter — the only source of materials in the game. The original transmuted by
   material value and let you buy materials with secrets.
 - **Materials** are read by colour with no written label, and are applied as a
@@ -60,9 +60,9 @@ above. Change it freely.
 - **Blanks are flat.** 3 damage, untouched by word length, repeats, Jade or the
   word of the day. The original's 1-damage blank scaled with nothing either, but
   the exact figure is ours.
-- **Chambers unseal one at a time**, starting from one, each time *every* open
-  chamber has been drained since the last unseal — and reseal at the top of every
-  level. The boiler also refuses to load duplicate letters while it has distinct
+- **Chambers unseal one at a time**, starting from one, each time every letter
+  that was loaded at the previous unseal has been fired — and reseal at the top of
+  every level. The boiler also refuses to load duplicate letters while it has distinct
   ones left. The original ran all eight from the start.
 - **Boiler and storage.** A 15–50 letter working boiler with everything else
   parked in storage is entirely ours; the original had no cap.
