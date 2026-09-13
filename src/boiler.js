@@ -3,8 +3,8 @@
 // word into shots.
 
 import {
-  MATERIALS, BLANK_DMG, CHAMBERS, START_CHAMBERS,
-  LETTER_LEVELS, MAX_LEVEL, levelOf, levelDamage,
+  MATERIALS, SPECIAL_MATERIALS, BLANK_DMG, CHAMBERS, START_CHAMBERS,
+  MIN_BOILER, MAX_BOILER, LETTER_LEVELS, MAX_LEVEL, levelOf, levelDamage,
 } from './content.js';
 
 let nextId = 1;
@@ -12,8 +12,9 @@ export const makeLetter = (letter, mat = 'iron', level = null) =>
   ({ id: nextId++, letter, mat, level: level || levelOf(letter) });
 
 export class Boiler {
-  constructor(inventory = [], open = START_CHAMBERS) {
+  constructor(inventory = [], store = [], open = START_CHAMBERS) {
     this.inventory = inventory;
+    this.store = store;
     this.open = Math.max(1, Math.min(CHAMBERS, open));
     this.spentSinceUnlock = 0;
     this.bag = [];
@@ -44,6 +45,55 @@ export class Boiler {
 
   loaded() { return this.chambers.filter(Boolean).length; }
   sealed() { return CHAMBERS - this.open; }
+  full() { return this.inventory.length >= MAX_BOILER; }
+  short() { return Math.max(0, MIN_BOILER - this.inventory.length); }
+
+  // Every level starts with the chambers bolted shut again; you earn them back
+  // by spending what the open ones hold.
+  reseal() {
+    this.open = START_CHAMBERS;
+    this.spentSinceUnlock = 0;
+    this.chambers.fill(null);
+    this.reshuffle();
+    this.refill();
+  }
+
+  find(id) {
+    return this.inventory.find(l => l.id === id) || this.store.find(l => l.id === id) || null;
+  }
+  inBoiler(id) { return this.inventory.some(l => l.id === id); }
+
+  // Letters can be parked in storage and drawn back out between levels.
+  toStore(id) {
+    const l = this.inventory.find(x => x.id === id);
+    if (!l) return false;
+    this.remove(id);
+    this.store.push(l);
+    return true;
+  }
+  toBoiler(id) {
+    if (this.full()) return false;
+    const i = this.store.findIndex(x => x.id === id);
+    if (i < 0) return false;
+    const [l] = this.store.splice(i, 1);
+    this.inventory.push(l);
+    this.bag.push(l);
+    this.refill();
+    return true;
+  }
+  // Where a new letter lands: the boiler while there is room, storage after.
+  stow(letter, mat = 'iron', level = null) {
+    if (!this.full()) return { where: 'boiler', letter: this.add(letter, mat, level) };
+    const l = makeLetter(letter, mat, level);
+    this.store.push(l);
+    return { where: 'store', letter: l };
+  }
+  discard(id) {
+    const i = this.store.findIndex(x => x.id === id);
+    if (i >= 0) { this.store.splice(i, 1); return true; }
+    if (this.inBoiler(id)) { this.remove(id); return true; }
+    return false;
+  }
 
   add(letter, mat = 'iron', level = null) {
     const l = makeLetter(letter, mat, level);
@@ -61,29 +111,52 @@ export class Boiler {
     this.refill();
   }
 
-  // Two letters of the same level fuse into one letter of the level above,
-  // in the same material. You choose which letter of that level you get.
+  // Two letters of the same level go into the crucible. Below the top of the
+  // rack they come out one level higher, in the same material. Two level-5
+  // letters burn away entirely and leave a material behind, seeded on a fresh
+  // level-1 letter — which is the only way a material is ever made.
+  // Either way the crucible, not you, decides which letter comes out.
   canCombine(a, b) {
-    return !!a && !!b && a.id !== b.id && a.level === b.level && a.level < MAX_LEVEL;
+    return !!a && !!b && a.id !== b.id && a.level === b.level;
   }
 
-  combine(a, b, letter) {
+  combine(a, b) {
     if (!this.canCombine(a, b)) return null;
-    const level = a.level + 1;
-    if (!LETTER_LEVELS[level].pool.includes(letter)) return null;
-    const mat = a.mat !== 'iron' ? a.mat : b.mat;
-    this.remove(a.id); this.remove(b.id);
-    return this.add(letter, mat, level);
+    const pick = arr => arr[(Math.random() * arr.length) | 0];
+    let level, letter, mat;
+    if (a.level >= MAX_LEVEL) {
+      level = 1;
+      letter = pick(LETTER_LEVELS[1].pool);
+      mat = pick(SPECIAL_MATERIALS).id;
+    } else {
+      level = a.level + 1;
+      letter = pick(LETTER_LEVELS[level].pool);
+      mat = a.mat !== 'iron' ? a.mat : b.mat;
+    }
+    const toBoiler = this.inBoiler(a.id) || this.inBoiler(b.id);
+    this.discard(a.id); this.discard(b.id);
+    return toBoiler && !this.full()
+      ? this.add(letter, mat, level)
+      : this.stow(letter, mat, level).letter;
   }
 
-  // A letter has to reach level 5 before it is rare enough to hold a material.
-  canRefit(l) { return !!l && l.level >= MAX_LEVEL; }
+  // Secrets keep the boiler topped up when the bugs have not been generous.
+  stoke() {
+    const pool = LETTER_LEVELS[1].pool;
+    return this.stow(pool[(Math.random() * pool.length) | 0], 'iron', 1);
+  }
 
-  refit(id, mat) {
-    const l = this.inventory.find(x => x.id === id);
-    if (!l || !this.canRefit(l) || !MATERIALS[mat]) return false;
-    l.mat = mat;
-    return true;
+  // Which chambers the word in the rack would spend, so the tanks can read as
+  // empty the moment you type the letter.
+  preview(word) {
+    const taken = new Set();
+    for (const ch of word.toLowerCase()) {
+      for (let i = 0; i < this.open; i++) {
+        const c = this.chambers[i];
+        if (c && c.letter === ch && !taken.has(i)) { taken.add(i); break; }
+      }
+    }
+    return taken;
   }
 
   /**
@@ -120,8 +193,7 @@ export class Boiler {
     const shots = picks.map((p, i) => {
       const l = p.l;
       const m = l ? MATERIALS[l.mat] : null;
-      const base = l ? levelDamage(l.level) * m.mul : BLANK_DMG;
-      const dmg = Math.max(1, Math.round(base * mult));
+      const dmg = l ? Math.max(1, Math.round(levelDamage(l.level) * m.mul * mult)) : BLANK_DMG;
       const shot = {
         ch: chars[i], mat: l ? l.mat : null, level: l ? l.level : 0, dmg,
         pierce: m && m.pierce ? m.pierce : 0,
@@ -156,20 +228,22 @@ export class Boiler {
   }
 
   serialize() {
-    return { open: this.open, letters: this.inventory.map(l => `${l.letter}:${l.mat}:${l.level}`) };
+    const pack = l => `${l.letter}:${l.mat}:${l.level}`;
+    return { open: this.open, letters: this.inventory.map(pack), store: this.store.map(pack) };
   }
 
   static deserialize(data) {
-    const d = Array.isArray(data) ? { open: START_CHAMBERS, letters: data } : (data || {});
-    const letters = (d.letters || []).map(s => {
+    const d = Array.isArray(data) ? { letters: data } : (data || {});
+    const un = arr => (arr || []).map(s => {
       const [letter, mat, lvl] = s.split(':');
       return makeLetter(letter, MATERIALS[mat] ? mat : 'iron', +lvl || undefined);
     });
-    return new Boiler(letters, d.open || START_CHAMBERS);
+    return new Boiler(un(d.letters), un(d.store), d.open || START_CHAMBERS);
   }
 }
 
-// The boiler you start with: ten plain Iron letters off the common rack.
+// The boiler you start with: fifteen plain Iron letters off the common rack —
+// the least it will run on.
 export function startingInventory() {
-  return ['e', 'a', 'r', 's', 't', 'o', 'i', 'n', 'l', 'd'].map(ch => makeLetter(ch));
+  return 'etaoinshrdletao'.split('').map(ch => makeLetter(ch));
 }

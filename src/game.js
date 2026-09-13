@@ -1,6 +1,6 @@
 // game.js — the simulation. Pure state + update(); drawing lives in render.js.
 
-import { SPECIES, MATERIALS, getLevel, START_PAGES, MIN_WORD, rollLoot, levelOf } from './content.js';
+import { SPECIES, MATERIALS, getLevel, START_PAGES, MIN_WORD, rollLoot, FIRE_RPM } from './content.js';
 import { Boiler, startingInventory } from './boiler.js';
 import { isWord, wordOfTheDay } from './dict.js';
 import { sfx } from './audio.js';
@@ -8,9 +8,10 @@ import * as badges from './achievements.js';
 
 export const W = 960, H = 640;
 export const PLAY_H = 470;
-export const MACHINE = { x: 480, y: 418 };
-export const MUZZLE = { x: 480, y: 318 };
-export const PIVOT = { x: 480, y: 394 };
+export const MACHINE = { x: 152, y: 418 };
+export const FLOOR_Y = 418;
+export const MUZZLE = { x: 152, y: 318 };
+export const PIVOT = { x: 152, y: 394 };
 
 // The barrel is mounted on top of the boiler: it swings, but never below level.
 export const clampAim = a => {
@@ -20,16 +21,18 @@ export const clampAim = a => {
   return n;
 };
 export const HORIZON = 158;
-export const DOORS = [{ x: 150, y: 168 }, { x: 480, y: 168 }, { x: 810, y: 168 }];
+// One way in. The other two arches were bricked up years ago.
+export const DOORS = [{ x: 812, y: 168 }];
+export const SEALED_DOORS = [{ x: 200, y: 168 }, { x: 506, y: 168 }];
 
 // Things further up the room are further away.
-export const depthAt = y => 0.5 + 0.5 * Math.max(0, Math.min(1, (y - HORIZON) / (MACHINE.y - HORIZON)));
+export const depthAt = y => 0.5 + 0.5 * Math.max(0, Math.min(1, (y - HORIZON) / (FLOOR_Y - HORIZON)));
 // The bugs do not walk straight at you. They sweep the room: across, down a
 // lane, back across, down again — and the same way in reverse on the way out.
 export const LANES = [
-  { y: 210, x0: 96, x1: 864 },
-  { y: 270, x0: 168, x1: 792 },
-  { y: 332, x0: 258, x1: 702 },
+  { y: 212, x0: 92, x1: 868 },
+  { y: 274, x0: 92, x1: 868 },
+  { y: 336, x0: 92, x1: 868 },
 ];
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -43,12 +46,13 @@ export function buildPath(door) {
     wps.push({ x: dir > 0 ? ln.x1 : ln.x0, y: ln.y });
     dir = -dir;
   }
-  wps.push({ x: MACHINE.x, y: MACHINE.y - 26 });
+  wps.push({ x: MACHINE.x + 34, y: MACHINE.y - 30 });
   return wps;
 }
 
-const FIRE_GAP = 0.105;           // seconds between letters of a word
-const SHOT_SPEED = 640;
+const FIRE_GAP = 60 / FIRE_RPM;   // one shell per letter, 200 rounds a minute
+const SHOT_SPEED = 520;
+const TURN_RATE = 16;             // rad/s — tight enough that no shell ever misses
 const WP_RADIUS = 13;
 
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -88,6 +92,7 @@ export class Game {
     this.muzzleFlash = 0;
     this.recoil = 0;
     this.rackFlash = 0;
+    this.holding = false;
     this.levelSecrets = 0;
     this.levelKills = 0;
     this.spawns = this.spawns || [];
@@ -110,7 +115,7 @@ export class Game {
     }
     this.spawns.sort((a, b) => a.t - b.t);
     this.spawnIdx = 0;
-    this.boiler.refill();
+    this.boiler.reseal();
   }
 
   // ── typing ───────────────────────────────────────────────────────────────
@@ -223,7 +228,7 @@ export class Game {
 
   spawn(type, doorIdx) {
     const sp = SPECIES[type];
-    const d = DOORS[doorIdx >= 0 ? doorIdx : (Math.random() * DOORS.length) | 0];
+    const d = DOORS[Math.min(DOORS.length - 1, Math.max(0, doorIdx))] || DOORS[0];
     const hp = Math.round(sp.hp * this.scale);
     const bug = {
       sp, x: d.x + rand(-16, 16), y: d.y + rand(-4, 4),
@@ -357,39 +362,52 @@ export class Game {
 
   fireStep(dt) {
     this.fireTimer -= dt;
-    if (this.fireTimer > 0 || !this.fireQueue.length) return;
+    if (!this.fireQueue.length) { this.fireTimer = Math.min(this.fireTimer, 0); return; }
+    // Nothing worth spending a shell on: the breech holds.
+    const tgt = this.aim ? this.nearest(this.aim) : this.target();
+    if (!tgt) { this.holding = true; return; }
+    this.holding = false;
+    if (this.fireTimer > 0) return;
+
     const shot = this.fireQueue.shift();
     this.fireTimer = FIRE_GAP;
-    const tgt = this.target();
-    let ang;
-    if (this.aim) ang = Math.atan2(this.aim.y - PIVOT.y, this.aim.x - PIVOT.x);
-    else if (tgt) ang = Math.atan2(tgt.y - PIVOT.y, tgt.x - PIVOT.x);
-    else ang = -Math.PI / 2 + rand(-0.2, 0.2);
+    let ang = Math.atan2(tgt.y - PIVOT.y, tgt.x - PIVOT.x);
     ang = clampAim(ang);
     this.cannonAngle = ang;
     const reach = MUZZLE.y - PIVOT.y;            // barrel length, as a radius
     this.shots.push({
       x: PIVOT.x + Math.cos(ang) * -reach, y: PIVOT.y + Math.sin(ang) * -reach,
       vx: Math.cos(ang) * SHOT_SPEED, vy: Math.sin(ang) * SHOT_SPEED,
-      shot, target: tgt, hit: new Set(), life: 2.4, spin: rand(-6, 6), rot: 0, trail: [],
+      shot, target: tgt, hit: new Set(), life: 8, spin: rand(-6, 6), rot: 0, trail: [],
     });
     this.muzzleFlash = 1; this.recoil = 1;
     this.shake = Math.max(this.shake, shot.mat === 'aetherium' ? 0.35 : 0.12);
     sfx.fire(shot.mat ? 1.25 : 0.85);
   }
 
+  nearest(p, except = null) {
+    let best = null, bd = Infinity;
+    for (const b of this.bugs) {
+      if (b === except || b.dead) continue;
+      const d = dist(b, p);
+      if (d < bd) { bd = d; best = b; }
+    }
+    return best;
+  }
+
   shotStep(dt) {
     for (const s of this.shots) {
       s.life -= dt;
-      // light homing so letters curve onto whatever they were aimed at
-      if (s.target && !s.target.dead && this.bugs.includes(s.target)) {
+      // Every shell that leaves the barrel finds something: if its mark dies in
+      // flight the charge simply picks the next one.
+      if (!s.target || s.target.dead || !this.bugs.includes(s.target)) s.target = this.nearest(s);
+      if (s.target) {
         const want = Math.atan2(s.target.y - s.y, s.target.x - s.x);
         const cur = Math.atan2(s.vy, s.vx);
         let diff = want - cur;
         while (diff > Math.PI) diff -= 2 * Math.PI;
         while (diff < -Math.PI) diff += 2 * Math.PI;
-        const turn = Math.max(-7 * dt, Math.min(7 * dt, diff));
-        const a = cur + turn;
+        const a = cur + Math.max(-TURN_RATE * dt, Math.min(TURN_RATE * dt, diff));
         s.vx = Math.cos(a) * SHOT_SPEED; s.vy = Math.sin(a) * SHOT_SPEED;
       }
       s.trail.push({ x: s.x, y: s.y });
@@ -399,13 +417,14 @@ export class Game {
 
       for (const b of this.bugs) {
         if (s.hit.has(b)) continue;
-        if (dist(s, b) > b.r + 7) continue;
+        if (dist(s, b) > b.r + 9) continue;
         this.impact(s, b);
         s.hit.add(b);
-        if (s.hit.size > s.shot.pierce) { s.done = true; }
+        if (s.hit.size > s.shot.pierce) s.done = true;
         break;
       }
-      if (s.x < -40 || s.x > W + 40 || s.y < -40 || s.y > PLAY_H + 40 || s.life <= 0) s.done = true;
+      // Only ever discarded when the room is empty and it has nothing to chase.
+      if (!this.bugs.length && (s.life <= 0 || s.x < -60 || s.x > W + 60 || s.y < -60 || s.y > PLAY_H + 60)) s.done = true;
     }
     this.shots = this.shots.filter(s => !s.done);
   }

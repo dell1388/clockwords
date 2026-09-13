@@ -44,21 +44,32 @@ Sources: ¹ [WonderHowTo, "Turning Letters into Pesticide"](https://scrabble.won
 Everything below is a judgement call made to sit consistently around the facts
 above. Change it freely.
 
-- **Letter levels.** Grading letters 1–5 Scrabble-fashion, drawing the grade as
-  dots under the glyph, and making the level (not the material) set the damage:
-  8 / 24 / 60 / 140 / 320. The original's dots meant a flat 5 damage each; the
-  steep curve here is a deliberate departure, so a rare letter feels rare.
-- **Combining by level.** Two letters of the same level fuse into one of the
-  level above, keeping the material, with the resulting letter chosen from that
-  level's pool. The original transmuted by material value; this transmutes by
-  letter rarity instead.
-- **Materials are level-5 only**, are read by colour with no written label, and
-  are applied as a *multiplier* on the letter's level damage rather than as a
-  flat damage of their own. Aetherium is invented outright to cap the ladder.
+- **Letter levels.** Grading letters 1–5, split into rungs of roughly equal size
+  by English letter frequency, drawing the grade as dots under the glyph, and
+  making the level (not the material) set the damage: 8 / 24 / 60 / 140 / 320.
+  The original's dots meant a flat 5 damage each; the steep curve here is a
+  deliberate departure, so a rare letter feels rare.
+- **The crucible.** Two letters of the same level fuse into one of the level
+  above, keeping the material, with the resulting letter chosen at random from
+  that level's pool. Two level 5s instead yield a material on a fresh level 1
+  letter — the only source of materials in the game. The original transmuted by
+  material value and let you buy materials with secrets.
+- **Materials** are read by colour with no written label, and are applied as a
+  *multiplier* on the letter's level damage rather than as a flat damage of
+  their own. Aetherium is invented outright.
+- **Blanks are flat.** 3 damage, untouched by word length, repeats, Jade or the
+  word of the day. The original's 1-damage blank scaled with nothing either, but
+  the exact figure is ours.
 - **Chambers unseal one at a time**, starting from one, each time the open
-  chambers have been spent through. The original ran all eight from the start.
-- **Bug pathing.** The serpentine sweep — across, down a lane, back across, and
-  the same route in reverse on the way out — and all the speeds that go with it.
+  chambers have been spent through — and reseal at the top of every level. The
+  original ran all eight from the start.
+- **Boiler and storage.** A 15–50 letter working boiler with everything else
+  parked in storage is entirely ours; the original had no cap.
+- **The cannon** sits in a corner, fires one shell per letter at 200 rpm, holds
+  its fire when the room is empty, and never misses — every shell re-targets in
+  flight. The original fired faster and its letters could miss.
+- **Bug pathing.** One open door, and a single painted route: across, down a
+  lane, back across, and the same route in reverse on the way out.
 - **Loot tables** weighted by night number and by how tough the bug was.
 - **Exact numbers** for the long-word bonus (+15% per letter past four, ×4 cap),
   the repeat penalty (halving, floor 20%), Jade's scaling, Brass's radius, and
@@ -73,6 +84,6 @@ above. Change it freely.
 - **The campaign.** Ten handmade levels, then a procedural curve that keeps going,
   with a boss every ten. The original Prelude was roughly this length; Act 1 was
   much longer.
-- **The room.** Three arched service doors on the back wall, the perspective, the
-  depth scaling, the machine design, and the whole visual and audio treatment.
-  Nothing here is traced from the original art.
+- **The room.** The bricked-up arches, the perspective, the depth scaling, the
+  machine design, and the whole visual and audio treatment. Nothing here is
+  traced from the original art.

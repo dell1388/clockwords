@@ -1,6 +1,6 @@
 // render.js — all drawing. Sepia, brass and gaslight.
 
-import { W, H, PLAY_H, MACHINE, MUZZLE, PIVOT, DOORS } from './game.js';
+import { W, H, PLAY_H, MACHINE, MUZZLE, PIVOT, DOORS, SEALED_DOORS, buildPath } from './game.js';
 import { MATERIALS, CHAMBERS, START_PAGES, MAX_LEVEL } from './content.js';
 
 const TAU = Math.PI * 2;
@@ -72,8 +72,31 @@ export function makeBackground() {
     x.fillStyle = '#ffe9a8'; x.beginPath(); x.arc(lx, 130, 5, 0, TAU); x.fill();
   }
 
-  // arched service doors along the base of the back wall — the bugs come through
   const FLOOR = 158;
+
+  // the two arches that were bricked up years ago
+  for (const d of SEALED_DOORS) {
+    const w = 84, h = 68, px = d.x - w / 2, py = FLOOR - h;
+    x.save();
+    x.beginPath();
+    x.moveTo(px, FLOOR); x.lineTo(px, py + w / 2);
+    x.arc(d.x, py + w / 2, w / 2, Math.PI, 0); x.lineTo(px + w, FLOOR); x.closePath();
+    x.fillStyle = '#4a3c2b'; x.fill();
+    x.strokeStyle = '#5d492a'; x.lineWidth = 3; x.stroke();
+    x.clip();
+    x.strokeStyle = 'rgba(20,14,8,0.5)'; x.lineWidth = 2;
+    for (let r = 0; r < 7; r++) {
+      const yy = py + 6 + r * 9.6;
+      x.beginPath(); x.moveTo(px, yy); x.lineTo(px + w, yy); x.stroke();
+      for (let c = 0; c < 4; c++) {
+        const bx = px + ((r % 2) ? 10 : 0) + c * 22;
+        x.beginPath(); x.moveTo(bx, yy); x.lineTo(bx, yy + 9.6); x.stroke();
+      }
+    }
+    x.restore();
+  }
+
+  // the one arch still open — everything comes through here
   for (const d of DOORS) {
     const w = 84, h = 68, px = d.x - w / 2, py = FLOOR - h;
     x.save();
@@ -94,9 +117,11 @@ export function makeBackground() {
     x.beginPath(); x.ellipse(d.x, FLOOR + 5, w * 0.55, 7, 0, 0, TAU); x.fill();
   }
 
+  drawTracks(x);
+
   // a rug, so the floor is not a desert
   x.save();
-  x.globalAlpha = 0.3;
+  x.globalAlpha = 0.18;
   x.fillStyle = '#4a231c';
   x.beginPath(); x.moveTo(300, 250); x.lineTo(660, 250); x.lineTo(846, 430); x.lineTo(114, 430); x.closePath(); x.fill();
   x.strokeStyle = '#7a4b30'; x.lineWidth = 3; x.stroke();
@@ -106,12 +131,11 @@ export function makeBackground() {
 
   // workbench silhouettes at the edges
   x.fillStyle = 'rgba(16,11,6,0.72)';
-  roundRect(x, -10, 250, 130, 58, 6); x.fill();
-  roundRect(x, 10, 214, 96, 38, 4); x.fill();
-  roundRect(x, 840, 268, 140, 64, 6); x.fill();
-  roundRect(x, 862, 226, 100, 44, 4); x.fill();
+  roundRect(x, -14, 238, 66, 62, 6); x.fill();
+  roundRect(x, 898, 246, 116, 66, 6); x.fill();
+  roundRect(x, 912, 200, 88, 42, 4); x.fill();
   x.fillStyle = 'rgba(255,214,120,0.10)';
-  x.fillRect(18, 220, 80, 4); x.fillRect(870, 232, 84, 4);
+  x.fillRect(-8, 244, 52, 4); x.fillRect(918, 206, 74, 4);
 
   // shelf of bottles high on the wall
   x.fillStyle = 'rgba(16,11,6,0.8)'; x.fillRect(660, 62, 210, 7);
@@ -127,6 +151,54 @@ export function makeBackground() {
   x.fillStyle = v; x.fillRect(0, 0, W, PLAY_H);
 
   bg = c;
+}
+
+// The bugs all walk the one route, so the route is painted on the floor: a worn
+// track, a dashed centre line, and chevrons pointing the way they come.
+function drawTracks(x) {
+  const path = buildPath(DOORS[0]);
+  x.save();
+  x.lineCap = 'round'; x.lineJoin = 'round';
+  const trace = () => {
+    x.beginPath();
+    x.moveTo(path[0].x, path[0].y);
+    for (let i = 1; i < path.length; i++) x.lineTo(path[i].x, path[i].y);
+  };
+  trace(); x.strokeStyle = 'rgba(18,12,6,0.30)'; x.lineWidth = 40; x.stroke();
+  trace(); x.strokeStyle = 'rgba(255,226,170,0.075)'; x.lineWidth = 34; x.stroke();
+  trace(); x.strokeStyle = 'rgba(255,226,170,0.10)'; x.lineWidth = 20; x.stroke();
+  trace();
+  x.setLineDash([9, 13]);
+  x.strokeStyle = 'rgba(255,206,116,0.34)'; x.lineWidth = 2; x.stroke();
+  x.setLineDash([]);
+
+  // chevrons, evenly spaced along the whole run
+  const STEP = 62;
+  let carry = 26;
+  for (let i = 1; i < path.length; i++) {
+    const a = path[i - 1], b = path[i];
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    const ux = (b.x - a.x) / len, uy = (b.y - a.y) / len;
+    for (let d = carry; d < len; d += STEP) {
+      const cx = a.x + ux * d, cy = a.y + uy * d;
+      x.save();
+      x.translate(cx, cy);
+      x.rotate(Math.atan2(uy, ux));
+      x.strokeStyle = 'rgba(255,214,120,0.42)'; x.lineWidth = 2.6;
+      x.beginPath();
+      x.moveTo(-6, -6); x.lineTo(5, 0); x.lineTo(-6, 6);
+      x.stroke();
+      x.restore();
+    }
+    carry = STEP - ((len - carry) % STEP);
+  }
+
+  // brass studs at every turn
+  x.fillStyle = 'rgba(214,172,88,0.45)';
+  for (let i = 1; i < path.length - 1; i++) {
+    x.beginPath(); x.arc(path[i].x, path[i].y, 4, 0, TAU); x.fill();
+  }
+  x.restore();
 }
 
 export function draw(ctx, g, t) {
@@ -584,9 +656,11 @@ function drawHud(ctx, g, t) {
   const total = n * cw + (n - 1) * gap;
   let cx = (W - total) / 2;
   const cy = top + 18;
+  const reserved = g.boiler.preview(g.typed || '');
   for (let i = 0; i < n; i++) {
     const open = i < g.boiler.open;
     const letter = open ? g.boiler.chambers[i] : null;
+    const spent = reserved.has(i);
     ctx.save();
     ctx.fillStyle = open ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.72)';
     roundRect(ctx, cx, cy, cw, 56, 8); ctx.fill();
@@ -603,6 +677,25 @@ function drawHud(ctx, g, t) {
       }
       ctx.strokeStyle = 'rgba(190,160,96,0.30)'; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.moveTo(cx + 16, cy + 28); ctx.lineTo(cx + cw - 16, cy + 28); ctx.stroke();
+    } else if (letter && spent) {
+      // Typed, not yet fired: the tank already reads as drawn down.
+      const m = MATERIALS[letter.mat];
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      roundRect(ctx, cx + 6, cy + 6, cw - 12, 44, 7); ctx.fill();
+      ctx.save();
+      ctx.setLineDash([5, 4]);
+      ctx.strokeStyle = m.glow; ctx.lineWidth = 2;
+      roundRect(ctx, cx + 6, cy + 6, cw - 12, 44, 7); ctx.stroke();
+      ctx.restore();
+      ctx.globalAlpha = 0.26;
+      ctx.fillStyle = m.glow;
+      ctx.font = "26px 'Special Elite', 'Courier New', monospace";
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(letter.letter.toUpperCase(), cx + cw / 2, cy + 24);
+      drawDots(ctx, cx + cw / 2, cy + 42, letter.level, 2.4, m.dot);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = m.glow;
+      ctx.beginPath(); ctx.arc(cx + cw - 12, cy + 12, 3, 0, TAU); ctx.fill();
     } else if (letter) {
       const m = MATERIALS[letter.mat];
       ctx.shadowColor = m.glow; ctx.shadowBlur = 11;
@@ -652,11 +745,16 @@ function drawHud(ctx, g, t) {
         if (c && c.letter === ch && !lit.has(i)) { lit.add(i); mat = c.mat; break; }
       }
       const m = mat ? MATERIALS[mat] : null;
+      const wch = ctx.measureText(ch.toUpperCase()).width;
       if (m) { ctx.fillStyle = m.glow; ctx.shadowColor = m.glow; ctx.shadowBlur = 10; }
-      else { ctx.fillStyle = '#d8cbaa'; ctx.shadowBlur = 0; }
-      ctx.fillText(ch.toUpperCase(), tx, ry + 23);
-      tx += ctx.measureText(ch.toUpperCase()).width + 1;
+      else { ctx.fillStyle = 'rgba(216,203,170,0.62)'; ctx.shadowBlur = 0; }
+      ctx.fillText(ch.toUpperCase(), tx, ry + 21);
       ctx.shadowBlur = 0;
+      if (m) {
+        ctx.fillStyle = m.glow;
+        ctx.fillRect(tx, ry + 37, wch, 2.5);
+      }
+      tx += wch + 1;
     }
     ctx.fillStyle = (t * 2) % 1 > 0.5 ? '#ffd66b' : 'transparent';
     ctx.fillRect(tx + 2, ry + 10, 12, 26);
@@ -701,9 +799,16 @@ function drawHud(ctx, g, t) {
   ctx.textAlign = 'left'; ctx.font = "13px 'Special Elite', 'Courier New', monospace";
   if (g.fireQueue.length) {
     ctx.fillStyle = '#ffd66b';
-    ctx.fillText('in the breech: ' + g.fireQueue.slice(0, 18).map(s => s.ch.toUpperCase()).join(' '), 300, top + 152);
+    const q = g.fireQueue;
+    ctx.fillText(`breech: ${q.length} · ` + q.slice(0, 8).map(s => s.ch.toUpperCase()).join(' ')
+      + (q.length > 8 ? ' …' : ''), 220, top + 152);
   }
   ctx.textAlign = 'right';
-  ctx.fillStyle = 'rgba(230,214,180,0.4)'; ctx.font = "italic 13px 'IM Fell English', Georgia, serif";
-  ctx.fillText('right-mouse aims by hand · Esc clears, Esc again pauses', W - 16, top + 155);
+  if (g.holding && g.fireQueue.length) {
+    ctx.fillStyle = '#ffd66b'; ctx.font = "13px 'IM Fell English SC', Georgia, serif";
+    ctx.fillText('BREECH HELD — nothing in the room to shoot', W - 16, top + 155);
+  } else {
+    ctx.fillStyle = 'rgba(230,214,180,0.4)'; ctx.font = "italic 13px 'IM Fell English', Georgia, serif";
+    ctx.fillText('right-mouse aims by hand · Esc clears, Esc again pauses', W - 16, top + 155);
+  }
 }

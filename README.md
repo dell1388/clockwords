@@ -22,51 +22,79 @@ lexicon is fetched and the code is ES modules.
 
 ## How it plays
 
-Type any English word and press <kbd>Enter</kbd>. Every letter of the word is
-fired at the bugs, one after another. A word that is not in the lexicon just
-clears the rack and says so — no pause, no penalty.
+Type any English word and press <kbd>Enter</kbd>. Every letter of the word
+becomes one shell, and the cannon in the corner fires them at **200 rounds a
+minute**. A word that is not in the lexicon just clears the rack and says so —
+no pause, no penalty.
 
-**Chambers unseal as you use them.** The boiler has 8 chambers but starts with
-only **one** open. Spend everything the open chambers hold and the next one
-unseals, so the engine widens under you as the night goes on.
+**Every shell finds a target.** If its mark dies in flight the charge picks the
+next one; with nothing in the room the breech simply holds until something walks
+in.
 
-If a character you type is sitting in an open chamber, that chamber fires and
+**Chambers unseal as you use them, and bolt shut again every level.** The boiler
+has 8 chambers but each level opens with only **one**. Spend everything the open
+chambers hold and the next one unseals.
+
+Type a character that is sitting in an open chamber and that chamber reads as
+drawn down at once — you can see what a word will cost before you fire it. It
 then empties and refills from the bag. Any character *not* in a chamber is a
-**blank** worth 1 damage. So the game is not "type fast", it is "type the word
-that spends your boiler well".
+**blank**: a flat 3 damage that no bonus or penalty ever touches.
+
+### One way in, one route across
+
+Everything comes through the single arch still standing on the back wall and
+walks the route painted on the floor — across, down a lane, back across — to the
+machine in the corner, where it takes a page of the formula and retraces the
+whole run to get out. Kill a carrier and the page comes home. Lose all **5
+pages** and the night is over.
 
 ### Letters have levels
 
-Letters are graded the way Scrabble grades them, and the grade is drawn as
-**dots under the glyph**. The level is what sets the damage — a rare letter is
-worth a great many common ones.
+Letters are graded the way Scrabble grades them, split into five rungs of
+roughly equal size by how often the letter turns up in English. The grade is
+drawn as **dots under the glyph**, and it is the level that sets the damage.
 
 | Level | Damage | Letters |
 |---|---|---|
-| ●     | 8   | A E I O U L N S T R |
-| ●●    | 24  | D G |
-| ●●●   | 60  | B C M P |
-| ●●●●  | 140 | F H V W Y |
+| ●     | 8   | E T A O I N |
+| ●●    | 24  | S H R D L |
+| ●●●   | 60  | C U M W F |
+| ●●●●  | 140 | G Y P B V |
 | ●●●●● | 320 | K J X Q Z |
 
-Bugs only ever drop plain **Iron**. In the boiler room you **combine** two
-letters of the same level into one letter of the level above — same material,
-and you choose which letter of that level you get. A letter has to reach level 5
-before it is rare enough to be **refitted** with a material, which costs secrets.
+### The crucible
+
+Bugs only ever drop plain **Iron**. In the boiler room you put two letters of
+the same level in the crucible:
+
+- **Levels 1–4** → one letter of the level above, same material.
+- **Two level 5s** → they burn away and leave a **material** behind, seeded on a
+  fresh level 1 letter. This is the only way a material is ever made.
+
+The crucible chooses which letter comes out, not you. Level a materialised
+letter up and it keeps its material.
+
+Secrets buy a fresh level 1 Iron letter (3 ⚙) and come back from scrapping (1 ⚙).
 
 ### Materials are colour, not labels
 
 Nothing on the rack is labelled: you read a material off its colour.
 
-| Material | Cost | Damage | Effect |
-|---|---|---|---|
-| Iron | — | ×1.0 | plain shot |
-| Thermite | 6 | ×0.5 | sets bugs alight, burning for 4 seconds |
-| Amethyst | 8 | ×0.7 | passes through up to 2 targets |
-| Lazurite | 10 | ×0.4 | freezes bugs for 4 seconds |
-| Brass | 12 | ×0.9 | splash, and detonates every Iron letter in the same word |
-| Jade | 15 | ×0.8 | every letter in the word hits harder, +5% per letter of the word |
-| Aetherium | 20 | ×1.2 | the charge arcs to 3 nearby bugs |
+| Material | Damage | Effect |
+|---|---|---|
+| Iron | ×1.0 | plain shot |
+| Thermite | ×0.5 | sets bugs alight, burning for 4 seconds |
+| Amethyst | ×0.7 | passes through up to 2 targets |
+| Lazurite | ×0.4 | freezes bugs for 4 seconds |
+| Brass | ×0.9 | splash, and detonates every Iron letter in the same word |
+| Jade | ×0.8 | every letter in the word hits harder, +5% per letter of the word |
+| Aetherium | ×1.2 | the charge arcs to 3 nearby bugs |
+
+### Boiler and storage
+
+The boiler runs on between **15 and 50** letters. Everything else lives in
+**storage**, out of the mix, until you draw it back — so a deep collection does
+not dilute what the chambers pull.
 
 ### Other rules that matter
 
@@ -74,9 +102,6 @@ Nothing on the rack is labelled: you read a material off its colour.
 - **Repeating a word** halves its power each time you reuse it, down to 20%.
 - **Boiler overload** — spend every loaded chamber in one word for a bonus barrage.
 - **Word of the day** — one word, the same for everyone, doubles everything and explodes.
-- Bugs sweep the room in lanes — across, down, back across — reach the machine,
-  take a page of the formula and retrace the whole route to get out. Kill the
-  carrier and the page comes home. Lose all **5 pages** and the night is over.
 - Loot is tabled by night: common letters fall constantly early on, and the rare
   ones only start appearing once you are deep enough — and off tougher bugs.
 

@@ -7,13 +7,16 @@
 // Letters are graded the way Scrabble grades them: the commonest letters are
 // level 1, the rarest are level 5. A letter's level is drawn as dots under the
 // glyph, and it is the level — not the material — that sets the damage.
+// The five rungs hold five or six letters each, split on English frequency.
 
+// Five rungs of roughly equal size, cut by how often the letter actually turns
+// up in English: E T A O I N are the workhorses, K J X Q Z the trophies.
 export const LETTER_LEVELS = [
   null,
-  { level: 1, dmg: 8,   pool: 'aeioulnstr' },
-  { level: 2, dmg: 24,  pool: 'dg' },
-  { level: 3, dmg: 60,  pool: 'bcmp' },
-  { level: 4, dmg: 140, pool: 'fhvwy' },
+  { level: 1, dmg: 8,   pool: 'etaoin' },
+  { level: 2, dmg: 24,  pool: 'shrdl' },
+  { level: 3, dmg: 60,  pool: 'cumwf' },
+  { level: 4, dmg: 140, pool: 'gypbv' },
   { level: 5, dmg: 320, pool: 'kjxqz' },
 ];
 export const MAX_LEVEL = 5;
@@ -66,12 +69,17 @@ export const MATERIALS = {
 };
 export const SPECIAL_MATERIALS = Object.values(MATERIALS).filter(m => !m.base);
 
-// A letter that is NOT loaded in a chamber is a blank and deals 1 damage. (canon)
-export const BLANK_DMG = 1;
+// A letter that is NOT loaded in a chamber is a blank: a small, flat amount of
+// damage that no bonus or penalty ever touches.
+export const BLANK_DMG = 3;
 export const CHAMBERS = 8;          // the boiler feeds eight chambers (canon)
-export const START_CHAMBERS = 1;    // but only one of them is unsealed to begin with
+export const START_CHAMBERS = 1;    // sealed back down to one at the top of every level
 export const MIN_WORD = 3;
 export const START_PAGES = 5;
+export const MIN_BOILER = 15;       // the boiler will not run on less
+export const MAX_BOILER = 50;       // and will not hold more
+export const FIRE_RPM = 200;        // one shell per letter, two hundred a minute
+export const STOKE_COST = 3;        // secrets for one fresh level-1 Iron letter
 
 // ── loot ───────────────────────────────────────────────────────────────────
 // Common letters fall constantly on the early nights; the rare ones only start
@@ -97,42 +105,42 @@ export function rollLoot(nightNo, bugTier = 1) {
 
 export const SPECIES = {
   spider: {
-    id: 'spider', name: 'Clockwork Spider', hp: 30, speed: 74, r: 13,
+    id: 'spider', name: 'Clockwork Spider', hp: 30, speed: 80, r: 13,
     legs: 8, gait: 'crawl', bounty: 1, secret: 0.10, drop: 0.16,
     body: '#8a7a5c', trim: '#d8c489',
   },
   roach: {
-    id: 'roach', name: 'Brass Roach', hp: 22, speed: 118, r: 11,
+    id: 'roach', name: 'Brass Roach', hp: 22, speed: 128, r: 11,
     legs: 6, gait: 'scurry', bounty: 1, secret: 0.10, drop: 0.14,
     body: '#9c6a2c', trim: '#f0b451',
   },
   tick: {
-    id: 'tick', name: 'Gear Tick', hp: 10, speed: 98, r: 8,
+    id: 'tick', name: 'Gear Tick', hp: 10, speed: 108, r: 8,
     legs: 6, gait: 'scurry', bounty: 0, secret: 0.04, drop: 0.05,
     body: '#6f6152', trim: '#c3b191',
   },
   beetle: {
-    id: 'beetle', name: 'Ironclad Beetle', hp: 130, speed: 47, r: 19,
+    id: 'beetle', name: 'Ironclad Beetle', hp: 130, speed: 51, r: 19,
     legs: 6, gait: 'lumber', armor: 0.5, bounty: 3, secret: 0.35, drop: 0.34,
     body: '#4d5259', trim: '#98a3ad',
   },
   moth: {
-    id: 'moth', name: 'Cinder Moth', hp: 40, speed: 146, r: 13,
+    id: 'moth', name: 'Cinder Moth', hp: 40, speed: 159, r: 13,
     legs: 6, gait: 'flit', flying: true, bounty: 2, secret: 0.22, drop: 0.24,
     body: '#7b4a63', trim: '#e3b7d0',
   },
   centipede: {
-    id: 'centipede', name: 'Copper Centipede', hp: 95, speed: 86, r: 14,
+    id: 'centipede', name: 'Copper Centipede', hp: 95, speed: 94, r: 14,
     legs: 12, gait: 'crawl', splitOnDeath: ['tick', 'tick'], bounty: 3,
     secret: 0.30, drop: 0.30, body: '#a4552b', trim: '#efa070',
   },
   weaver: {
-    id: 'weaver', name: 'Steam Weaver', hp: 70, speed: 68, r: 15,
+    id: 'weaver', name: 'Steam Weaver', hp: 70, speed: 75, r: 15,
     legs: 8, gait: 'crawl', heals: { rate: 9, range: 120 }, bounty: 3,
     secret: 0.32, drop: 0.30, body: '#5d6b4a', trim: '#b9cf92',
   },
   box: {
-    id: 'box', name: 'The Diabolical Box', hp: 2600, speed: 31, r: 46,
+    id: 'box', name: 'The Diabolical Box', hp: 2600, speed: 28, r: 46,
     legs: 8, gait: 'lumber', armor: 0.25, boss: true, spawns: 'tick',
     bounty: 25, secret: 6, drop: 1, body: '#3f3a33', trim: '#d8ab4c',
   },

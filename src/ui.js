@@ -1,7 +1,8 @@
 // ui.js — DOM screens layered over the canvas: title, level cards, the boiler
 // room between levels, and the end-of-run summary.
 
-import { MATERIALS, SPECIAL_MATERIALS, LETTER_LEVELS, MAX_LEVEL, CHAMBERS, START_CHAMBERS, START_PAGES, getLevel } from './content.js';
+import { MATERIALS, SPECIAL_MATERIALS, LETTER_LEVELS, MAX_LEVEL, CHAMBERS, START_CHAMBERS,
+  START_PAGES, MIN_BOILER, MAX_BOILER, FIRE_RPM, STOKE_COST, getLevel } from './content.js';
 import { dictSize } from './dict.js';
 import { BADGES, earned } from './achievements.js';
 import { sfx } from './audio.js';
@@ -78,21 +79,25 @@ export function renderHow(onBack) {
           <p>Type any English word and press <kbd>Enter</kbd>. Every letter of the word is
           fired at the bugs, one after another. A word that is not in the lexicon simply
           clears and tells you so — it costs you nothing but the typing.</p>
-          <p>The boiler has <b>${CHAMBERS} chambers</b>, but it starts with
+          <p>The boiler has <b>${CHAMBERS} chambers</b>, but every level starts with
           <b>${START_CHAMBERS === 1 ? 'only one unsealed' : `${START_CHAMBERS} unsealed`}</b>.
-          Spend everything the unsealed chambers hold and the next one opens, so the engine
-          widens as you use it.</p>
-          <p>If a character you type is sitting in an unsealed chamber, that chamber fires
-          and then empties and refills from the bag. Any character <i>not</i> in a chamber is
-          a <b>blank</b>, worth 1 damage.</p>
+          Spend everything the unsealed chambers hold and the next one opens — and at the top
+          of the next level they all bolt shut again.</p>
+          <p>If a character you type is sitting in an unsealed chamber, the chamber reads as
+          drawn down the moment you type it, then fires and refills from the bag. Any character
+          <i>not</i> in a chamber is a <b>blank</b> — a flat 3 damage that no bonus or penalty
+          ever changes.</p>
+          <p>The cannon fires <b>one shell per letter at ${FIRE_RPM} rounds a minute</b>, and
+          every shell finds a target: if its mark dies in flight the charge picks the next one.
+          With nothing in the room the breech simply holds.</p>
           <p>Longer words hit harder. A word you have already used does less each time you
           repeat it. Use every loaded chamber in one word for a <b>boiler overload</b>. The
           <b>word of the day</b> doubles everything and explodes.</p>
           <h3>The bugs</h3>
-          <p>They come through the grates and sweep the room — across, down a lane, back
-          across — until they reach the machine, take a page of the formula and retrace the
-          whole route to get out. Kill a carrier and the page comes home. Lose all
-          ${START_PAGES} pages and the night is over.</p>
+          <p>Everything comes through the one arch still standing, and walks the route painted
+          on the floor — across, down a lane, back across — until it reaches the machine, takes
+          a page of the formula and retraces the whole run to get out. Kill a carrier and the
+          page comes home. Lose all ${START_PAGES} pages and the night is over.</p>
           <h3>Controls</h3>
           <p><kbd>A&ndash;Z</kbd> type &middot; <kbd>Enter</kbd> or <kbd>Space</kbd> fire &middot;
           <kbd>Backspace</kbd> delete &middot; <kbd>Esc</kbd> clears the rack, and clears again
@@ -107,14 +112,18 @@ export function renderHow(onBack) {
           common ones.</p>
           <ul class="mats">${levels}</ul>
           <h3>Materials</h3>
-          <p>Materials are read by <b>colour</b> alone. Bugs only ever drop plain Iron; a
-          letter has to reach <b>level ${MAX_LEVEL}</b> before it is rare enough to be refitted
-          with anything else.</p>
+          <p>Materials are read by <b>colour</b> alone. Bugs only ever drop plain Iron. The one
+          way to make a material is to put <b>two level ${MAX_LEVEL} letters</b> in the crucible:
+          they burn away and leave a material behind on a fresh level 1 letter, both chosen by
+          the crucible. Level that letter up and it keeps its material.</p>
           <ul class="mats">${mats}</ul>
           <h3>The boiler room</h3>
-          <p>Between levels: <b>combine</b> two letters of the same level into one letter of
-          the level above, in the same material and of your choosing — or spend
-          <b>secrets</b> to refit a level-${MAX_LEVEL} letter, or scrap what you do not want.</p>
+          <p>Between levels: <b>combine</b> two letters of the same level into one of the level
+          above in the same material — the crucible picks which letter, not you. Two level
+          ${MAX_LEVEL}s instead yield a material. Scrap what you do not want for a secret, and
+          spend <b>${STOKE_COST} secrets</b> to stoke one fresh level 1 letter out of the boiler.</p>
+          <p>The boiler runs on between <b>${MIN_BOILER}</b> and <b>${MAX_BOILER}</b> letters.
+          Anything else lives in <b>storage</b>, out of the mix, until you draw it back.</p>
         </div>
       </div>
       <div class="btns"><button id="b-back" class="big">Back</button></div>
@@ -143,41 +152,43 @@ export function renderIntro(n, onGo) {
 // ── boiler room ────────────────────────────────────────────────────────────
 export function renderBoiler(game, onNext) {
   const s = $('#boiler');
-  let selected = [];         // letter ids picked out of the boiler
-  let pickLetter = null, pickMat = null;
+  let selected = [];         // letter ids picked out of either rack
 
-  // Whatever the bugs dropped tonight goes into the boiler now.
-  const recovered = game.pending.slice();
-  for (const loot of game.pending) game.boiler.add(loot.letter, 'iron', loot.level);
+  // Whatever the bugs dropped tonight goes to the boiler, or to storage if the
+  // boiler is already full.
+  const recovered = game.pending.map(loot => {
+    const r = game.boiler.stow(loot.letter, 'iron', loot.level);
+    return { ...loot, where: r.where };
+  });
   game.pending = [];
 
   function draw() {
-    const inv = game.boiler.inventory;
-    const byLevel = [...inv].sort((a, b) => b.level - a.level || a.letter.localeCompare(b.letter));
-    const invHtml = byLevel.map(l =>
+    const bo = game.boiler;
+    const sorted = arr => [...arr].sort((a, b) => b.level - a.level || a.letter.localeCompare(b.letter));
+    const chips = arr => sorted(arr).map(l =>
       `<button class="chipbtn ${selected.includes(l.id) ? 'sel' : ''}" data-id="${l.id}">
-        ${chip(l.letter, l.mat, l.level)}</button>`).join('')
-      || '<p class="d">Your boiler is empty.</p>';
+        ${chip(l.letter, l.mat, l.level)}</button>`).join('');
 
-    const a = inv.find(l => l.id === selected[0]);
-    const b = inv.find(l => l.id === selected[1]);
-    const canCombine = game.boiler.canCombine(a, b);
-    const nextLevel = a ? a.level + 1 : 0;
-    const outLetters = canCombine ? LETTER_LEVELS[nextLevel].pool.split('').map(ch =>
-      `<button class="letbtn ${pickLetter === ch ? 'sel' : ''}" data-clet="${ch}">${ch.toUpperCase()}</button>`).join('') : '';
+    const picked = selected.map(id => bo.find(id)).filter(Boolean);
+    const a = picked[0], b = picked[1];
+    const canCombine = bo.canCombine(a, b);
+    const one = picked.length === 1 ? a : null;
 
-    const one = selected.length === 1 ? a : null;
-    const canRefit = game.boiler.canRefit(one);
-    const matHtml = canRefit ? SPECIAL_MATERIALS.map(m => {
-      const afford = game.secrets >= m.cost && one.mat !== m.id;
-      return `<button class="matbtn ${pickMat === m.id ? 'sel' : ''} ${afford ? '' : 'off'}" data-rmat="${m.id}">
-        ${swatch(m.id)}<b>${m.name}</b><span class="cost">${m.cost}⚙</span>
-        <span class="d">${m.desc}</span></button>`;
-    }).join('') : '';
+    const fromBoiler = picked.filter(l => bo.inBoiler(l.id));
+    const fromStore = picked.filter(l => !bo.inBoiler(l.id));
+    const canStow = fromBoiler.length > 0 && bo.inventory.length - fromBoiler.length >= MIN_BOILER;
+    const canDraw = fromStore.length > 0 && bo.inventory.length + fromStore.length <= MAX_BOILER;
 
+    const SHOWN = 14;
     const recHtml = recovered.length
-      ? recovered.map(r => chip(r.letter, 'iron', r.level)).join(' ')
+      ? recovered.slice(0, SHOWN)
+          .map(r => chip(r.letter, 'iron', r.level, r.where === 'store' ? 'stowed' : '')).join(' ')
+        + (recovered.length > SHOWN ? `<span class="d">and ${recovered.length - SHOWN} more</span>` : '')
       : '<span class="d">Nothing fell tonight.</span>';
+
+    const short = bo.short();
+    const gauge = `<span class="gauge ${bo.inventory.length >= MAX_BOILER ? 'full' : short ? 'low' : ''}">
+      ${bo.inventory.length} / ${MAX_BOILER}</span>`;
 
     s.innerHTML = `
       <div class="plate wide boilerroom">
@@ -191,76 +202,91 @@ export function renderBoiler(game, onNext) {
           </div>
         </div>
         <p class="d recap">+${game.levelSecrets} secrets · ${game.levelKills} bugs ·
-          ${game.pages}/${START_PAGES} pages intact · ${game.boiler.open}/${CHAMBERS} chambers unsealed</p>
+          ${game.pages}/${START_PAGES} pages intact · the chambers bolt shut again at the next level</p>
         <p class="recovered"><span class="lbl">Recovered tonight</span> ${recHtml}</p>
 
         <div class="cols3">
           <section>
-            <h3>Your boiler <span class="d">&middot; ${inv.length} letters</span></h3>
-            <p class="d">Dots are the level. Colour is the material. Pick two of the same
-            level to combine, or one on its own to refit or scrap.</p>
-            <div class="inv">${invHtml}</div>
-            <button id="b-scrap" class="small" ${one ? '' : 'disabled'}>Scrap for 1 ⚙</button>
+            <h3>Boiler ${gauge}</h3>
+            <p class="d">What the chambers draw from. It runs on no fewer than
+            ${MIN_BOILER} letters and holds no more than ${MAX_BOILER}.</p>
+            <div class="inv">${chips(bo.inventory) || '<p class="d">Empty.</p>'}</div>
+            <button id="b-stow" class="small" ${canStow ? '' : 'disabled'}>Move to storage &darr;</button>
           </section>
 
           <section>
-            <h3>Combine</h3>
+            <h3>Storage <span class="d">&middot; ${bo.store.length}</span></h3>
+            <p class="d">Letters kept out of the mix. Nothing here is ever loaded
+            into a chamber.</p>
+            <div class="inv">${chips(bo.store) || '<p class="d">Empty.</p>'}</div>
+            <button id="b-draw" class="small" ${canDraw ? '' : 'disabled'}>Move to boiler &uarr;</button>
+          </section>
+
+          <section>
+            <h3>Crucible</h3>
             <div class="slots">
               <div class="slot">${a ? chip(a.letter, a.mat, a.level) : '<span class="d">slot</span>'}</div>
               <span class="plus">+</span>
               <div class="slot">${b ? chip(b.letter, b.mat, b.level) : '<span class="d">slot</span>'}</div>
             </div>
-            ${canCombine ? `<p class="d">Two level ${a.level} letters make one level
-              ${nextLevel}. Choose which letter you get.</p>
-              <div class="letrow">${outLetters}</div>
-              <button id="b-fuse" class="big" ${pickLetter ? '' : 'disabled'}>Combine</button>`
-              : `<p class="d">${selected.length < 2 ? 'Select two letters of the same level.'
-                  : a && b && a.level >= MAX_LEVEL ? `Level ${MAX_LEVEL} is the top of the rack — refit it instead.`
+            ${canCombine
+              ? (a.level >= MAX_LEVEL
+                ? `<p class="d hot">Two level ${MAX_LEVEL} letters burn away and leave a
+                   <b>material</b> behind, seeded on a fresh level 1 letter. This is the only
+                   way a material is ever made — and the crucible chooses both.</p>
+                   <div class="matrow">${SPECIAL_MATERIALS.map(m => swatch(m.id)).join('')}</div>
+                   <button id="b-fuse" class="big">Fire the crucible</button>`
+                : `<p class="d">Two level ${a.level} letters make one level ${a.level + 1} in the
+                   same material. The crucible decides which letter comes out.</p>
+                   <button id="b-fuse" class="big">Combine</button>`)
+              : `<p class="d">${picked.length < 2
+                  ? 'Select two letters of the same level. Two level 5s make a material.'
                   : 'Both letters must be the same level.'}</p>`}
-          </section>
-
-          <section>
-            <h3>Refit</h3>
-            ${one ? (canRefit
-              ? `<p class="d">${one.letter.toUpperCase()} is rare enough to hold a material.</p>
-                 <div class="matlist">${matHtml}</div>
-                 <button id="b-refit" class="big" ${pickMat && game.secrets >= MATERIALS[pickMat].cost
-                   && one.mat !== pickMat ? '' : 'disabled'}>Refit</button>`
-              : `<p class="d">Only a level ${MAX_LEVEL} letter can be refitted.
-                 ${one.letter.toUpperCase()} is level ${one.level} — combine it up first.</p>`)
-              : '<p class="d">Select a single letter.</p>'}
+            <div class="benchrow">
+              <button id="b-stoke" class="small" ${game.secrets >= STOKE_COST ? '' : 'disabled'}
+                >Stoke for ${STOKE_COST} ⚙</button>
+              <button id="b-scrap" class="small" ${one ? '' : 'disabled'}>Scrap for 1 ⚙</button>
+            </div>
+            <p class="d fine">Stoking buys one fresh level 1 Iron letter.</p>
           </section>
         </div>
 
-        <div class="btns"><button id="b-next" class="big">To level ${game.levelNo + 1} &rarr;</button></div>
+        ${short ? `<p class="warn">The boiler needs ${short} more letter${short > 1 ? 's' : ''}
+          before it will run.</p>` : ''}
+        <div class="btns">
+          <button id="b-next" class="big" ${short ? 'disabled' : ''}>To level ${game.levelNo + 1} &rarr;</button>
+        </div>
       </div>`;
 
     s.querySelectorAll('[data-id]').forEach(n => n.onclick = () => {
       const id = +n.dataset.id;
       if (selected.includes(id)) selected = selected.filter(x => x !== id);
       else { selected.push(id); if (selected.length > 2) selected.shift(); }
-      pickLetter = null; pickMat = null;
       sfx.key(); draw();
     });
-    s.querySelectorAll('[data-clet]').forEach(n => n.onclick = () => { pickLetter = n.dataset.clet; sfx.key(); draw(); });
-    s.querySelectorAll('[data-rmat]').forEach(n => n.onclick = () => { pickMat = n.dataset.rmat; sfx.key(); draw(); });
 
-    const scrap = $('#b-scrap');
-    if (scrap) scrap.onclick = () => {
-      game.boiler.remove(one.id); game.secrets += 1; selected = []; sfx.clank(); draw();
-    };
-    const fuse = $('#b-fuse');
-    if (fuse) fuse.onclick = () => {
-      game.boiler.combine(a, b, pickLetter);
-      selected = []; pickLetter = null; sfx.overload(); draw();
-    };
-    const refit = $('#b-refit');
-    if (refit) refit.onclick = () => {
-      game.secrets -= MATERIALS[pickMat].cost;
-      game.boiler.refit(one.id, pickMat);
-      pickMat = null; sfx.steam(); draw();
-    };
-    $('#b-next').onclick = () => { sfx.clank(); onNext(); };
+    const on = (id, fn) => { const n = $(id); if (n) n.onclick = fn; };
+    on('#b-stow', () => { for (const l of fromBoiler) bo.toStore(l.id); selected = []; sfx.clank(); draw(); });
+    on('#b-draw', () => { for (const l of fromStore) bo.toBoiler(l.id); selected = []; sfx.clank(); draw(); });
+    on('#b-scrap', () => { bo.discard(one.id); game.secrets += 1; selected = []; sfx.clank(); draw(); });
+    on('#b-fuse', () => {
+      const made = bo.combine(a, b);
+      selected = []; sfx.overload();
+      if (made) toast({ name: `${made.letter.toUpperCase()} — level ${made.level}`,
+        desc: made.mat === 'iron' ? 'out of the crucible'
+          : `out of the crucible in ${MATERIALS[made.mat].name}`, pts: made.level });
+      draw();
+    });
+    on('#b-stoke', () => {
+      if (game.secrets < STOKE_COST) return;
+      game.secrets -= STOKE_COST;
+      const r = bo.stoke();
+      sfx.steam();
+      toast({ name: `${r.letter.letter.toUpperCase()} — level 1`,
+        desc: r.where === 'store' ? 'boiler full, sent to storage' : 'straight into the boiler', pts: 1 });
+      draw();
+    });
+    on('#b-next', () => { if (!bo.short()) { sfx.clank(); onNext(); } });
   }
   draw();
 }
