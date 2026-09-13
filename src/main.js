@@ -123,7 +123,7 @@ function toBoiler() {
     game.levelNo = next;
     stash();
     toIntro(next);
-  }, stash);
+  }, stash, () => { stash(); toTitle(); });
 }
 
 function toWin() {

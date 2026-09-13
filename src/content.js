@@ -7,17 +7,14 @@
 // Letters are graded the way Scrabble grades them: the commonest letters are
 // level 1, the rarest are level 5. A letter's level is drawn as dots under the
 // glyph, and it is the level — not the material — that sets the damage.
-// The five rungs hold five or six letters each, split on English frequency.
 
-// Five rungs of roughly equal size, cut by how often the letter actually turns
-// up in English: E T A O I N are the workhorses, K J X Q Z the trophies.
 export const LETTER_LEVELS = [
   null,
-  { level: 1, dmg: 8,   pool: 'etaoin' },
-  { level: 2, dmg: 24,  pool: 'shrdl' },
-  { level: 3, dmg: 60,  pool: 'cumwf' },
-  { level: 4, dmg: 140, pool: 'gypbv' },
-  { level: 5, dmg: 320, pool: 'kjxqz' },
+  { level: 1, dmg: 8,   pool: 'aiot' },
+  { level: 2, dmg: 24,  pool: 'bcelnrs' },
+  { level: 3, dmg: 60,  pool: 'dfghkmuy' },
+  { level: 4, dmg: 140, pool: 'pvwz' },
+  { level: 5, dmg: 320, pool: 'jqx' },
 ];
 export const MAX_LEVEL = 5;
 

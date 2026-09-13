@@ -53,17 +53,16 @@ pages** and the night is over.
 
 ### Letters have levels
 
-Letters are graded the way Scrabble grades them, split into five rungs of
-roughly equal size by how often the letter turns up in English. The grade is
-drawn as **dots under the glyph**, and it is the level that sets the damage.
+Letters are graded the way Scrabble grades them. The grade is drawn as **dots
+under the glyph**, and it is the level that sets the damage.
 
 | Level | Damage | Letters |
 |---|---|---|
-| ●     | 8   | E T A O I N |
-| ●●    | 24  | S H R D L |
-| ●●●   | 60  | C U M W F |
-| ●●●●  | 140 | G Y P B V |
-| ●●●●● | 320 | K J X Q Z |
+| ●     | 8   | A I O T |
+| ●●    | 24  | B C E L N R S |
+| ●●●   | 60  | D F G H K M U Y |
+| ●●●●  | 140 | P V W Z |
+| ●●●●● | 320 | J Q X |
 
 ### The crucible
 
@@ -114,6 +113,11 @@ not dilute what the chambers pull.
 
 When the last bug is off the floor the room holds for a beat with **LEVEL
 CLEARED** — or **LEVEL FAILED** — across it before the panel comes up.
+
+The boiler room then lists **the night's work**: every word you fired, ranked by
+the damage it actually dealt, with the letters that came out of a chamber lit in
+their material colour and the blanks left grey. Burn damage is credited back to
+the word that started the fire.
 
 ### Twenty nights, and a level select
 

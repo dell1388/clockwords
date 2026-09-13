@@ -94,6 +94,7 @@ export class Game {
     this.rackFlash = 0;
     this.holding = false;
     this.outro = null;
+    this.wordLog = [];
     this.levelSecrets = 0;
     this.levelKills = 0;
     this.spawns = this.spawns || [];
@@ -123,6 +124,7 @@ export class Game {
     }
     this.spawns.sort((a, b) => a.t - b.t);
     this.spawnIdx = 0;
+    this.wordLog = [];
     this.boiler.reseal();
   }
 
@@ -147,18 +149,25 @@ export class Game {
     const repeats = this.usedWords.get(word) || 0;
     const wotd = word === this.wotd;
     const res = this.boiler.resolve(word, { repeats, wotd });
+    const entry = {
+      word, marks: res.shots.map(sh => sh.mat), planned: 0, dealt: 0,
+      wotd, overload: res.overload, repeats, at: this.time,
+    };
+    const wid = this.wordLog.push(entry) - 1;
+    for (const sh of res.shots) sh.wid = wid;
     const unsealed = this.boiler.spend(res.slots);
     if (unsealed) { this.note('CHAMBER UNSEALED', '#9be8ff'); sfx.steam(); }
     this.usedWords.set(word, repeats + 1);
 
     let total = 0;
     for (const s of res.shots) { this.fireQueue.push(s); total += s.dmg; }
+    entry.planned = total;
 
     if (res.overload) {
       sfx.overload();
       this.note('BOILER OVERLOAD', '#ffd66b');
       for (let i = 0; i < 6; i++) {
-        this.fireQueue.push({ ch: '*', mat: 'aetherium', dmg: Math.round(60 * res.mult),
+        this.fireQueue.push({ ch: '*', mat: 'aetherium', dmg: Math.round(60 * res.mult), wid,
           pierce: 1, freeze: 0, burn: null, splash: 50, chain: 2, chainRange: 120 });
       }
     }
@@ -259,7 +268,7 @@ export class Game {
       if (b.freeze > 0) { b.freeze -= dt; }
       if (b.burn) {
         b.burn.t -= dt;
-        this.damage(b, b.burn.dps * dt, { silent: true, dot: true });
+        this.credit(b.burn.wid, this.damage(b, b.burn.dps * dt, { silent: true, dot: true }));
         if (Math.random() < dt * 22) this.particles.push({
           x: b.x + rand(-b.r, b.r), y: b.y + rand(-b.r, b.r), vx: rand(-12, 12), vy: rand(-40, -14),
           t: rand(0.25, 0.6), r: rand(1.5, 3.4), c: Math.random() < 0.5 ? '#ff9b3d' : '#ffd98a',
@@ -374,7 +383,6 @@ export class Game {
     const tgt = this.aim ? this.nearest(this.aim) : this.target();
     if (!tgt) { this.holding = true; return; }
     this.holding = false;
-    this.outro = null;
     if (this.fireTimer > 0) return;
 
     const shot = this.fireQueue.shift();
@@ -439,7 +447,7 @@ export class Game {
 
   impact(s, b) {
     const sh = s.shot;
-    this.damage(b, sh.dmg);
+    let dealt = this.damage(b, sh.dmg);
     sfx.hit();
     this.sparks(s.x, s.y, sh.mat ? MATERIALS[sh.mat].glow : '#d9cdb4');
 
@@ -449,7 +457,7 @@ export class Game {
       this.puff(b.x, b.y, 10, MATERIALS.lazurite.glow);
     }
     if (sh.burn) {
-      b.burn = { t: sh.burn.time, dps: sh.burn.dps };
+      b.burn = { t: sh.burn.time, dps: sh.burn.dps, wid: sh.wid };
       sfx.burn();
     }
     if (sh.splash) {
@@ -459,7 +467,7 @@ export class Game {
       for (const o of this.bugs) {
         if (o === b) continue;
         const d = dist(o, s);
-        if (d < sh.splash) this.damage(o, sh.dmg * 0.6 * (1 - d / sh.splash));
+        if (d < sh.splash) dealt += this.damage(o, sh.dmg * 0.6 * (1 - d / sh.splash));
       }
     }
     if (sh.chain) {
@@ -474,14 +482,20 @@ export class Game {
         }
         if (!near) break;
         this.arc(src, near);
-        this.damage(near, sh.dmg * 0.5);
+        dealt += this.damage(near, sh.dmg * 0.5);
         done.add(near); src = near;
       }
     }
+    this.credit(sh.wid, dealt);
+  }
+
+  credit(wid, dealt) {
+    const e = this.wordLog[wid];
+    if (e) e.dealt += dealt;
   }
 
   damage(b, amount, opts = {}) {
-    if (b.dead) return;
+    if (b.dead) return 0;
     const dealt = amount * (1 - (b.armor || 0));
     b.hp -= dealt;
     this.stats.damage += dealt;
@@ -491,6 +505,7 @@ export class Game {
         x: b.x + rand(-6, 6), y: b.y - b.r - 4, vy: -34, t: 0.7 });
     }
     if (b.hp <= 0) this.kill(b);
+    return dealt;
   }
 
   kill(b) {

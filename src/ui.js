@@ -190,7 +190,18 @@ export function renderIntro(n, onGo) {
 }
 
 // ── boiler room ────────────────────────────────────────────────────────────
-export function renderBoiler(game, onNext, onChange) {
+// A word as it was actually fired: chamber letters lit in their material,
+// blanks left grey.
+function firedWord(entry) {
+  return entry.marks.map((m, i) => {
+    const ch = (entry.word[i] || '').toUpperCase();
+    if (!m) return `<span class="blk">${ch}</span>`;
+    const M = MATERIALS[m];
+    return `<span class="lit" style="--glow:${M.glow}">${ch}</span>`;
+  }).join('');
+}
+
+export function renderBoiler(game, onNext, onChange, onMenu) {
   const s = $('#boiler');
   let selected = [];         // letter ids picked out of either rack
 
@@ -310,9 +321,12 @@ export function renderBoiler(game, onNext, onChange) {
           </section>
         </div>
 
+        ${wordLogHtml(game)}
+
         ${short ? `<p class="warn">The boiler needs ${short} more letter${short > 1 ? 's' : ''}
           before it will run.</p>` : ''}
         <div class="btns">
+          <button id="b-menu">Main menu</button>
           <button id="b-next" class="big" ${short ? 'disabled' : ''}>${game.levelNo >= CAMPAIGN ? "Finish" : `To level ${game.levelNo + 1}`} &rarr;</button>
         </div>
       </div>`;
@@ -362,9 +376,38 @@ export function renderBoiler(game, onNext, onChange) {
       draw();
     });
     on('#b-next', () => { if (!bo.short()) { sfx.clank(); onNext(); } });
+    on('#b-menu', () => { sfx.clank(); onMenu && onMenu(); });
     if (onChange) onChange();
   }
   draw();
+}
+
+// Every word of the night, hardest hitter first.
+function wordLogHtml(game) {
+  const log = [...(game.wordLog || [])].sort((a, b) => b.dealt - a.dealt);
+  const total = log.reduce((n, e) => n + e.dealt, 0);
+  if (!log.length) {
+    return `<section class="wordlog"><h3>The night's work</h3>
+      <p class="d">Not a single word fired.</p></section>`;
+  }
+  const rows = log.map((e, i) => {
+    const tags = [
+      e.wotd ? '<b class="tag wotd">word of the day</b>' : '',
+      e.overload ? '<b class="tag over">overload</b>' : '',
+      e.repeats ? `<b class="tag rep">repeat ×${e.repeats + 1}</b>` : '',
+    ].join('');
+    return `<li>
+      <span class="rk">${i + 1}</span>
+      <span class="wd">${firedWord(e)}${tags}</span>
+      <span class="dmg">${Math.round(e.dealt).toLocaleString()}</span>
+    </li>`;
+  }).join('');
+  return `<section class="wordlog">
+    <h3>The night's work
+      <span class="d">&middot; ${log.length} word${log.length > 1 ? 's' : ''}
+      &middot; ${Math.round(total).toLocaleString()} damage</span></h3>
+    <ol class="wl">${rows}</ol>
+  </section>`;
 }
 
 // ── end of run ─────────────────────────────────────────────────────────────

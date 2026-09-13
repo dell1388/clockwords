@@ -44,9 +44,9 @@ Sources: ¹ [WonderHowTo, "Turning Letters into Pesticide"](https://scrabble.won
 Everything below is a judgement call made to sit consistently around the facts
 above. Change it freely.
 
-- **Letter levels.** Grading letters 1–5, split into rungs of roughly equal size
-  by English letter frequency, drawing the grade as dots under the glyph, and
-  making the level (not the material) set the damage: 8 / 24 / 60 / 140 / 320.
+- **Letter levels.** Grading letters 1–5 (A I O T / B C E L N R S / D F G H K M U Y
+  / P V W Z / J Q X), drawing the grade as dots under the glyph, and making the
+  level (not the material) set the damage: 8 / 24 / 60 / 140 / 320.
   The original's dots meant a flat 5 damage each; the steep curve here is a
   deliberate departure, so a rare letter feels rare.
 - **The crucible.** Any even number of letters of one level goes in at once and is
@@ -82,6 +82,7 @@ above. Change it freely.
   the Cinder Moth, the Copper Centipede, the Steam Weaver and the Diabolical Box
   boss, along with all HP, speeds and armour, are ours.
 - **Five pages**, and pages returning when you kill the carrier.
+- **The night's work** — the ranked per-word damage ledger in the boiler room.
 - **The campaign.** Twenty levels: ten handmade, then a procedural curve, with a
   boss on the tenth and twentieth. Failing a level costs that night only — the run
   is checkpointed on entry and a level select lets you replay any night reached.
