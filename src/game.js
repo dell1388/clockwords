@@ -1,0 +1,495 @@
+// game.js — the simulation. Pure state + update(); drawing lives in render.js.
+
+import { SPECIES, MATERIALS, getLevel, START_PAGES, MIN_WORD } from './content.js';
+import { Boiler, startingInventory } from './boiler.js';
+import { isWord, wordOfTheDay } from './dict.js';
+import { sfx } from './audio.js';
+import * as badges from './achievements.js';
+
+export const W = 960, H = 640;
+export const PLAY_H = 470;
+export const MACHINE = { x: 480, y: 418 };
+export const MUZZLE = { x: 480, y: 356 };
+export const HORIZON = 158;
+export const DOORS = [{ x: 150, y: 168 }, { x: 480, y: 168 }, { x: 810, y: 168 }];
+
+// Things further up the room are further away.
+export const depthAt = y => 0.5 + 0.5 * Math.max(0, Math.min(1, (y - HORIZON) / (MACHINE.y - HORIZON)));
+const FIRE_GAP = 0.105;           // seconds between letters of a word
+const SHOT_SPEED = 640;
+const STEAL_RANGE = 34;
+
+const rand = (a, b) => a + Math.random() * (b - a);
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+// Rarer letters drop from tougher bugs.
+const COMMON = 'eaiorntslucdpmhgbfywkvxzjq';
+function rollLetter(tier) {
+  const spread = Math.max(4, Math.round(COMMON.length * (0.35 + 0.65 * Math.random())));
+  const bias = Math.min(COMMON.length - 1, Math.floor(Math.pow(Math.random(), 2.2 - tier * 0.35) * spread));
+  return COMMON[bias];
+}
+
+export class Game {
+  constructor(opts = {}) {
+    this.boiler = opts.boiler || new Boiler(startingInventory());
+    this.secrets = opts.secrets ?? 0;
+    this.discovered = opts.discovered || {};      // letter -> count
+    this.score = opts.score ?? 0;
+    this.levelNo = opts.levelNo || 1;
+    this.usedWords = opts.usedWords || new Map();
+    this.stats = opts.stats || { kills: 0, words: 0, damage: 0, best: '', bestDmg: 0, longest: '' };
+    this.wotd = wordOfTheDay();
+    this.reset();
+  }
+
+  reset() {
+    this.bugs = [];
+    this.shots = [];
+    this.particles = [];
+    this.floaters = [];
+    this.pageDrops = [];
+    this.fireQueue = [];
+    this.fireTimer = 0;
+    this.typed = '';
+    this.message = null;
+    this.pages = START_PAGES;
+    this.lost = 0;
+    this.time = 0;
+    this.shake = 0;
+    this.aim = null;              // {x,y} when the player aims by hand
+    this.over = false;
+    this.won = false;
+    this.muzzleFlash = 0;
+    this.recoil = 0;
+    this.levelSecrets = 0;
+    this.levelKills = 0;
+    this.spawns = this.spawns || [];
+    this.spawnIdx = 0;
+    this.level = this.level || null;
+    this.scale = this.scale || 1;
+  }
+
+  startLevel(n) {
+    this.reset();
+    this.levelNo = n;
+    const def = getLevel(n);
+    this.level = def;
+    this.scale = def.scale || 1;
+    this.spawns = [];
+    for (const w of def.waves) {
+      for (let i = 0; i < w.n; i++) {
+        this.spawns.push({ t: w.at + i * w.gap, type: w.type, door: w.door });
+      }
+    }
+    this.spawns.sort((a, b) => a.t - b.t);
+    this.spawnIdx = 0;
+    this.boiler.refill();
+  }
+
+  // ── typing ───────────────────────────────────────────────────────────────
+  type(ch) {
+    if (this.over || this.won) return;
+    if (this.typed.length >= 28) return;
+    this.typed += ch.toLowerCase();
+    sfx.key();
+  }
+
+  backspace() { if (this.typed) { this.typed = this.typed.slice(0, -1); sfx.back(); } }
+  clear() { if (this.typed) { this.typed = ''; sfx.back(); } }
+
+  submit() {
+    const word = this.typed.toLowerCase();
+    this.typed = '';
+    if (this.over || this.won) return;
+    if (word.length < MIN_WORD) { this.reject(word, `${MIN_WORD} letters minimum`); return; }
+    if (!isWord(word)) { this.reject(word, 'not in the lexicon'); return; }
+
+    const repeats = this.usedWords.get(word) || 0;
+    const wotd = word === this.wotd;
+    const res = this.boiler.resolve(word, { repeats, wotd });
+    this.boiler.spend(res.slots);
+    this.usedWords.set(word, repeats + 1);
+
+    let total = 0;
+    for (const s of res.shots) { this.fireQueue.push(s); total += s.dmg; }
+
+    if (res.overload) {
+      sfx.overload();
+      this.note('BOILER OVERLOAD', '#ffd66b');
+      for (let i = 0; i < 6; i++) {
+        this.fireQueue.push({ ch: '*', mat: 'aetherium', dmg: Math.round(60 * res.mult),
+          pierce: 1, freeze: 0, burn: null, splash: 50, chain: 2, chainRange: 120 });
+      }
+    }
+    if (wotd) { this.note('WORD OF THE DAY', '#9be8ff'); sfx.overload(); }
+    if (repeats > 0) this.note(`repeated ×${repeats + 1} — ${Math.round(res.penalty * 100)}% power`, '#c8a27a');
+
+    this.stats.words++;
+    badges.checkWord(word);
+    if (total > this.stats.bestDmg) { this.stats.bestDmg = total; this.stats.best = word; }
+    if (word.length > (this.stats.longest || '').length) this.stats.longest = word;
+    this.score += Math.round(total * 0.5 + word.length * word.length);
+    this.lastWord = { word, res, total, at: this.time };
+  }
+
+  reject(word, why) {
+    sfx.bad();
+    this.message = { text: word ? `"${word}" — ${why}` : why, t: 1.6, bad: true };
+  }
+
+  note(text, color) { this.floaters.push({ text, color, x: MACHINE.x, y: 396, vy: -26, t: 1.6, big: true }); }
+
+  // ── simulation ───────────────────────────────────────────────────────────
+  update(dt) {
+    if (this.over) { this.decay(dt); return; }
+    this.time += dt;
+    this.shake = Math.max(0, this.shake - dt * 3.2);
+    this.muzzleFlash = Math.max(0, this.muzzleFlash - dt * 6);
+    this.recoil = Math.max(0, this.recoil - dt * 5);
+    if (this.message) { this.message.t -= dt; if (this.message.t <= 0) this.message = null; }
+
+    this.spawnStep();
+    this.fireStep(dt);
+    this.bugStep(dt);
+    this.shotStep(dt);
+    this.dropStep(dt);
+    this.decay(dt);
+
+    if (!this.won && this.spawnIdx >= this.spawns.length && !this.bugs.length && !this.pageDrops.length) {
+      this.won = true;
+      this.fireQueue.length = 0;
+      this.typed = '';
+      this.levelSecrets = 2 + Math.floor(this.levelNo / 2) + (this.level.boss ? 5 : 0) + this.pages;
+      this.secrets += this.levelSecrets;
+      this.score += 250 + this.pages * 100;
+      badges.checkLevelClear(this);
+      sfx.win();
+    }
+  }
+
+  decay(dt) {
+    for (const p of this.particles) {
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      p.vy += (p.g || 0) * dt; p.vx *= 0.99; p.vy *= 0.99;
+      p.t -= dt;
+    }
+    this.particles = this.particles.filter(p => p.t > 0);
+    for (const f of this.floaters) { f.y += f.vy * dt; f.t -= dt; }
+    this.floaters = this.floaters.filter(f => f.t > 0);
+  }
+
+  spawnStep() {
+    while (this.spawnIdx < this.spawns.length && this.spawns[this.spawnIdx].t <= this.time) {
+      const s = this.spawns[this.spawnIdx++];
+      this.spawn(s.type, s.door);
+    }
+  }
+
+  spawn(type, doorIdx) {
+    const sp = SPECIES[type];
+    const d = DOORS[doorIdx >= 0 ? doorIdx : (Math.random() * DOORS.length) | 0];
+    const hp = Math.round(sp.hp * this.scale);
+    const bug = {
+      sp, x: d.x + rand(-22, 22), y: d.y + rand(-6, 6),
+      hp, maxHp: hp, r: sp.r, door: d,
+      speed: sp.speed * (0.9 + Math.random() * 0.25),
+      armor: sp.armor || 0, phase: 'in', carrying: false,
+      freeze: 0, burn: null, wob: Math.random() * 6.28, legPhase: Math.random() * 6.28,
+      flash: 0, tilt: 0, spawnT: 0,
+    };
+    this.bugs.push(bug);
+    if (sp.boss) { sfx.boss(); this.shake = 1; }
+    this.puff(bug.x, bug.y, 8, '#9d8f76');
+  }
+
+  bugStep(dt) {
+    for (const b of this.bugs) {
+      b.spawnT += dt;
+      if (b.depth === undefined) { b.depth = b.sp.boss ? Math.max(0.82, depthAt(b.y)) : depthAt(b.y); b.r = b.sp.r * b.depth; }
+      b.flash = Math.max(0, b.flash - dt * 5);
+      if (b.freeze > 0) { b.freeze -= dt; }
+      if (b.burn) {
+        b.burn.t -= dt;
+        this.damage(b, b.burn.dps * dt, { silent: true, dot: true });
+        if (Math.random() < dt * 22) this.particles.push({
+          x: b.x + rand(-b.r, b.r), y: b.y + rand(-b.r, b.r), vx: rand(-12, 12), vy: rand(-40, -14),
+          t: rand(0.25, 0.6), r: rand(1.5, 3.4), c: Math.random() < 0.5 ? '#ff9b3d' : '#ffd98a',
+        });
+        if (b.burn.t <= 0) b.burn = null;
+      }
+      if (b.sp.heals) {
+        b.healT = (b.healT || 0) + dt;
+        if (b.healT > 1) {
+          b.healT = 0;
+          for (const o of this.bugs) {
+            if (o !== b && dist(o, b) < b.sp.heals.range && o.hp < o.maxHp) {
+              o.hp = Math.min(o.maxHp, o.hp + b.sp.heals.rate);
+              this.particles.push({ x: o.x, y: o.y - 10, vx: rand(-8, 8), vy: -30, t: 0.5, r: 2.5, c: '#b9cf92' });
+            }
+          }
+        }
+      }
+      if (b.sp.spawns) {
+        b.spawnTimer = (b.spawnTimer || 0) + dt;
+        if (b.spawnTimer > 4.5) {
+          b.spawnTimer = 0;
+          const sp = SPECIES[b.sp.spawns];
+          const hp = Math.round(sp.hp * this.scale);
+          this.bugs.push({ sp, x: b.x + rand(-20, 20), y: b.y + 18, hp, maxHp: hp, r: sp.r,
+            door: b.door, speed: sp.speed, armor: 0, phase: 'in', carrying: false,
+            freeze: 0, burn: null, wob: Math.random() * 6.28, legPhase: 0, flash: 0, tilt: 0, spawnT: 0 });
+          sfx.clank();
+        }
+      }
+
+      if (b.freeze > 0) { b.frost = Math.min(1, (b.frost || 0) + dt * 4); continue; }
+      b.frost = Math.max(0, (b.frost || 0) - dt * 2);
+
+      const goal = b.phase === 'in' ? MACHINE : b.door;
+      let dx = goal.x - b.x, dy = goal.y - b.y;
+      const d = Math.hypot(dx, dy) || 1;
+      dx /= d; dy /= d;
+
+      b.wob += dt * (b.sp.gait === 'flit' ? 5.5 : 2.2);
+      const sway = Math.sin(b.wob) * (b.sp.gait === 'flit' ? 46 : b.sp.gait === 'scurry' ? 16 : 8);
+      const px = -dy, py = dx;
+      const sp = b.speed * (b.carrying ? 1.15 : 1);
+      b.x += (dx * sp + px * sway * 0.5) * dt;
+      b.y += (dy * sp + py * sway * 0.5) * dt;
+      b.tilt = Math.atan2(dy, dx) + Math.PI / 2;
+      b.legPhase += dt * sp * 0.22;
+      b.x = Math.max(14, Math.min(W - 14, b.x));
+      b.depth = b.sp.boss ? Math.max(0.82, depthAt(b.y)) : depthAt(b.y);
+      b.r = b.sp.r * b.depth;
+
+      if (b.phase === 'in' && d < STEAL_RANGE + b.r) {
+        if (this.pages > 0) {
+          this.pages--;
+          b.carrying = true;
+          b.phase = 'out';
+          sfx.steal();
+          this.shake = Math.max(this.shake, 0.5);
+          this.floaters.push({ text: 'A page!', color: '#ff8f6b', x: b.x, y: b.y - 20, vy: -30, t: 1.4 });
+        } else {
+          b.phase = 'out';
+        }
+      }
+      if (b.phase === 'out' && d < 26) {
+        if (b.carrying) {
+          this.lost++;
+          sfx.lost();
+          this.shake = 1;
+          this.floaters.push({ text: 'PAGE LOST', color: '#ff5a3c', x: b.x, y: b.y + 10, vy: -20, t: 2, big: true });
+          if (this.lost >= START_PAGES) this.gameOver();
+        }
+        b.dead = true;
+      }
+    }
+    this.bugs = this.bugs.filter(b => !b.dead);
+  }
+
+  target() {
+    if (this.aim) return null;
+    let best = null, bestScore = -Infinity;
+    for (const b of this.bugs) {
+      if (b.spawnT < 0.15) continue;
+      // prefer whatever is closest to stealing, then carriers on their way out
+      const prog = b.phase === 'out' && b.carrying ? 4000 - dist(b, b.door) : 2000 - dist(b, MACHINE);
+      if (prog > bestScore) { bestScore = prog; best = b; }
+    }
+    return best;
+  }
+
+  fireStep(dt) {
+    this.fireTimer -= dt;
+    if (this.fireTimer > 0 || !this.fireQueue.length) return;
+    const shot = this.fireQueue.shift();
+    this.fireTimer = FIRE_GAP;
+    const tgt = this.target();
+    let ang;
+    if (this.aim) ang = Math.atan2(this.aim.y - MUZZLE.y, this.aim.x - MUZZLE.x);
+    else if (tgt) ang = Math.atan2(tgt.y - MUZZLE.y, tgt.x - MUZZLE.x);
+    else ang = -Math.PI / 2 + rand(-0.2, 0.2);
+    this.cannonAngle = ang;
+    this.shots.push({
+      x: MUZZLE.x, y: MUZZLE.y,
+      vx: Math.cos(ang) * SHOT_SPEED, vy: Math.sin(ang) * SHOT_SPEED,
+      shot, target: tgt, hit: new Set(), life: 2.4, spin: rand(-6, 6), rot: 0, trail: [],
+    });
+    this.muzzleFlash = 1; this.recoil = 1;
+    this.shake = Math.max(this.shake, shot.mat === 'aetherium' ? 0.35 : 0.12);
+    sfx.fire(shot.mat ? 1.25 : 0.85);
+  }
+
+  shotStep(dt) {
+    for (const s of this.shots) {
+      s.life -= dt;
+      // light homing so letters curve onto whatever they were aimed at
+      if (s.target && !s.target.dead && this.bugs.includes(s.target)) {
+        const want = Math.atan2(s.target.y - s.y, s.target.x - s.x);
+        const cur = Math.atan2(s.vy, s.vx);
+        let diff = want - cur;
+        while (diff > Math.PI) diff -= 2 * Math.PI;
+        while (diff < -Math.PI) diff += 2 * Math.PI;
+        const turn = Math.max(-7 * dt, Math.min(7 * dt, diff));
+        const a = cur + turn;
+        s.vx = Math.cos(a) * SHOT_SPEED; s.vy = Math.sin(a) * SHOT_SPEED;
+      }
+      s.trail.push({ x: s.x, y: s.y });
+      if (s.trail.length > 6) s.trail.shift();
+      s.x += s.vx * dt; s.y += s.vy * dt;
+      s.rot += s.spin * dt;
+
+      for (const b of this.bugs) {
+        if (s.hit.has(b)) continue;
+        if (dist(s, b) > b.r + 7) continue;
+        this.impact(s, b);
+        s.hit.add(b);
+        if (s.hit.size > s.shot.pierce) { s.done = true; }
+        break;
+      }
+      if (s.x < -40 || s.x > W + 40 || s.y < -40 || s.y > PLAY_H + 40 || s.life <= 0) s.done = true;
+    }
+    this.shots = this.shots.filter(s => !s.done);
+  }
+
+  impact(s, b) {
+    const sh = s.shot;
+    this.damage(b, sh.dmg);
+    sfx.hit();
+    this.sparks(s.x, s.y, sh.mat ? MATERIALS[sh.mat].glow : '#d9cdb4');
+
+    if (sh.freeze) {
+      b.freeze = Math.max(b.freeze, sh.freeze);
+      sfx.freeze();
+      this.puff(b.x, b.y, 10, MATERIALS.lazurite.glow);
+    }
+    if (sh.burn) {
+      b.burn = { t: sh.burn.time, dps: sh.burn.dps };
+      sfx.burn();
+    }
+    if (sh.splash) {
+      sfx.boom();
+      this.shake = Math.max(this.shake, 0.4);
+      this.blast(s.x, s.y, sh.splash, sh.mat ? MATERIALS[sh.mat].glow : '#ffb457');
+      for (const o of this.bugs) {
+        if (o === b) continue;
+        const d = dist(o, s);
+        if (d < sh.splash) this.damage(o, sh.dmg * 0.6 * (1 - d / sh.splash));
+      }
+    }
+    if (sh.chain) {
+      let src = b, n = sh.chain;
+      const done = new Set([b]);
+      while (n-- > 0) {
+        let near = null, nd = sh.chainRange;
+        for (const o of this.bugs) {
+          if (done.has(o)) continue;
+          const d = dist(o, src);
+          if (d < nd) { nd = d; near = o; }
+        }
+        if (!near) break;
+        this.arc(src, near);
+        this.damage(near, sh.dmg * 0.5);
+        done.add(near); src = near;
+      }
+    }
+  }
+
+  damage(b, amount, opts = {}) {
+    if (b.dead) return;
+    const dealt = amount * (1 - (b.armor || 0));
+    b.hp -= dealt;
+    this.stats.damage += dealt;
+    if (!opts.dot) { b.flash = 1; }
+    if (!opts.silent && dealt >= 1) {
+      this.floaters.push({ text: String(Math.round(dealt)), color: '#ffe9bd',
+        x: b.x + rand(-6, 6), y: b.y - b.r - 4, vy: -34, t: 0.7 });
+    }
+    if (b.hp <= 0) this.kill(b);
+  }
+
+  kill(b) {
+    if (b.dead) return;
+    b.dead = true;
+    this.stats.kills++;
+    this.levelKills++;
+    this.score += (b.sp.bounty + 1) * 10;
+    sfx.die();
+    this.debris(b);
+    if (b.carrying) {
+      this.pageDrops.push({ x: b.x, y: b.y, t: 0, vx: rand(-20, 20), vy: -40 });
+      this.floaters.push({ text: 'page recovered', color: '#9be88b', x: b.x, y: b.y - 16, vy: -28, t: 1.4 });
+    }
+    if (b.sp.splitOnDeath) {
+      for (const t of b.sp.splitOnDeath) {
+        const sp = SPECIES[t];
+        const hp = Math.round(sp.hp * this.scale);
+        this.bugs.push({ sp, x: b.x + rand(-12, 12), y: b.y + rand(-8, 8), hp, maxHp: hp, r: sp.r,
+          door: b.door, speed: sp.speed, armor: 0, phase: b.phase, carrying: false,
+          freeze: 0, burn: null, wob: Math.random() * 6.28, legPhase: 0, flash: 0, tilt: 0, spawnT: 0 });
+      }
+    }
+    if (Math.random() < (b.sp.secret >= 1 ? 1 : b.sp.secret)) {
+      const n = b.sp.secret >= 1 ? b.sp.secret : 1;
+      this.secrets += n;
+      this.floaters.push({ text: `+${n} secret`, color: '#ffd66b', x: b.x, y: b.y - 26, vy: -30, t: 1.3 });
+    }
+    if (Math.random() < b.sp.drop) {
+      const ch = rollLetter(b.sp.boss ? 4 : b.sp.hp > 80 ? 3 : b.sp.hp > 30 ? 2 : 1);
+      this.discovered[ch] = (this.discovered[ch] || 0) + 1;
+      this.floaters.push({ text: ch.toUpperCase(), color: '#e8d7ae', x: b.x, y: b.y - 12, vy: -40, t: 1.5, big: true });
+    }
+    if (b.sp.boss) { this.shake = 1.2; sfx.boom(); this.blast(b.x, b.y, 160, '#ffc857'); }
+    badges.checkKill(b.sp);
+  }
+
+  gameOver() {
+    this.over = true;
+    sfx.boom();
+    this.shake = 1.4;
+  }
+
+  dropStep(dt) {
+    for (const p of this.pageDrops) {
+      p.t += dt;
+      if (p.t < 0.6) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 160 * dt; }
+      else {
+        const dx = MACHINE.x - p.x, dy = (MACHINE.y - 16) - p.y;
+        const d = Math.hypot(dx, dy) || 1;
+        p.x += (dx / d) * 260 * dt; p.y += (dy / d) * 260 * dt;
+        if (d < 14) { p.done = true; this.pages++; sfx.clank(); }
+      }
+    }
+    this.pageDrops = this.pageDrops.filter(p => !p.done);
+  }
+
+  // ── particle helpers ────────────────────────────────────────────────────
+  sparks(x, y, c) {
+    for (let i = 0; i < 7; i++) this.particles.push({
+      x, y, vx: rand(-120, 120), vy: rand(-120, 120), t: rand(0.15, 0.4), r: rand(1, 2.6), c, g: 260,
+    });
+  }
+  puff(x, y, n, c) {
+    for (let i = 0; i < n; i++) this.particles.push({
+      x, y, vx: rand(-40, 40), vy: rand(-50, 10), t: rand(0.3, 0.8), r: rand(3, 8), c, soft: true,
+    });
+  }
+  blast(x, y, r, c) {
+    this.particles.push({ x, y, vx: 0, vy: 0, t: 0.34, r, c, ring: true });
+    for (let i = 0; i < 22; i++) this.particles.push({
+      x, y, vx: rand(-1, 1) * r * 3, vy: rand(-1, 1) * r * 3, t: rand(0.2, 0.55), r: rand(2, 5), c, g: 180,
+    });
+  }
+  debris(b) {
+    for (let i = 0; i < 14; i++) this.particles.push({
+      x: b.x, y: b.y, vx: rand(-160, 160), vy: rand(-190, 40), t: rand(0.4, 0.9),
+      r: rand(1.5, 3.6), c: Math.random() < 0.5 ? b.sp.body : b.sp.trim, g: 420, gear: Math.random() < 0.4,
+    });
+    this.puff(b.x, b.y, 6, '#b9ac93');
+  }
+  arc(a, b) {
+    this.particles.push({ arc: true, x: a.x, y: a.y, x2: b.x, y2: b.y, t: 0.18, c: '#fff6c9', r: 2 });
+  }
+}
