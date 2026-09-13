@@ -23,17 +23,19 @@ lexicon is fetched and the code is ES modules.
 ## How it plays
 
 Type any English word and press <kbd>Enter</kbd>. Every letter of the word
-becomes one shell, and the cannon in the corner fires them at **200 rounds a
-minute**. A word that is not in the lexicon just clears the rack and says so —
-no pause, no penalty.
+becomes one shell, and the cannon in the corner fires them **one every 0.2
+seconds** (300 rounds a minute). A word that is not in the lexicon just clears
+the rack and says so — no pause, no penalty.
 
 **Every shell finds a target.** If its mark dies in flight the charge picks the
 next one; with nothing in the room the breech simply holds until something walks
 in.
 
 **Chambers unseal as you use them, and bolt shut again every level.** The boiler
-has 8 chambers but each level opens with only **one**. Spend everything the open
-chambers hold and the next one unseals.
+has 8 chambers but each level opens with only **one**. Drain *every* open chamber
+and exactly one more unseals — a partial sweep opens nothing. The boiler will not
+load the same letter into two chambers at once unless it has nothing else to
+load, and never fills more chambers than it has letters.
 
 Type a character that is sitting in an open chamber and that chamber reads as
 drawn down at once — you can see what a word will cost before you fire it. It
@@ -104,6 +106,9 @@ not dilute what the chambers pull.
 - **Word of the day** — one word, the same for everyone, doubles everything and explodes.
 - Loot is tabled by night: common letters fall constantly early on, and the rare
   ones only start appearing once you are deep enough — and off tougher bugs.
+- Nights are long: the first runs about a minute and a half and twenty-odd bugs,
+  the twentieth nearly three minutes and well over a hundred. Each wave starts
+  before the last has finished, so the pressure never really lifts.
 
 ### Controls
 

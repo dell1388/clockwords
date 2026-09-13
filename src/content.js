@@ -78,7 +78,7 @@ export const MIN_WORD = 3;
 export const START_PAGES = 5;
 export const MIN_BOILER = 15;       // the boiler will not run on less
 export const MAX_BOILER = 50;       // and will not hold more
-export const FIRE_RPM = 200;        // one shell per letter, two hundred a minute
+export const FIRE_RPM = 300;        // one shell per letter, one every 0.2s
 export const STOKE_COST = 3;        // secrets for one fresh level-1 Iron letter
 
 // ── loot ───────────────────────────────────────────────────────────────────

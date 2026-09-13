@@ -81,15 +81,17 @@ export function renderHow(onBack) {
           clears and tells you so — it costs you nothing but the typing.</p>
           <p>The boiler has <b>${CHAMBERS} chambers</b>, but every level starts with
           <b>${START_CHAMBERS === 1 ? 'only one unsealed' : `${START_CHAMBERS} unsealed`}</b>.
-          Spend everything the unsealed chambers hold and the next one opens — and at the top
-          of the next level they all bolt shut again.</p>
+          Drain <i>every</i> open chamber and exactly one more unseals — a partial sweep opens
+          nothing. At the top of the next level they all bolt shut again.</p>
+          <p>The boiler never loads the same letter into two chambers at once unless it has
+          nothing else left to load, and it never fills more chambers than it has letters.</p>
           <p>If a character you type is sitting in an unsealed chamber, the chamber reads as
           drawn down the moment you type it, then fires and refills from the bag. Any character
           <i>not</i> in a chamber is a <b>blank</b> — a flat 3 damage that no bonus or penalty
           ever changes.</p>
-          <p>The cannon fires <b>one shell per letter at ${FIRE_RPM} rounds a minute</b>, and
-          every shell finds a target: if its mark dies in flight the charge picks the next one.
-          With nothing in the room the breech simply holds.</p>
+          <p>The cannon fires <b>one shell per letter, one every 0.2 seconds</b> (${FIRE_RPM} rounds
+          a minute), and every shell finds a target: if its mark dies in flight the charge picks
+          the next one. With nothing in the room the breech simply holds.</p>
           <p>Longer words hit harder. A word you have already used does less each time you
           repeat it. Use every loaded chamber in one word for a <b>boiler overload</b>. The
           <b>word of the day</b> doubles everything and explodes.</p>

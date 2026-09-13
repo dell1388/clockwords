@@ -51,8 +51,8 @@ export function buildPath(door) {
 }
 
 const FIRE_GAP = 60 / FIRE_RPM;   // one shell per letter, 200 rounds a minute
-const SHOT_SPEED = 520;
-const TURN_RATE = 16;             // rad/s — tight enough that no shell ever misses
+const SHOT_SPEED = 1040;
+const TURN_RATE = 32;             // rad/s — tight enough that no shell ever misses
 const WP_RADIUS = 13;
 
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -107,11 +107,18 @@ export class Game {
     const def = getLevel(n);
     this.level = def;
     this.scale = def.scale || 1;
+    // Nights are long. Each wave in the table is stretched out, and the next one
+    // starts before the last has finished, so the pressure never really lifts.
+    const stretch = Math.min(4.5, 3 + (n - 1) * 0.16);
     this.spawns = [];
+    let clock = 1;
     for (const w of def.waves) {
-      for (let i = 0; i < w.n; i++) {
-        this.spawns.push({ t: w.at + i * w.gap, type: w.type, door: w.door });
+      const boss = SPECIES[w.type] && SPECIES[w.type].boss;
+      const count = boss ? w.n : Math.min(30, Math.max(1, Math.round(w.n * stretch)));
+      for (let i = 0; i < count; i++) {
+        this.spawns.push({ t: clock + i * w.gap, type: w.type, door: w.door });
       }
+      clock += count * w.gap * 0.8;
     }
     this.spawns.sort((a, b) => a.t - b.t);
     this.spawnIdx = 0;
@@ -140,10 +147,7 @@ export class Game {
     const wotd = word === this.wotd;
     const res = this.boiler.resolve(word, { repeats, wotd });
     const unsealed = this.boiler.spend(res.slots);
-    if (unsealed) {
-      this.note(unsealed > 1 ? `${unsealed} CHAMBERS UNSEALED` : 'CHAMBER UNSEALED', '#9be8ff');
-      sfx.steam();
-    }
+    if (unsealed) { this.note('CHAMBER UNSEALED', '#9be8ff'); sfx.steam(); }
     this.usedWords.set(word, repeats + 1);
 
     let total = 0;

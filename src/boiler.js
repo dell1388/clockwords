@@ -16,7 +16,7 @@ export class Boiler {
     this.inventory = inventory;
     this.store = store;
     this.open = Math.max(1, Math.min(CHAMBERS, open));
-    this.spentSinceUnlock = 0;
+    this.usedSinceUnlock = new Set();
     this.bag = [];
     this.chambers = new Array(CHAMBERS).fill(null);
     this.reshuffle();
@@ -32,14 +32,29 @@ export class Boiler {
     }
   }
 
-  // Only the unsealed chambers are fed; the bag recycles when it runs out.
+  // Pull one letter from the bag, preferring a character that is not already
+  // sitting in a chamber. Only when the bag has nothing else to offer does the
+  // boiler load a second copy of a letter you already have.
+  draw() {
+    if (!this.bag.length) this.reshuffle();
+    if (!this.bag.length) return null;
+    const loadedChars = new Set(this.chambers.filter(Boolean).map(c => c.letter));
+    for (let k = this.bag.length - 1; k >= 0; k--) {
+      if (!loadedChars.has(this.bag[k].letter)) return this.bag.splice(k, 1)[0];
+    }
+    return this.bag.pop();
+  }
+
+  // Only the unsealed chambers are fed, and never more of them than there are
+  // letters in the boiler. The bag recycles when it runs out.
   refill() {
+    const room = Math.min(this.open, this.inventory.length);
     for (let i = 0; i < CHAMBERS; i++) {
-      if (i >= this.open) { this.chambers[i] = null; continue; }
+      if (i >= room) { this.chambers[i] = null; continue; }
       if (this.chambers[i]) continue;
-      if (!this.bag.length) this.reshuffle();
-      if (!this.bag.length) break;              // inventory smaller than the open count
-      this.chambers[i] = this.bag.pop();
+      const l = this.draw();
+      if (!l) break;
+      this.chambers[i] = l;
     }
   }
 
@@ -52,7 +67,7 @@ export class Boiler {
   // by spending what the open ones hold.
   reseal() {
     this.open = START_CHAMBERS;
-    this.spentSinceUnlock = 0;
+    this.usedSinceUnlock.clear();
     this.chambers.fill(null);
     this.reshuffle();
     this.refill();
@@ -212,16 +227,19 @@ export class Boiler {
     return { shots, slots: [...taken], mult, penalty, overload, jade, brass, wotd };
   }
 
-  // Called once the word has been committed to the cannon. Spending everything
-  // the open chambers held unseals the next one.
+  // Called once the word has been committed to the cannon. A chamber unseals
+  // only when every chamber currently open has been drained since the last one
+  // opened — never more than one at a time, and never on a partial sweep.
   spend(slots) {
-    for (const i of slots) this.chambers[i] = null;
-    this.spentSinceUnlock += slots.length;
+    for (const i of slots) {
+      this.chambers[i] = null;
+      this.usedSinceUnlock.add(i);
+    }
     let unsealed = 0;
-    while (this.spentSinceUnlock >= this.open && this.open < CHAMBERS) {
-      this.spentSinceUnlock -= this.open;
-      this.open++;
-      unsealed++;
+    if (this.open < CHAMBERS && this.inventory.length > this.open) {
+      let all = true;
+      for (let i = 0; i < this.open; i++) if (!this.usedSinceUnlock.has(i)) { all = false; break; }
+      if (all) { this.open++; this.usedSinceUnlock.clear(); unsealed = 1; }
     }
     this.refill();
     return unsealed;

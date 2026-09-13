@@ -60,12 +60,13 @@ above. Change it freely.
 - **Blanks are flat.** 3 damage, untouched by word length, repeats, Jade or the
   word of the day. The original's 1-damage blank scaled with nothing either, but
   the exact figure is ours.
-- **Chambers unseal one at a time**, starting from one, each time the open
-  chambers have been spent through — and reseal at the top of every level. The
-  original ran all eight from the start.
+- **Chambers unseal one at a time**, starting from one, each time *every* open
+  chamber has been drained since the last unseal — and reseal at the top of every
+  level. The boiler also refuses to load duplicate letters while it has distinct
+  ones left. The original ran all eight from the start.
 - **Boiler and storage.** A 15–50 letter working boiler with everything else
   parked in storage is entirely ours; the original had no cap.
-- **The cannon** sits in a corner, fires one shell per letter at 200 rpm, holds
+- **The cannon** sits in a corner, fires one shell per letter at 300 rpm, holds
   its fire when the room is empty, and never misses — every shell re-targets in
   flight. The original fired faster and its letters could miss.
 - **Bug pathing.** One open door, and a single painted route: across, down a
