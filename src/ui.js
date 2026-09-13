@@ -321,7 +321,13 @@ export function renderBoiler(game, onNext, onChange, onMenu) {
           </section>
         </div>
 
-        ${wordLogHtml(game)}
+        <div class="afteraction">
+          <section>
+            <h3>The night in figures</h3>
+            ${statsBlock(game.summary())}
+          </section>
+          ${wordLogHtml(game)}
+        </div>
 
         ${short ? `<p class="warn">The boiler needs ${short} more letter${short > 1 ? 's' : ''}
           before it will run.</p>` : ''}
@@ -382,6 +388,26 @@ export function renderBoiler(game, onNext, onChange, onMenu) {
   draw();
 }
 
+const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+
+// The night in figures — the same block whether the night was won or lost.
+export function statsBlock(sum, { secrets = true } = {}) {
+  const row = (label, value) => `<li><span>${label}</span><b>${value}</b></li>`;
+  const best = sum.best ? `${sum.best.word} (${Math.round(sum.best.dealt).toLocaleString()})` : '—';
+  return `<ul class="stats">
+    ${row('Score this level', sum.score.toLocaleString())}
+    ${row('Bugs destroyed', sum.kills)}
+    ${row('Words fired', sum.words)}
+    ${row('Damage dealt', Math.round(sum.dealt).toLocaleString())}
+    ${row('Letters fired', `${sum.lit} from chambers · ${sum.blanks} blank`)}
+    ${row('Hardest word', best)}
+    ${row('Longest word', sum.longest ? sum.longest.word : '—')}
+    ${row('Pages', `${sum.pages} intact · ${sum.lost} lost`)}
+    ${secrets ? row('Secrets earned', `⚙ ${sum.secrets}`) : ''}
+    ${row('Time on the floor', mmss(sum.time))}
+  </ul>`;
+}
+
 // Every word of the night, hardest hitter first.
 function wordLogHtml(game) {
   const log = [...(game.wordLog || [])].sort((a, b) => b.dealt - a.dealt);
@@ -390,6 +416,7 @@ function wordLogHtml(game) {
     return `<section class="wordlog"><h3>The night's work</h3>
       <p class="d">Not a single word fired.</p></section>`;
   }
+
   const rows = log.map((e, i) => {
     const tags = [
       e.wotd ? '<b class="tag wotd">word of the day</b>' : '',
@@ -414,20 +441,23 @@ function wordLogHtml(game) {
 export function renderOver(game, on) {
   const t = $('#gameover');
   t.innerHTML = `
-    <div class="plate">
-      <div class="crest sad">☠</div>
-      <p class="kicker">Level ${game.levelNo} — ${getLevel(game.levelNo).name}</p>
-      <h2>The formula is gone</h2>
-      <p class="story">All ${START_PAGES} pages were carried off into the dark.
-      Only tonight is lost — the workshop stands, and the boiler is as you carried it in.</p>
-      <ul class="stats">
-        <li><span>Score</span><b>${game.score.toLocaleString()}</b></li>
-        <li><span>Bugs destroyed</span><b>${game.stats.kills}</b></li>
-        <li><span>Words fired</span><b>${game.stats.words}</b></li>
-        <li><span>Damage dealt</span><b>${Math.round(game.stats.damage).toLocaleString()}</b></li>
-        <li><span>Best word</span><b>${game.stats.best || '—'} (${game.stats.bestDmg})</b></li>
-        <li><span>Longest word</span><b>${game.stats.longest || '—'}</b></li>
-      </ul>
+    <div class="plate wide">
+      <div class="overhead">
+        <div class="crest sad">☠</div>
+        <div>
+          <p class="kicker">Level ${game.levelNo} — ${getLevel(game.levelNo).name}</p>
+          <h2>The formula is gone</h2>
+          <p class="story">All ${START_PAGES} pages were carried off into the dark.
+          Only tonight is lost — the workshop stands, and the boiler is as you carried it in.</p>
+        </div>
+      </div>
+      <div class="afteraction">
+        <section>
+          <h3>The night in figures</h3>
+          ${statsBlock(game.summary(), { secrets: false })}
+        </section>
+        ${wordLogHtml(game)}
+      </div>
       <div class="btns">
         <button id="b-retry" class="big">Fight level ${game.levelNo} again</button>
         <button id="b-levels">Levels</button>

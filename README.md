@@ -114,10 +114,13 @@ not dilute what the chambers pull.
 When the last bug is off the floor the room holds for a beat with **LEVEL
 CLEARED** — or **LEVEL FAILED** — across it before the panel comes up.
 
-The boiler room then lists **the night's work**: every word you fired, ranked by
-the damage it actually dealt, with the letters that came out of a chamber lit in
-their material colour and the blanks left grey. Burn damage is credited back to
-the word that started the fire.
+Both end-of-level screens — the boiler room and the defeat panel — then show
+**the night in figures** (that level only: score, kills, words, damage, chamber
+letters against blanks, hardest and longest word, pages, secrets, time) beside
+**the night's work**: every word you fired, ranked by the damage it actually
+dealt, with the letters that came out of a chamber lit in their material colour
+and the blanks left grey. Burn damage is credited back to the word that started
+the fire.
 
 ### Twenty nights, and a level select
 

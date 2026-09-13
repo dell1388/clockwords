@@ -125,6 +125,7 @@ export class Game {
     this.spawns.sort((a, b) => a.t - b.t);
     this.spawnIdx = 0;
     this.wordLog = [];
+    this.levelStartScore = this.score;
     this.boiler.reseal();
   }
 
@@ -219,6 +220,7 @@ export class Game {
       this.levelSecrets = 2 + Math.floor(this.levelNo / 2) + (this.level.boss ? 5 : 0) + this.pages;
       this.secrets += this.levelSecrets;
       this.score += 250 + this.pages * 100;
+      this.levelTime = this.time;
       badges.checkLevelClear(this);
       sfx.win();
     }
@@ -570,6 +572,30 @@ export class Game {
       }
     }
     this.pageDrops = this.pageDrops.filter(p => !p.done);
+  }
+
+  // Everything the night came to, for the panel afterwards.
+  summary() {
+    const log = this.wordLog || [];
+    let dealt = 0, lit = 0, blanks = 0, best = null, longest = null;
+    for (const e of log) {
+      dealt += e.dealt;
+      for (const m of e.marks) (m ? lit++ : blanks++);
+      if (!best || e.dealt > best.dealt) best = e;
+      if (!longest || e.word.length > longest.word.length) longest = e;
+    }
+    return {
+      level: this.levelNo,
+      score: this.score - (this.levelStartScore || 0),
+      kills: this.levelKills,
+      words: log.length,
+      dealt,
+      lit, blanks,
+      best, longest,
+      pages: this.pages, lost: this.lost,
+      secrets: this.levelSecrets,
+      time: this.levelTime || this.time,
+    };
   }
 
   // ── particle helpers ────────────────────────────────────────────────────
