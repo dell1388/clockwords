@@ -2,7 +2,7 @@
 // room between levels, and the end-of-run summary.
 
 import { MATERIALS, SPECIAL_MATERIALS, LETTER_LEVELS, MAX_LEVEL, CHAMBERS, START_CHAMBERS,
-  START_PAGES, MIN_BOILER, MAX_BOILER, FIRE_RPM, STOKE_COST, getLevel } from './content.js';
+  START_PAGES, MIN_BOILER, MAX_BOILER, FIRE_RPM, STOKE_COST, CAMPAIGN, getLevel } from './content.js';
 import { dictSize } from './dict.js';
 import { BADGES, earned } from './achievements.js';
 import { sfx } from './audio.js';
@@ -34,9 +34,10 @@ const swatch = mat => {
 };
 
 // ── title ──────────────────────────────────────────────────────────────────
-export function renderTitle(hasSave, onPlay, onContinue, onHow) {
-  const s = $('#title');
-  s.innerHTML = `
+export function renderTitle(progress, on) {
+  const started = progress.reached > 1 || !!progress.checkpoints[1];
+  const t = $('#title');
+  t.innerHTML = `
     <div class="plate">
       <div class="crest">⚙</div>
       <h1>CLOCKWORDS</h1>
@@ -45,8 +46,9 @@ export function renderTitle(hasSave, onPlay, onContinue, onHow) {
       pages of your formula. The engine on your bench turns words into ammunition.
       Type quickly. Type well.</p>
       <div class="btns">
-        ${hasSave ? '<button id="b-cont" class="big">Continue</button>' : ''}
-        <button id="b-play" class="big">${hasSave ? 'New game' : 'Begin'}</button>
+        ${started ? `<button id="b-cont" class="big">Continue &mdash; level ${Math.min(CAMPAIGN, progress.reached)}</button>` : ''}
+        <button id="b-play" class="big">${started ? 'Start over' : 'Begin'}</button>
+        <button id="b-levels">Levels</button>
         <button id="b-how">How to play</button>
       </div>
       <ul class="badges">${BADGES.map(b => {
@@ -56,9 +58,41 @@ export function renderTitle(hasSave, onPlay, onContinue, onHow) {
       }).join('')}</ul>
       <p class="fine">${dictSize().toLocaleString()} words in the lexicon</p>
     </div>`;
-  $('#b-play').onclick = () => { sfx.clank(); onPlay(); };
-  if (hasSave) $('#b-cont').onclick = () => { sfx.clank(); onContinue(); };
-  $('#b-how').onclick = () => { sfx.clank(); onHow(); };
+  const wire = (id, fn) => { const n = $(id); if (n) n.onclick = () => { sfx.clank(); fn(); }; };
+  wire('#b-play', on.newGame);
+  wire('#b-cont', on.cont);
+  wire('#b-levels', on.levels);
+  wire('#b-how', on.how);
+}
+
+// ── level select ───────────────────────────────────────────────────────────
+export function renderLevels(progress, onPick, onBack) {
+  const t = $('#levels');
+  const cards = [];
+  for (let n = 1; n <= CAMPAIGN; n++) {
+    const def = getLevel(n);
+    const open = n <= progress.reached;
+    const best = progress.best[n];
+    cards.push(`
+      <button class="lvl ${open ? '' : 'locked'} ${def.boss ? 'boss' : ''}" data-lvl="${n}"
+        ${open ? '' : 'disabled'}>
+        <span class="ln">${String(n).padStart(2, '0')}</span>
+        <span class="lt">${open ? def.name : 'Sealed'}</span>
+        <span class="lb">${best ? `best ${best.toLocaleString()}`
+          : open ? (def.boss ? 'boss night' : 'not yet cleared') : '—'}</span>
+      </button>`);
+  }
+  t.innerHTML = `
+    <div class="plate wide">
+      <p class="kicker">The campaign</p>
+      <h2>Twenty Nights</h2>
+      <p class="d">Every night you walk into is kept. Fail one and you start that night
+      again, with the boiler exactly as you carried it in — never the whole campaign.</p>
+      <div class="lvlgrid">${cards.join('')}</div>
+      <div class="btns"><button id="b-back" class="big">Back</button></div>
+    </div>`;
+  t.querySelectorAll('[data-lvl]').forEach(n => n.onclick = () => { sfx.clank(); onPick(+n.dataset.lvl); });
+  $('#b-back').onclick = () => { sfx.clank(); onBack(); };
 }
 
 export function renderHow(onBack) {
@@ -152,7 +186,7 @@ export function renderIntro(n, onGo) {
 }
 
 // ── boiler room ────────────────────────────────────────────────────────────
-export function renderBoiler(game, onNext) {
+export function renderBoiler(game, onNext, onChange) {
   const s = $('#boiler');
   let selected = [];         // letter ids picked out of either rack
 
@@ -173,8 +207,12 @@ export function renderBoiler(game, onNext) {
 
     const picked = selected.map(id => bo.find(id)).filter(Boolean);
     const a = picked[0], b = picked[1];
-    const canCombine = bo.canCombine(a, b);
+    const pairOk = bo.canCombine(a, b);
+    const combineStrands = pairOk &&
+      bo.wouldStrand([a.id, b.id], bo.combineLandsInBoiler(a, b) ? 1 : 0);
+    const canCombine = pairOk && !combineStrands;
     const one = picked.length === 1 ? a : null;
+    const scrapStrands = !!one && bo.wouldStrand([one.id]);
 
     const fromBoiler = picked.filter(l => bo.inBoiler(l.id));
     const fromStore = picked.filter(l => !bo.inBoiler(l.id));
@@ -241,13 +279,17 @@ export function renderBoiler(game, onNext) {
                 : `<p class="d">Two level ${a.level} letters make one level ${a.level + 1} in the
                    same material. The crucible decides which letter comes out.</p>
                    <button id="b-fuse" class="big">Combine</button>`)
-              : `<p class="d">${picked.length < 2
-                  ? 'Select two letters of the same level. Two level 5s make a material.'
-                  : 'Both letters must be the same level.'}</p>`}
+              : `<p class="d">${combineStrands
+                  ? `Combining these would leave the boiler under ${MIN_BOILER} letters.
+                     Draw one back out of storage, or stoke a new one, first.`
+                  : picked.length < 2
+                    ? 'Select two letters of the same level. Two level 5s make a material.'
+                    : 'Both letters must be the same level.'}</p>`}
             <div class="benchrow">
               <button id="b-stoke" class="small" ${game.secrets >= STOKE_COST ? '' : 'disabled'}
                 >Stoke for ${STOKE_COST} ⚙</button>
-              <button id="b-scrap" class="small" ${one ? '' : 'disabled'}>Scrap for 1 ⚙</button>
+              <button id="b-scrap" class="small" ${one && !scrapStrands ? '' : 'disabled'}
+                >Scrap for 1 ⚙</button>
             </div>
             <p class="d fine">Stoking buys one fresh level 1 Iron letter.</p>
           </section>
@@ -256,7 +298,7 @@ export function renderBoiler(game, onNext) {
         ${short ? `<p class="warn">The boiler needs ${short} more letter${short > 1 ? 's' : ''}
           before it will run.</p>` : ''}
         <div class="btns">
-          <button id="b-next" class="big" ${short ? 'disabled' : ''}>To level ${game.levelNo + 1} &rarr;</button>
+          <button id="b-next" class="big" ${short ? 'disabled' : ''}>${game.levelNo >= CAMPAIGN ? "Finish" : `To level ${game.levelNo + 1}`} &rarr;</button>
         </div>
       </div>`;
 
@@ -270,8 +312,9 @@ export function renderBoiler(game, onNext) {
     const on = (id, fn) => { const n = $(id); if (n) n.onclick = fn; };
     on('#b-stow', () => { for (const l of fromBoiler) bo.toStore(l.id); selected = []; sfx.clank(); draw(); });
     on('#b-draw', () => { for (const l of fromStore) bo.toBoiler(l.id); selected = []; sfx.clank(); draw(); });
-    on('#b-scrap', () => { bo.discard(one.id); game.secrets += 1; selected = []; sfx.clank(); draw(); });
+    on('#b-scrap', () => { if (scrapStrands) return; bo.discard(one.id); game.secrets += 1; selected = []; sfx.clank(); draw(); });
     on('#b-fuse', () => {
+      if (!canCombine) return;
       const made = bo.combine(a, b);
       selected = []; sfx.overload();
       if (made) toast({ name: `${made.letter.toUpperCase()} — level ${made.level}`,
@@ -289,21 +332,22 @@ export function renderBoiler(game, onNext) {
       draw();
     });
     on('#b-next', () => { if (!bo.short()) { sfx.clank(); onNext(); } });
+    if (onChange) onChange();
   }
   draw();
 }
 
 // ── end of run ─────────────────────────────────────────────────────────────
-export function renderOver(game, onRetry, onTitle) {
-  const s = $('#gameover');
-  s.innerHTML = `
+export function renderOver(game, on) {
+  const t = $('#gameover');
+  t.innerHTML = `
     <div class="plate">
       <div class="crest sad">☠</div>
+      <p class="kicker">Level ${game.levelNo} — ${getLevel(game.levelNo).name}</p>
       <h2>The formula is gone</h2>
       <p class="story">All ${START_PAGES} pages were carried off into the dark.
-      London will have to wait for its genius.</p>
+      Only tonight is lost — the workshop stands, and the boiler is as you carried it in.</p>
       <ul class="stats">
-        <li><span>Level reached</span><b>${game.levelNo}</b></li>
         <li><span>Score</span><b>${game.score.toLocaleString()}</b></li>
         <li><span>Bugs destroyed</span><b>${game.stats.kills}</b></li>
         <li><span>Words fired</span><b>${game.stats.words}</b></li>
@@ -312,12 +356,40 @@ export function renderOver(game, onRetry, onTitle) {
         <li><span>Longest word</span><b>${game.stats.longest || '—'}</b></li>
       </ul>
       <div class="btns">
-        <button id="b-retry" class="big">Try again</button>
+        <button id="b-retry" class="big">Fight level ${game.levelNo} again</button>
+        <button id="b-levels">Levels</button>
         <button id="b-title">Title screen</button>
       </div>
     </div>`;
-  $('#b-retry').onclick = () => { sfx.clank(); onRetry(); };
-  $('#b-title').onclick = () => { sfx.clank(); onTitle(); };
+  const wire = (id, fn) => { const n = $(id); if (n) n.onclick = () => { sfx.clank(); fn(); }; };
+  wire('#b-retry', on.retry); wire('#b-levels', on.levels); wire('#b-title', on.title);
+}
+
+export function renderWin(game, on) {
+  const t = $('#gameover');
+  t.innerHTML = `
+    <div class="plate">
+      <div class="crest">★</div>
+      <p class="kicker">Twenty nights</p>
+      <h2>The formula holds</h2>
+      <p class="story">The last of them went back through the arch and did not come out
+      again. Whatever was sending them has run out of machines. London gets its genius
+      after all.</p>
+      <ul class="stats">
+        <li><span>Final score</span><b>${game.score.toLocaleString()}</b></li>
+        <li><span>Bugs destroyed</span><b>${game.stats.kills}</b></li>
+        <li><span>Words fired</span><b>${game.stats.words}</b></li>
+        <li><span>Damage dealt</span><b>${Math.round(game.stats.damage).toLocaleString()}</b></li>
+        <li><span>Best word</span><b>${game.stats.best || '—'} (${game.stats.bestDmg})</b></li>
+        <li><span>Longest word</span><b>${game.stats.longest || '—'}</b></li>
+      </ul>
+      <div class="btns">
+        <button id="b-levels" class="big">Levels</button>
+        <button id="b-title">Title screen</button>
+      </div>
+    </div>`;
+  const wire = (id, fn) => { const n = $(id); if (n) n.onclick = () => { sfx.clank(); fn(); }; };
+  wire('#b-levels', on.levels); wire('#b-title', on.title);
 }
 
 export function renderPause(onResume, onTitle) {

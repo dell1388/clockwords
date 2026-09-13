@@ -2,13 +2,14 @@
 
 import { Game, W, H, PLAY_H } from './game.js';
 import { Boiler, startingInventory } from './boiler.js';
+import { CAMPAIGN, rollLoot } from './content.js';
+import * as progress from './progress.js';
 import { loadDictionary, dictSize } from './dict.js';
 import { draw, makeBackground } from './render.js';
 import * as ui from './ui.js';
 import { sfx, unlock, setMuted, isMuted } from './audio.js';
 import { onBadge } from './achievements.js';
 
-const SAVE_KEY = 'clockwords.save.v1';
 const canvas = document.getElementById('stage');
 const ctx = canvas.getContext('2d');
 
@@ -33,55 +34,76 @@ function fit() {
 }
 window.addEventListener('resize', fit);
 
-// ── persistence ────────────────────────────────────────────────────────────
-function saveGame() {
-  if (!game) return;
-  try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify({
-      levelNo: game.levelNo, secrets: game.secrets, pending: game.pending,
-      score: game.score, inventory: game.boiler.serialize(), stats: game.stats,
-      used: [...game.usedWords.entries()],
-    }));
-  } catch (_) {}
+// ── the run, and what survives a bad night ─────────────────────────────────
+const snapshot = g => ({
+  boiler: g.boiler.serialize(), secrets: g.secrets, score: g.score,
+  stats: g.stats, used: [...g.usedWords.entries()], pending: g.pending,
+});
+
+function gameFrom(snap, levelNo) {
+  const g = snap
+    ? new Game({
+        boiler: Boiler.deserialize(snap.boiler), secrets: snap.secrets, score: snap.score,
+        stats: snap.stats, usedWords: new Map(snap.used || []), pending: snap.pending || [],
+      })
+    : new Game({ boiler: new Boiler(startingInventory()) });
+  g.levelNo = levelNo;
+  return g;
 }
-function loadSave() {
-  try { return JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (_) { return null; }
+
+// Someone jumping straight to a late night should not arrive with a beginner's
+// boiler, so one is built for them out of that night's loot table.
+function outfitFor(level) {
+  const b = new Boiler(startingInventory());
+  for (let i = 0; i < Math.min(28, (level - 1) * 2); i++) {
+    const loot = rollLoot(Math.max(1, level - 1), 2);
+    b.stow(loot.letter, 'iron', loot.level);
+  }
+  return snapshot(new Game({ boiler: b, secrets: 4 + level * 2, levelNo: level }));
 }
-function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch (_) {} }
 
 // ── flow ───────────────────────────────────────────────────────────────────
 function toTitle() {
   state = 'title';
   ui.show('title');
-  ui.renderTitle(!!loadSave(), newGame, continueGame, () => {
-    state = 'howto'; ui.show('howto'); ui.renderHow(toTitle);
+  ui.renderTitle(progress.load(), {
+    newGame,
+    cont: () => enterLevel(Math.min(CAMPAIGN, progress.furthest())),
+    levels: toLevels,
+    how: () => { state = 'howto'; ui.show('howto'); ui.renderHow(toTitle); },
   });
+}
+
+function toLevels(back = toTitle) {
+  state = 'levels';
+  ui.show('levels');
+  ui.renderLevels(progress.load(), enterLevel, back);
 }
 
 function newGame() {
-  clearSave();
-  game = new Game({ boiler: new Boiler(startingInventory()) });
+  progress.reset();
+  game = gameFrom(null, 1);
   toIntro(1);
 }
 
-function continueGame() {
-  const s = loadSave();
-  if (!s) return newGame();
-  game = new Game({
-    boiler: Boiler.deserialize(s.inventory),
-    secrets: s.secrets, pending: s.pending || [], score: s.score,
-    levelNo: s.levelNo, stats: s.stats, usedWords: new Map(s.used || []),
-  });
-  toIntro(s.levelNo);
+// Start a level from its checkpoint — the run exactly as it was when you first
+// walked in — building one if this night has never been entered.
+function enterLevel(n) {
+  const snap = progress.checkpointFor(n) || (n === 1 ? null : outfitFor(n));
+  game = gameFrom(snap, n);
+  progress.checkpoint(n, snapshot(game));
+  toIntro(n);
 }
 
 function toIntro(n) {
   state = 'intro';
   ui.show('intro');
-  introGo = ui.renderIntro(n, () => startLevel(n));
+  introGo = ui.renderIntro(n, () => beginLevel(n));
 }
 
-function startLevel(n) {
+function beginLevel(n) {
+  game.levelNo = n;
+  progress.checkpoint(n, snapshot(game));
   game.startLevel(n);
   state = 'play';
   ui.show('none');
@@ -90,22 +112,41 @@ function startLevel(n) {
 }
 
 function toBoiler() {
+  progress.cleared(game.levelNo, game.score);
+  const next = game.levelNo + 1;
   state = 'boiler';
-  saveGame();
   ui.show('boiler');
-  ui.renderBoiler(game, () => { game.levelNo++; saveGame(); toIntro(game.levelNo); });
+  const stash = () => { if (next <= CAMPAIGN) progress.checkpoint(next, snapshot(game)); };
+  stash();
+  ui.renderBoiler(game, () => {
+    if (next > CAMPAIGN) return toWin();
+    game.levelNo = next;
+    stash();
+    toIntro(next);
+  }, stash);
+}
+
+function toWin() {
+  state = 'over';
+  ui.show('gameover');
+  ui.renderWin(game, { levels: () => toLevels(toTitle), title: toTitle });
 }
 
 function toOver() {
   state = 'over';
-  clearSave();
   ui.show('gameover');
-  ui.renderOver(game, newGame, toTitle);
+  ui.renderOver(game, {
+    retry: () => enterLevel(game.levelNo),
+    levels: () => toLevels(toTitle),
+    title: toTitle,
+  });
 }
 
 function togglePause() {
-  if (state === 'play') { state = 'pause'; ui.show('pause'); ui.renderPause(() => { state = 'play'; ui.show('none'); }, toTitle); }
-  else if (state === 'pause') { state = 'play'; ui.show('none'); }
+  if (state === 'play') {
+    state = 'pause'; ui.show('pause');
+    ui.renderPause(() => { state = 'play'; ui.show('none'); }, toTitle);
+  } else if (state === 'pause') { state = 'play'; ui.show('none'); }
 }
 
 // ── input ──────────────────────────────────────────────────────────────────
@@ -128,6 +169,7 @@ window.addEventListener('keydown', e => {
   unlock();
   if (e.target === kb) return;
   if (state === 'intro' && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); introGo && introGo(); return; }
+  if (state === 'levels' && e.key === 'Escape') { toTitle(); return; }
   if (state !== 'play') {
     if (e.key === 'Escape' && state === 'pause') togglePause();
     return;
@@ -189,7 +231,7 @@ function frame(ts) {
   const n = await loadDictionary(p => ui.setLoading(p, `Opening the lexicon… ${Math.round(p * 100)}%`));
   ui.setLoading(1, `${n.toLocaleString()} words ready`);
   makeBackground();
-  game = new Game({ boiler: new Boiler(startingInventory()) });
+  game = gameFrom(null, 1);
   game.startLevel(1);
   requestAnimationFrame(frame);
   setTimeout(toTitle, 250);

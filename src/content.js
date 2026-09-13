@@ -80,6 +80,7 @@ export const MIN_BOILER = 15;       // the boiler will not run on less
 export const MAX_BOILER = 50;       // and will not hold more
 export const FIRE_RPM = 300;        // one shell per letter, one every 0.2s
 export const STOKE_COST = 3;        // secrets for one fresh level-1 Iron letter
+export const CAMPAIGN = 20;         // twenty nights, then the formula is safe
 
 // ── loot ───────────────────────────────────────────────────────────────────
 // Common letters fall constantly on the early nights; the rare ones only start
@@ -179,7 +180,7 @@ export function proceduralLevel(n) {                       // n is 1-based
   const k = n - LEVELS.length;                             // 1,2,3...
   const boss = k % 10 === 0;
   const waves = [];
-  const bands = 4 + Math.min(3, Math.floor(k / 4));
+  const bands = 4 + Math.min(2, Math.floor(k / 5));
   for (let i = 0; i < bands; i++) {
     const type = LATE[(i * 3 + k) % LATE.length];
     const n2 = Math.min(12, 3 + Math.floor(k / 2) + (type === 'tick' ? 6 : 0));
@@ -189,7 +190,7 @@ export function proceduralLevel(n) {                       // n is 1-based
   return {
     name: boss ? `The Box Returns (${k / 10 + 1})` : `Night ${n}`,
     flavour: boss ? 'Rebuilt, and angrier.' : 'They keep coming.',
-    waves, boss, scale: 1 + k * 0.22,
+    waves, boss, scale: 1 + k * 0.18,
   };
 }
 

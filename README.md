@@ -106,9 +106,20 @@ not dilute what the chambers pull.
 - **Word of the day** — one word, the same for everyone, doubles everything and explodes.
 - Loot is tabled by night: common letters fall constantly early on, and the rare
   ones only start appearing once you are deep enough — and off tougher bugs.
-- Nights are long: the first runs about a minute and a half and twenty-odd bugs,
-  the twentieth nearly three minutes and well over a hundred. Each wave starts
-  before the last has finished, so the pressure never really lifts.
+- Nights are long: the first runs about eighty seconds and twenty-odd bugs, the
+  twentieth over two minutes and a hundred and twenty. Each wave starts before
+  the last has finished, so the pressure never really lifts.
+
+### Twenty nights, and a level select
+
+The campaign is twenty levels. **Failing one costs you that night, not the
+campaign**: every level you walk into is checkpointed with the run exactly as you
+carried it in, so a loss drops you back to the same night with the same boiler.
+The level select lists all twenty with your best score on each, and lets you
+replay any night you have reached. Jumping to a night you have never entered
+builds you a loadout out of that night's loot table.
+
+Progress lives in `localStorage` under `clockwords.progress.v1`.
 
 ### Controls
 
@@ -134,10 +145,11 @@ src/render.js         all drawing (canvas, procedural)
 src/audio.js          all sound (Web Audio, procedural)
 src/ui.js             DOM screens: title, how-to, level cards, boiler room
 src/achievements.js   the three badges
+src/progress.js       levels reached, best scores, per-level checkpoints
 src/main.js           bootstrap, loop, input, save/load
 ```
 
-Progress is kept in `localStorage` (`clockwords.save.v1`, `clockwords.badges.v1`).
+Progress is kept in `localStorage` (`clockwords.progress.v1`, `clockwords.badges.v1`).
 
 ## Credits and licence
 

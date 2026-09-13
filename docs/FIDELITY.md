@@ -82,9 +82,10 @@ above. Change it freely.
   the Cinder Moth, the Copper Centipede, the Steam Weaver and the Diabolical Box
   boss, along with all HP, speeds and armour, are ours.
 - **Five pages**, and pages returning when you kill the carrier.
-- **The campaign.** Ten handmade levels, then a procedural curve that keeps going,
-  with a boss every ten. The original Prelude was roughly this length; Act 1 was
-  much longer.
+- **The campaign.** Twenty levels: ten handmade, then a procedural curve, with a
+  boss on the tenth and twentieth. Failing a level costs that night only — the run
+  is checkpointed on entry and a level select lets you replay any night reached.
+  The original had no level select and no checkpointing.
 - **The room.** The bricked-up arches, the perspective, the depth scaling, the
   machine design, and the whole visual and audio treatment. Nothing here is
   traced from the original art.

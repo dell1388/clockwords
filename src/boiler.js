@@ -63,6 +63,19 @@ export class Boiler {
   full() { return this.inventory.length >= MAX_BOILER; }
   short() { return Math.max(0, MIN_BOILER - this.inventory.length); }
 
+  // Would taking these letters out (and putting `returning` back) leave the
+  // boiler unable to run? Nothing that strands it is ever allowed.
+  wouldStrand(ids, returning = 0) {
+    const out = ids.filter(id => this.inBoiler(id)).length;
+    return this.inventory.length - out + returning < MIN_BOILER;
+  }
+
+  // Where the crucible's output lands, worked out before anything is consumed.
+  combineLandsInBoiler(a, b) {
+    const out = [a, b].filter(l => this.inBoiler(l.id)).length;
+    return out > 0 && this.inventory.length - out < MAX_BOILER;
+  }
+
   // Every level starts with the chambers bolted shut again; you earn them back
   // by spending what the open ones hold.
   reseal() {

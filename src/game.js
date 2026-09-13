@@ -109,12 +109,12 @@ export class Game {
     this.scale = def.scale || 1;
     // Nights are long. Each wave in the table is stretched out, and the next one
     // starts before the last has finished, so the pressure never really lifts.
-    const stretch = Math.min(4.5, 3 + (n - 1) * 0.16);
+    const stretch = Math.min(4, 2.6 + (n - 1) * 0.13);
     this.spawns = [];
     let clock = 1;
     for (const w of def.waves) {
       const boss = SPECIES[w.type] && SPECIES[w.type].boss;
-      const count = boss ? w.n : Math.min(30, Math.max(1, Math.round(w.n * stretch)));
+      const count = boss ? w.n : Math.min(20, Math.max(1, Math.round(w.n * stretch)));
       for (let i = 0; i < count; i++) {
         this.spawns.push({ t: clock + i * w.gap, type: w.type, door: w.door });
       }
