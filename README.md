@@ -58,11 +58,11 @@ under the glyph**, and it is the level that sets the damage.
 
 | Level | Damage | Letters |
 |---|---|---|
-| ●     | 8   | A I O T |
-| ●●    | 24  | B C E L N R S |
-| ●●●   | 60  | D F G H K M U Y |
-| ●●●●  | 140 | P V W Z |
-| ●●●●● | 320 | J Q X |
+| ●     | 8   | R A I S E |
+| ●●    | 24  | N O G T D L |
+| ●●●   | 60  | C B U P M H |
+| ●●●●  | 140 | F K V Y W |
+| ●●●●● | 320 | Z J X Q |
 
 ### The crucible
 

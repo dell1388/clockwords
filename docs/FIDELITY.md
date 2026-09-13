@@ -44,8 +44,8 @@ Sources: ¹ [WonderHowTo, "Turning Letters into Pesticide"](https://scrabble.won
 Everything below is a judgement call made to sit consistently around the facts
 above. Change it freely.
 
-- **Letter levels.** Grading letters 1–5 (A I O T / B C E L N R S / D F G H K M U Y
-  / P V W Z / J Q X), drawing the grade as dots under the glyph, and making the
+- **Letter levels.** Grading letters 1–5 (R A I S E / N O G T D L / C B U P M H /
+  F K V Y W / Z J X Q), drawing the grade as dots under the glyph, and making the
   level (not the material) set the damage: 8 / 24 / 60 / 140 / 320.
   The original's dots meant a flat 5 damage each; the steep curve here is a
   deliberate departure, so a rare letter feels rare.

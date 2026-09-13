@@ -10,11 +10,11 @@
 
 export const LETTER_LEVELS = [
   null,
-  { level: 1, dmg: 8,   pool: 'aiot' },
-  { level: 2, dmg: 24,  pool: 'bcelnrs' },
-  { level: 3, dmg: 60,  pool: 'dfghkmuy' },
-  { level: 4, dmg: 140, pool: 'pvwz' },
-  { level: 5, dmg: 320, pool: 'jqx' },
+  { level: 1, dmg: 8,   pool: 'raise' },
+  { level: 2, dmg: 24,  pool: 'nogtdl' },
+  { level: 3, dmg: 60,  pool: 'cbupmh' },
+  { level: 4, dmg: 140, pool: 'fkvyw' },
+  { level: 5, dmg: 320, pool: 'zjxq' },
 ];
 export const MAX_LEVEL = 5;
 

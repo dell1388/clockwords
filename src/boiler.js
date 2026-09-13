@@ -320,5 +320,5 @@ export class Boiler {
 // The boiler you start with: fifteen plain Iron letters off the common rack —
 // the least it will run on.
 export function startingInventory() {
-  return 'etaoinshrdletao'.split('').map(ch => makeLetter(ch));
+  return 'raisenogtdlrasi'.split('').map(ch => makeLetter(ch));
 }
