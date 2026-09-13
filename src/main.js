@@ -17,7 +17,7 @@ const kb = document.getElementById('kb');
 const touch = matchMedia('(hover: none)').matches || 'ontouchstart' in window;
 if (touch) document.body.classList.add('touch');
 
-let game = null, state = 'loading', last = 0, clock = 0, introGo = null;
+let game = null, state = 'loading', last = 0, clock = 0, introGo = null, howBack = null;
 
 onBadge(b => { ui.toast(b); sfx.win(); });
 
@@ -51,8 +51,8 @@ function gameFrom(snap, levelNo) {
   return g;
 }
 
-// Someone jumping straight to a late night should not arrive with a beginner's
-// boiler, so one is built for them out of that night's loot table.
+// Only reachable from a save that records progress but no boiler (an old or
+// hand-edited one): build something plausible rather than a beginner's rack.
 function outfitFor(level) {
   const b = new Boiler(startingInventory());
   for (let i = 0; i < Math.min(28, (level - 1) * 2); i++) {
@@ -70,7 +70,7 @@ function toTitle() {
     newGame,
     cont: () => enterLevel(Math.min(CAMPAIGN, progress.furthest())),
     levels: toLevels,
-    how: () => { state = 'howto'; ui.show('howto'); ui.renderHow(toTitle); },
+    how: () => { state = 'howto'; ui.show('howto'); howBack = ui.renderHow(toTitle); },
   });
 }
 
@@ -86,12 +86,10 @@ function newGame() {
   toIntro(1);
 }
 
-// Start a level from its checkpoint — the run exactly as it was when you first
-// walked in — building one if this night has never been entered.
+// Whichever night you pick, you walk in with the run's boiler. It is not tied
+// to the level, so replaying an early one does not hand back an early loadout.
 function enterLevel(n) {
-  const snap = progress.checkpointFor(n) || (n === 1 ? null : outfitFor(n));
-  game = gameFrom(snap, n);
-  progress.checkpoint(n, snapshot(game));
+  game = gameFrom(progress.loadout() || (n === 1 ? null : outfitFor(n)), n);
   toIntro(n);
 }
 
@@ -109,7 +107,7 @@ function toWorkshop(n) {
   game.levelNo = n;
   state = 'boiler';
   ui.show('boiler');
-  const stash = () => progress.checkpoint(n, snapshot(game));
+  const stash = () => progress.setLoadout(snapshot(game));
   ui.renderBoiler(game, {
     standalone: true,
     onNext: () => { stash(); beginLevel(n); },
@@ -120,7 +118,6 @@ function toWorkshop(n) {
 
 function beginLevel(n) {
   game.levelNo = n;
-  progress.checkpoint(n, snapshot(game));
   game.startLevel(n);
   state = 'play';
   ui.show('none');
@@ -133,7 +130,7 @@ function toBoiler() {
   const next = game.levelNo + 1;
   state = 'boiler';
   ui.show('boiler');
-  const stash = () => { if (next <= CAMPAIGN) progress.checkpoint(next, snapshot(game)); };
+  const stash = () => progress.setLoadout(snapshot(game));
   stash();
   ui.renderBoiler(game, {
     onNext: () => {
@@ -190,7 +187,10 @@ window.addEventListener('keydown', e => {
   unlock();
   if (e.target === kb) return;
   if (state === 'intro' && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); introGo && introGo(); return; }
-  if (state === 'levels' && e.key === 'Escape') { toTitle(); return; }
+  if (state === 'levels' && (e.key === 'Escape' || e.key === 'Backspace')) { e.preventDefault(); toTitle(); return; }
+  if (state === 'howto' && (e.key === 'Escape' || e.key === 'Enter' || e.key === 'Backspace')) {
+    e.preventDefault(); howBack ? howBack() : toTitle(); return;
+  }
   if (state !== 'play') {
     if (e.key === 'Escape' && state === 'pause') togglePause();
     return;

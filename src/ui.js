@@ -8,6 +8,14 @@ import { BADGES, earned } from './achievements.js';
 import { sfx } from './audio.js';
 
 const $ = sel => document.querySelector(sel);
+// Screens share button ids (#b-back, #b-next, #b-title...), and every screen's
+// markup stays in the document while hidden — so always look inside the screen
+// being wired, never across the whole page.
+const wireIn = root => (sel, fn) => {
+  const n = root.querySelector(sel);
+  if (n) n.onclick = () => { sfx.clank(); fn(); };
+  return n;
+};
 const el = (tag, cls, html) => {
   const n = document.createElement(tag);
   if (cls) n.className = cls;
@@ -36,7 +44,7 @@ const swatch = mat => {
 
 // ── title ──────────────────────────────────────────────────────────────────
 export function renderTitle(progress, on) {
-  const started = progress.reached > 1 || !!progress.checkpoints[1];
+  const started = progress.reached > 1 || !!progress.loadout;
   const t = $('#title');
   t.innerHTML = `
     <div class="plate">
@@ -59,7 +67,7 @@ export function renderTitle(progress, on) {
       }).join('')}</ul>
       <p class="fine">${dictSize().toLocaleString()} words in the lexicon</p>
     </div>`;
-  const wire = (id, fn) => { const n = $(id); if (n) n.onclick = () => { sfx.clank(); fn(); }; };
+  const wire = wireIn(t);
   wire('#b-play', on.newGame);
   wire('#b-cont', on.cont);
   wire('#b-levels', on.levels);
@@ -87,13 +95,14 @@ export function renderLevels(progress, onPick, onBack) {
     <div class="plate wide">
       <p class="kicker">The campaign</p>
       <h2>Twenty Nights</h2>
-      <p class="d">Every night you walk into is kept. Fail one and you start that night
-      again, with the boiler exactly as you carried it in — never the whole campaign.</p>
+      <p class="d">One boiler carries the whole run: whichever night you pick, you take the
+      same letters in, and they only ever change in the boiler room. Fail a night and you
+      start that night again — never the whole campaign.</p>
       <div class="lvlgrid">${cards.join('')}</div>
       <div class="btns"><button id="b-back" class="big">Back</button></div>
     </div>`;
   t.querySelectorAll('[data-lvl]').forEach(n => n.onclick = () => { sfx.clank(); onPick(+n.dataset.lvl); });
-  $('#b-back').onclick = () => { sfx.clank(); onBack(); };
+  wireIn(t)('#b-back', onBack);
 }
 
 export function renderHow(onBack) {
@@ -170,8 +179,10 @@ export function renderHow(onBack) {
         </div>
       </div>
       <div class="btns"><button id="b-back" class="big">Back</button></div>
+      <p class="fine">press Esc or Enter to go back</p>
     </div>`;
-  $('#b-back').onclick = () => { sfx.clank(); onBack(); };
+  wireIn(t)('#b-back', onBack);
+  return onBack;
 }
 
 // ── level card ─────────────────────────────────────────────────────────────
@@ -190,10 +201,10 @@ export function renderIntro(n, { onGo, onBoiler }) {
       </div>
       <p class="fine">press Enter to begin &middot; the boiler room is open until you do</p>
     </div>`;
-  const go = () => { sfx.clank(); onGo(); };
-  $('#b-go').onclick = go;
-  $('#b-boiler').onclick = () => { sfx.clank(); onBoiler(); };
-  return go;
+  const wire = wireIn(t);
+  wire('#b-go', onGo);
+  wire('#b-boiler', onBoiler);
+  return () => { sfx.clank(); onGo(); };
 }
 
 // ── boiler room ────────────────────────────────────────────────────────────
@@ -366,7 +377,7 @@ export function renderBoiler(game, { onNext, onChange, onMenu, standalone = fals
     });
     s.querySelectorAll('[data-clear]').forEach(n => n.onclick = () => { selected = []; sfx.key(); draw(); });
 
-    const on = (id, fn) => { const n = $(id); if (n) n.onclick = fn; };
+    const on = (id, fn) => { const n = s.querySelector(id); if (n) n.onclick = fn; };
     on('#b-stow', () => { for (const l of fromBoiler) bo.toStore(l.id); selected = []; sfx.clank(); draw(); });
     on('#b-draw', () => { for (const l of fromStore) bo.toBoiler(l.id); selected = []; sfx.clank(); draw(); });
     on('#b-scrap', () => { if (scrapStrands) return; bo.discard(one.id); game.secrets += 1; selected = []; sfx.clank(); draw(); });
@@ -477,7 +488,7 @@ export function renderOver(game, on) {
         <button id="b-title">Title screen</button>
       </div>
     </div>`;
-  const wire = (id, fn) => { const n = $(id); if (n) n.onclick = () => { sfx.clank(); fn(); }; };
+  const wire = wireIn(t);
   wire('#b-retry', on.retry); wire('#b-levels', on.levels); wire('#b-title', on.title);
 }
 
@@ -504,7 +515,7 @@ export function renderWin(game, on) {
         <button id="b-title">Title screen</button>
       </div>
     </div>`;
-  const wire = (id, fn) => { const n = $(id); if (n) n.onclick = () => { sfx.clank(); fn(); }; };
+  const wire = wireIn(t);
   wire('#b-levels', on.levels); wire('#b-title', on.title);
 }
 
@@ -519,8 +530,9 @@ export function renderPause(onResume, onTitle) {
         <button id="b-quit">Abandon the night</button>
       </div>
     </div>`;
-  $('#b-res').onclick = () => { sfx.clank(); onResume(); };
-  $('#b-quit').onclick = () => { sfx.clank(); onTitle(); };
+  const wire = wireIn(s);
+  wire('#b-res', onResume);
+  wire('#b-quit', onTitle);
 }
 
 export function setLoading(pct, msg) {

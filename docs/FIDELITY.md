@@ -84,9 +84,10 @@ above. Change it freely.
 - **Five pages**, and pages returning when you kill the carrier.
 - **The night's work** — the ranked per-word damage ledger in the boiler room.
 - **The campaign.** Twenty levels: ten handmade, then a procedural curve, with a
-  boss on the tenth and twentieth. Failing a level costs that night only — the run
-  is checkpointed on entry and a level select lets you replay any night reached.
-  The original had no level select and no checkpointing.
+  boss on the tenth and twentieth. One boiler carries the whole run, independent
+  of which level you enter, and only ever changes in the boiler room; failing a
+  level costs that night only. A level select lets you replay any night reached.
+  The original had no level select and no persistence between attempts.
 - **The room.** The bricked-up arches, the perspective, the depth scaling, the
   machine design, and the whole visual and audio treatment. Nothing here is
   traced from the original art.

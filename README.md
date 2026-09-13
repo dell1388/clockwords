@@ -128,12 +128,15 @@ the fire.
 
 ### Twenty nights, and a level select
 
-The campaign is twenty levels. **Failing one costs you that night, not the
-campaign**: every level you walk into is checkpointed with the run exactly as you
-carried it in, so a loss drops you back to the same night with the same boiler.
-The level select lists all twenty with your best score on each, and lets you
-replay any night you have reached. Jumping to a night you have never entered
-builds you a loadout out of that night's loot table.
+The campaign is twenty levels. **One boiler carries the whole run** — it belongs
+to the run, not to any level, so whichever night you pick you take the same
+letters in, and they only ever change in the boiler room. Letters the bugs drop
+during a night are only added when you reach the boiler room, so a night you fail
+changes nothing.
+
+**Failing a level costs you that night, not the campaign.** The level select
+lists all twenty with your best score on each, and lets you replay any night you
+have reached.
 
 Progress lives in `localStorage` under `clockwords.progress.v1`.
 
