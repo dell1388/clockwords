@@ -134,6 +134,7 @@ export class Game {
     this.muzzleFlash = 0;
     this.recoil = 0;
     this.rackFlash = 0;
+    this.cannonAngle = -Math.PI / 2;
     this.holding = false;
     this.outro = null;
     this.sandbox = false;
@@ -469,9 +470,10 @@ export class Game {
   // an empty corner of the room.
   aimStep(dt) {
     const t = this.target();
-    let want = -Math.PI / 2;
+    let want;
     if (this.aim) want = Math.atan2(this.aim.y - PIVOT.y, this.aim.x - PIVOT.x);
     else if (t) want = leadAngle(PIVOT, t);
+    else return;                     // nothing to point at: the barrel stays put
     want = clampAim(want);
     const cur = this.cannonAngle ?? want;
     let d = want - cur;
@@ -491,7 +493,7 @@ export class Game {
 
     const shot = this.fireQueue.shift();
     this.fireTimer = FIRE_GAP;
-    let ang = clampAim(leadAngle(PIVOT, tgt));
+    const ang = clampAim(leadAngle(PIVOT, tgt));
     this.cannonAngle = ang;
     const reach = MUZZLE.y - PIVOT.y;            // barrel length, as a radius
     this.shots.push({
