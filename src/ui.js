@@ -177,6 +177,9 @@ export function renderHow(onBack) {
           <b>quota</b> per letter and it looks after itself: the number is drawn out of storage
           and anything above it is sent back down. A quota of <b>0</b> keeps a letter out of the
           boiler entirely.</p>
+          <p><b>Fuse extras</b> sweeps up the plain Iron sitting in storage or over quota and
+          pairs it off level by level in one pass. Letters carrying a material are never swept
+          up — pairing one of those off is a decision you make yourself.</p>
           <p>Between nights the <b>crucible</b> takes any even number of letters of one level and
           works through them in pairs: each pair becomes one letter of the level above in the
           same material, or — for level ${MAX_LEVEL} pairs — a material on a fresh level 1
@@ -439,8 +442,9 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, onTest, s
               <button id="b-scrap" class="small" ${one && !scrapStrands ? '' : 'disabled'}
                 >Scrap for 1 ⚙</button>
             </div>
-            <p class="d fine">Fusing extras pairs off everything in storage and over quota,
-            level by level. Stoking buys one fresh level 1 Iron letter.</p>
+            <p class="d fine">Fusing extras pairs off the <b>plain Iron</b> in storage and over
+            quota, level by level — a letter carrying a material is left alone. Stoking buys one
+            fresh level 1 Iron letter.</p>
           </section>
         </div>
 

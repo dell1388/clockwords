@@ -128,8 +128,9 @@ not hold yet. Set a **quota** per letter and it looks after itself: the number i
 storage, and anything above it is sent back down. **∞** leaves a letter alone;
 **0** keeps it out of the boiler entirely, swapping in something wanted so the
 15-letter minimum still holds. **Tidy** applies the quotas in one click, **Fuse
-extras** pairs off everything in storage and over quota, and the rack filters by
-level and material.
+extras** sweeps up the plain **Iron** in storage and over quota and pairs it off
+level by level — letters carrying a material are never swept up — and the rack
+filters by level and material.
 
 ### Other rules that matter
 
@@ -195,8 +196,9 @@ not hold yet. Set a **quota** per letter and it looks after itself: the number i
 storage, and anything above it is sent back down. **∞** leaves a letter alone;
 **0** keeps it out of the boiler entirely, swapping in something wanted so the
 15-letter minimum still holds. **Tidy** applies the quotas in one click, **Fuse
-extras** pairs off everything in storage and over quota, and the rack filters by
-level and material.
+extras** sweeps up the plain **Iron** in storage and over quota and pairs it off
+level by level — letters carrying a material are never swept up — and the rack
+filters by level and material.
 
 ### Other rules that matter
 

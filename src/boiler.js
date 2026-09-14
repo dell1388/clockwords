@@ -248,9 +248,7 @@ export class Boiler {
     return this.deposit(letter, mat, level).letter;   // out of the crucible, into storage
   }
 
-  // Everything you are not using — storage, plus whatever sits over quota —
-  // paired off by level in one pass. Everything the crucible makes goes to
-  // storage, so nothing appears in the boiler without you putting it there.
+  // Everything you are not using — storage, plus whatever sits over quota.
   extras() {
     const seen = new Set();
     return [...this.store, ...this.overQuota()].filter(l => {
@@ -260,10 +258,15 @@ export class Boiler {
     });
   }
 
+  // Only plain Iron is ever fused in bulk. A letter carrying a material took
+  // work to make, and pairing it off is a decision, not a tidy-up.
+  fusableExtras() {
+    return this.extras().filter(l => l.mat === 'iron' && l.level < MAX_LEVEL);
+  }
+
   fuseExtras() {
     const byLevel = {};
-    for (const l of this.extras()) {
-      if (l.level >= MAX_LEVEL) continue;          // level 5 pairs make materials; keep that deliberate
+    for (const l of this.fusableExtras()) {
       (byLevel[l.level] = byLevel[l.level] || []).push(l);
     }
     const made = [];
@@ -281,10 +284,7 @@ export class Boiler {
   // How many pairs a Fuse extras would actually make, for the button.
   extraPairs() {
     const byLevel = {};
-    for (const l of this.extras()) {
-      if (l.level >= MAX_LEVEL) continue;
-      byLevel[l.level] = (byLevel[l.level] || 0) + 1;
-    }
+    for (const l of this.fusableExtras()) byLevel[l.level] = (byLevel[l.level] || 0) + 1;
     return Object.values(byLevel).reduce((n, c) => n + (c >> 1), 0);
   }
 
