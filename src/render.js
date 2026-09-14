@@ -6,6 +6,19 @@ import { MATERIALS, CHAMBERS, START_PAGES, MAX_LEVEL } from './content.js';
 const TAU = Math.PI * 2;
 const SHOT_R = 13;          // one radius for every letter fired
 const CHAMBER_R = 27;       // and one for every tank on the rack
+const CHAMBER_GAP = 74;
+
+// Where each tank sits, so a click can find it.
+export function chamberAt(x, y) {
+  const total = (CHAMBERS - 1) * CHAMBER_GAP + CHAMBER_R * 2;
+  const cy = PLAY_H + 20 + CHAMBER_R;
+  const first = (W - total) / 2 + CHAMBER_R;
+  for (let i = 0; i < CHAMBERS; i++) {
+    const cx = first + i * CHAMBER_GAP;
+    if (Math.hypot(x - cx, y - cy) <= CHAMBER_R + 3) return i;
+  }
+  return -1;
+}
 let bg = null;
 
 export function roundRect(x, px, py, w, h, r) {
@@ -705,7 +718,7 @@ function drawHud(ctx, g, t) {
 
   // chambers — circular tanks, every one the same size; colour is the only
   // mark of material and the dots are the level
-  const n = CHAMBERS, gap = 74;
+  const n = CHAMBERS, gap = CHAMBER_GAP;
   const total = (n - 1) * gap + CHAMBER_R * 2;
   const cy = top + 20 + CHAMBER_R;
   const first = (W - total) / 2 + CHAMBER_R;
@@ -763,9 +776,11 @@ function drawHud(ctx, g, t) {
       ctx.globalAlpha = 1;
       if (spent) { ctx.fillStyle = m.glow; ctx.beginPath(); ctx.arc(cx + 19, cy - 19, 3, 0, TAU); ctx.fill(); }
     } else {
-      ctx.fillStyle = 'rgba(255,230,180,0.14)';
+      ctx.strokeStyle = 'rgba(190,160,96,0.22)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx, cy, CHAMBER_R - 8, 0, TAU); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,230,180,0.18)';
       ctx.font = "10px 'IM Fell English', Georgia, serif";
-      ctx.fillText('refilling', cx, cy);
+      ctx.fillText('drawing', cx, cy);
     }
     ctx.restore();
   }
@@ -826,7 +841,10 @@ function drawHud(ctx, g, t) {
   ctx.fillStyle = '#d79a7a';
   ctx.fillText(`pages ${g.pages}/${START_PAGES}   lost ${g.lost}`, 16, top + 112);
   ctx.fillStyle = '#9ec0d8';
-  ctx.fillText(`chambers ${g.boiler.open}/${CHAMBERS}`, 16, top + 132);
+  ctx.fillText(g.boiler.open >= CHAMBERS
+    ? `chambers ${CHAMBERS}/${CHAMBERS} — all open`
+    : `chambers ${g.boiler.open}/${CHAMBERS} · all ${g.boiler.loadedCount()} in one word unseals`,
+    16, top + 132);
   ctx.fillStyle = '#9fb6a0'; ctx.font = "italic 13px 'IM Fell English', Georgia, serif";
   ctx.fillText(`word of the day: ${g.wotd}`, 16, top + 152);
 
@@ -855,6 +873,6 @@ function drawHud(ctx, g, t) {
     ctx.fillText('BREECH HELD — nothing in the room to shoot', W - 16, top + 155);
   } else {
     ctx.fillStyle = 'rgba(230,214,180,0.4)'; ctx.font = "italic 13px 'IM Fell English', Georgia, serif";
-    ctx.fillText('right-mouse aims by hand · Esc clears, Esc again pauses', W - 16, top + 155);
+    ctx.fillText('click a tank to swap its letter · right-mouse aims · Esc clears, then pauses', W - 16, top + 155);
   }
 }

@@ -31,12 +31,13 @@ the rack and says so — no pause, no penalty.
 next one; with nothing in the room the breech simply holds until something walks
 in.
 
-**Chambers unseal as you use them, and bolt shut again every level.** The boiler
-has 8 chambers but each level opens with only **one**. Fire *every letter that was
-loaded when the last chamber opened* and exactly one more unseals — letters that
-refill in the meantime don't count, so you really do have to clear the board. The boiler will not
-load the same letter into two chambers at once unless it has nothing else to
-load, and never fills more chambers than it has letters.
+**Chambers unseal on a full house.** The boiler has 8 but each level opens with
+only **one**. A chamber unseals only when *a single word spends every chamber
+that is loaded* — the same full house that earns a boiler overload. Draining them
+across several words does nothing. Stuck with a letter you can't use? **Click the
+tank** to tip it back into the bag and draw another. The boiler won't load the
+same letter into two chambers at once unless it has nothing else, and never fills
+more chambers than it has letters.
 
 Type a character that is sitting in an open chamber and that chamber reads as
 drawn down at once — you can see what a word will cost before you fire it. It
@@ -105,7 +106,9 @@ not dilute what the chambers pull.
 
 ### Other rules that matter
 
-- **Longer words hit harder** (+15% per letter past four, capped at ×4).
+- **Length pays steeply**: damage scales as `(length / 3) ^ 1.61`, so twice the
+  length is three times the damage and three times the length about six.
+- **A pure word** — every letter out of a chamber, no blanks at all — does **double**.
 - **Repeating a word** halves its power each time you reuse it *within the same
   level*, down to 20%. Every level starts the ledger again.
 - **Boiler overload** — spend every loaded chamber in one word for a bonus barrage.

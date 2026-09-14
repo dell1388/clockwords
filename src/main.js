@@ -5,7 +5,7 @@ import { Boiler, startingInventory } from './boiler.js';
 import { CAMPAIGN, rollLoot } from './content.js';
 import * as progress from './progress.js';
 import { loadDictionary, dictSize } from './dict.js';
-import { draw, makeBackground } from './render.js';
+import { draw, makeBackground, chamberAt } from './render.js';
 import * as ui from './ui.js';
 import { sfx, unlock, setMuted, isMuted } from './audio.js';
 import { onBadge } from './achievements.js';
@@ -225,7 +225,13 @@ canvas.addEventListener('contextmenu', e => e.preventDefault());
 canvas.addEventListener('pointerdown', e => {
   unlock();
   if (state !== 'play') return;
-  if (e.button === 2 || e.shiftKey) { const p = pointer(e); if (p.y < PLAY_H) game.aim = p; }
+  const p = pointer(e);
+  if (e.button === 2 || e.shiftKey) { if (p.y < PLAY_H) game.aim = p; return; }
+  if (p.y >= PLAY_H) {
+    // a letter you cannot use goes back in the bag, and counts towards the reload
+    const i = chamberAt(p.x, p.y);
+    if (i >= 0) game.dumpChamber(i);
+  }
 });
 canvas.addEventListener('pointermove', e => {
   if (state === 'play' && game.aim) { const p = pointer(e); game.aim = { x: p.x, y: Math.min(p.y, PLAY_H) }; }

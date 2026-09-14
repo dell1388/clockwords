@@ -72,6 +72,9 @@ export const BLANK_DMG = 5;
 export const CHAMBERS = 8;          // the boiler feeds eight chambers (canon)
 export const START_CHAMBERS = 1;    // sealed back down to one at the top of every level
 export const MIN_WORD = 3;
+// Word length pays superlinearly: log2(3), so twice the length is three times
+// the damage and three times the length is six.
+export const LENGTH_POWER = 1.61;
 export const START_PAGES = 5;
 export const MIN_BOILER = 15;       // the boiler will not run on less
 export const MAX_BOILER = 50;       // and will not hold more

@@ -139,6 +139,15 @@ export class Game {
   }
 
   backspace() { if (this.typed) { this.typed = this.typed.slice(0, -1); sfx.back(); } }
+
+  // Tip a chamber back into the bag — it still counts towards the reload.
+  dumpChamber(i) {
+    if (this.over || this.won || this.outro) return;
+    const c = this.boiler.chambers[i];
+    if (!c) return;
+    sfx.clank();
+    if (this.boiler.dump(i)) { this.note('CHAMBER UNSEALED', '#9be8ff'); sfx.steam(); }
+  }
   clear() { if (this.typed) { this.typed = ''; sfx.back(); } }
 
   submit() {
@@ -153,7 +162,7 @@ export class Game {
     const res = this.boiler.resolve(word, { repeats, wotd });
     const entry = {
       word, marks: res.shots.map(sh => sh.mat), planned: 0, dealt: 0,
-      wotd, overload: res.overload, repeats, at: this.time,
+      wotd, overload: res.overload, pure: res.pure, repeats, at: this.time,
     };
     const wid = this.wordLog.push(entry) - 1;
     for (const sh of res.shots) sh.wid = wid;
@@ -173,6 +182,7 @@ export class Game {
           pierce: 1, freeze: 0, burn: null, splash: 50, chain: 2, chainRange: 120 });
       }
     }
+    if (res.pure) this.note('PURE WORD — DOUBLE', '#9be8ff');
     if (wotd) { this.note('WORD OF THE DAY', '#9be8ff'); sfx.overload(); }
     if (repeats > 0) this.note(`repeated ×${repeats + 1} — ${Math.round(res.penalty * 100)}% power`, '#c8a27a');
 

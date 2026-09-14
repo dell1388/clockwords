@@ -60,19 +60,21 @@ above. Change it freely.
 - **Blanks are flat.** 5 damage, untouched by word length, repeats, Jade or the
   word of the day. The original's 1-damage blank scaled with nothing either, but
   the exact figure is ours.
-- **Chambers unseal one at a time**, starting from one, each time every letter
-  that was loaded at the previous unseal has been fired — and reseal at the top of
-  every level. The boiler also refuses to load duplicate letters while it has distinct
-  ones left. The original ran all eight from the start.
-- **Boiler and storage.** A 15–50 letter working boiler with everything else
-  parked in storage is entirely ours; the original had no cap.
+- **Chambers unseal on a full house**: only a single word that spends every loaded
+  chamber opens the next one, and they reseal to one at the top of every level. A
+  tank can be clicked to swap its letter. The boiler also refuses to load duplicate
+  letters while it has distinct ones left. The original ran all eight from the start.
+- **Boiler and storage.** A 15–50 letter working boiler with everything else parked
+  in storage is entirely ours, as are the per-letter quotas, the bulk fuse and the
+  rack filters; the original had no cap and no such tools.
 - **The cannon** sits in a corner, fires one shell per letter at 300 rpm, holds
   its fire when the room is empty, and never misses — every shell re-targets in
   flight. The original fired faster and its letters could miss.
 - **Bug pathing.** One open door, and a single painted route: across, down a
   lane, back across, and the same route in reverse on the way out.
 - **Loot tables** weighted by night number and by how tough the bug was.
-- **Exact numbers** for the long-word bonus (+15% per letter past four, ×4 cap),
+- **Exact numbers** for the long-word curve (`(length/3) ^ 1.61`, so double length
+  is triple damage), the double for a word with no blanks in it,
   the repeat penalty (halving to a floor of 20%, and reckoned per level rather
   than across the run), Jade's scaling, Brass's radius, and
   Aetherium's chain.
