@@ -125,6 +125,7 @@ export class Game {
     this.spawns.sort((a, b) => a.t - b.t);
     this.spawnIdx = 0;
     this.wordLog = [];
+    this.usedWords = new Map();   // the repeat penalty is per level, not per run
     this.levelStartScore = this.score;
     this.boiler.reseal();
   }

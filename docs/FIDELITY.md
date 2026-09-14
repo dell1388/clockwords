@@ -73,7 +73,8 @@ above. Change it freely.
   lane, back across, and the same route in reverse on the way out.
 - **Loot tables** weighted by night number and by how tough the bug was.
 - **Exact numbers** for the long-word bonus (+15% per letter past four, ×4 cap),
-  the repeat penalty (halving, floor 20%), Jade's scaling, Brass's radius, and
+  the repeat penalty (halving to a floor of 20%, and reckoned per level rather
+  than across the run), Jade's scaling, Brass's radius, and
   Aetherium's chain.
 - **Boiler overload** — the bonus for spending every loaded chamber in one word.
   The Jay Is Games review mentions that using all your special letters unlocks

@@ -106,7 +106,8 @@ not dilute what the chambers pull.
 ### Other rules that matter
 
 - **Longer words hit harder** (+15% per letter past four, capped at ×4).
-- **Repeating a word** halves its power each time you reuse it, down to 20%.
+- **Repeating a word** halves its power each time you reuse it *within the same
+  level*, down to 20%. Every level starts the ledger again.
 - **Boiler overload** — spend every loaded chamber in one word for a bonus barrage.
 - **Word of the day** — one word, the same for everyone, doubles everything and explodes.
 - Loot is tabled by night: common letters fall constantly early on, and the rare

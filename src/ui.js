@@ -138,8 +138,8 @@ export function renderHow(onBack) {
           <p>The cannon fires <b>one shell per letter, one every 0.2 seconds</b> (${FIRE_RPM} rounds
           a minute), and every shell finds a target: if its mark dies in flight the charge picks
           the next one. With nothing in the room the breech simply holds.</p>
-          <p>Longer words hit harder. A word you have already used does less each time you
-          repeat it. Use every loaded chamber in one word for a <b>boiler overload</b>. The
+          <p>Longer words hit harder. A word you have already used <i>on this level</i> does
+          less each time you repeat it — every level starts the ledger again. Use every loaded chamber in one word for a <b>boiler overload</b>. The
           <b>word of the day</b> doubles everything and explodes.</p>
           <h3>The bugs</h3>
           <p>Everything comes through the one arch still standing, and walks the route painted
