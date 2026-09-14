@@ -281,7 +281,9 @@ export class Game {
       }
     }
     if (res.pure) this.note('PURE WORD — DOUBLE', '#9be8ff');
-    if (res.jade) this.note(res.jade > 1 ? `JADE ×${res.jade} — ECHO` : 'JADE — ECHO', '#61e6b0');
+    if (res.jade) this.note(res.jade > 1
+      ? `${MATERIALS.jade.name.toUpperCase()} ×${res.jade} — ECHO`
+      : `${MATERIALS.jade.name.toUpperCase()} — ECHO`, '#61e6b0');
     if (wotd) { this.note('WORD OF THE DAY', '#9be8ff'); sfx.overload(); }
     if (repeats > 0) this.note(`repeated ×${repeats + 1} — ${Math.round(res.penalty * 100)}% power`, '#c8a27a');
 
@@ -303,7 +305,15 @@ export class Game {
     this.rackFlash = 1;
   }
 
-  note(text, color) { this.floaters.push({ text, color, x: W / 2, y: 400, vy: -26, t: 1.6, big: true }); }
+  // Several of these can land on the same word — a full salvo, an unsealed
+  // chamber, an echo — so each one stacks under the notes already rising
+  // rather than printing on top of them.
+  note(text, color) {
+    const live = this.floaters.filter(f => f.note);
+    const row = live.length;
+    this.floaters.push({ text, color, note: true, x: W / 2, y: 400 - row * 26,
+      vy: -26, t: 1.6 + row * 0.25, big: true });
+  }
 
   // ── simulation ───────────────────────────────────────────────────────────
   update(dt) {
