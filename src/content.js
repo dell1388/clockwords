@@ -109,37 +109,37 @@ export function rollLoot(nightNo, bugTier = 1) {
 
 export const SPECIES = {
   spider: {
-    id: 'spider', name: 'Clockwork Spider', hp: 30, speed: 80, r: 13,
+    id: 'spider', name: 'Clockwork Spider', hp: 30, speed: 96, r: 13,
     legs: 8, gait: 'crawl', bounty: 1, secret: 0.10, drop: 0.16,
     body: '#8a7a5c', trim: '#d8c489',
   },
   roach: {
-    id: 'roach', name: 'Brass Roach', hp: 22, speed: 128, r: 11,
+    id: 'roach', name: 'Brass Roach', hp: 22, speed: 154, r: 11,
     legs: 6, gait: 'scurry', bounty: 1, secret: 0.10, drop: 0.14,
     body: '#9c6a2c', trim: '#f0b451',
   },
   tick: {
-    id: 'tick', name: 'Gear Tick', hp: 10, speed: 108, r: 8,
+    id: 'tick', name: 'Gear Tick', hp: 10, speed: 130, r: 8,
     legs: 6, gait: 'scurry', bounty: 0, secret: 0.04, drop: 0.05,
     body: '#6f6152', trim: '#c3b191',
   },
   beetle: {
-    id: 'beetle', name: 'Ironclad Beetle', hp: 130, speed: 51, r: 19,
+    id: 'beetle', name: 'Ironclad Beetle', hp: 130, speed: 61, r: 19,
     legs: 6, gait: 'lumber', armor: 0.5, bounty: 3, secret: 0.35, drop: 0.34,
     body: '#4d5259', trim: '#98a3ad',
   },
   moth: {
-    id: 'moth', name: 'Cinder Moth', hp: 40, speed: 159, r: 13,
+    id: 'moth', name: 'Cinder Moth', hp: 40, speed: 191, r: 13,
     legs: 6, gait: 'flit', flying: true, bounty: 2, secret: 0.22, drop: 0.24,
     body: '#7b4a63', trim: '#e3b7d0',
   },
   centipede: {
-    id: 'centipede', name: 'Copper Centipede', hp: 95, speed: 94, r: 14,
+    id: 'centipede', name: 'Copper Centipede', hp: 95, speed: 113, r: 14,
     legs: 12, gait: 'crawl', splitOnDeath: ['tick', 'tick'], bounty: 3,
     secret: 0.30, drop: 0.30, body: '#a4552b', trim: '#efa070',
   },
   weaver: {
-    id: 'weaver', name: 'Steam Weaver', hp: 70, speed: 75, r: 15,
+    id: 'weaver', name: 'Steam Weaver', hp: 70, speed: 90, r: 15,
     legs: 8, gait: 'crawl', heals: { rate: 9, range: 120 }, bounty: 3,
     secret: 0.32, drop: 0.30, body: '#5d6b4a', trim: '#b9cf92',
   },
@@ -149,7 +149,7 @@ export const SPECIES = {
     body: '#6b6455', trim: '#cfc3a4',
   },
   box: {
-    id: 'box', name: 'The Diabolical Box', hp: 2600, speed: 28, r: 46,
+    id: 'box', name: 'The Diabolical Box', hp: 2600, speed: 34, r: 46,
     legs: 8, gait: 'lumber', armor: 0.25, boss: true, spawns: 'tick',
     bounty: 25, secret: 6, drop: 1, body: '#3f3a33', trim: '#d8ab4c',
   },

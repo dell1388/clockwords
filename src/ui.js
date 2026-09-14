@@ -122,9 +122,10 @@ export function renderHow(onBack) {
           <b>word of the day</b> doubles everything and explodes.</p>
           <h3>The bugs</h3>
           <p>Everything comes through the one arch still standing, and walks the route painted
-          on the floor — across, down a lane, back across — until it reaches the machine, takes
-          a page of the formula and retraces the whole run to get out. Kill a carrier and the
-          page comes home. Lose all ${START_PAGES} pages and the night is over.</p>
+          on the floor — across, down a lane, back across — to the <b>safe</b> in the corner
+          opposite the cannon, takes a page of the formula and retraces the whole run to get
+          out. Kill a carrier and the page goes back in the safe. Lose all ${START_PAGES} pages
+          and the night is over. Nothing ever comes near the cannon itself.</p>
           <h3>The proving floor</h3>
           <p><b>Test drive</b> puts you in a room of standing dummies with every chamber open
           and nothing that can reach you. Type anything and the damage each word actually deals

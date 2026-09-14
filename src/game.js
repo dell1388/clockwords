@@ -9,6 +9,9 @@ import * as badges from './achievements.js';
 export const W = 960, H = 640;
 export const PLAY_H = 470;
 export const MACHINE = { x: 152, y: 418 };
+// The formula lives in a strongbox in the far corner, as far from the muzzle as
+// the room allows — so nothing ever has to walk into the cannon's face.
+export const SAFE = { x: 828, y: 420 };
 export const FLOOR_Y = 418;
 export const MUZZLE = { x: 152, y: 318 };
 export const PIVOT = { x: 152, y: 394 };
@@ -68,24 +71,32 @@ export const SANDBOX_MARKS = [
   { x: 420, y: 316 }, { x: 650, y: 316 }, { x: 860, y: 316 },
 ];
 
+// Four sweeps of the floor. The lowest one stops well short of the cannon's
+// corner: nothing should ever be overhead, where the firing solution gets
+// twitchy and the barrel swings wild.
 export const LANES = [
-  { y: 212, x0: 92, x1: 868 },
-  { y: 274, x0: 92, x1: 868 },
-  { y: 336, x0: 92, x1: 868 },
+  { y: 196, x0: 92, x1: 868 },
+  { y: 246, x0: 92, x1: 868 },
+  { y: 296, x0: 210, x1: 868 },
+  { y: 346, x0: 350, x1: 868 },
 ];
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 export function buildPath(door) {
   const wps = [{ x: door.x, y: door.y }];
-  let dir = door.x < W / 2 ? 1 : -1;
+  // Start whichever way leaves the last lane finishing on the safe's side, so
+  // nothing ever walks away from the strongbox and back again.
+  const endRight = SAFE.x > W / 2;
+  const lastFlip = (LANES.length % 2 === 1);
+  let dir = (lastFlip === endRight) ? 1 : -1;
   for (const ln of LANES) {
     const prev = wps[wps.length - 1];
     wps.push({ x: clamp(prev.x, ln.x0, ln.x1), y: ln.y });
     wps.push({ x: dir > 0 ? ln.x1 : ln.x0, y: ln.y });
     dir = -dir;
   }
-  wps.push({ x: MACHINE.x + 34, y: MACHINE.y - 30 });
+  wps.push({ x: SAFE.x - 44, y: SAFE.y - 28 });
   return wps;
 }
 
@@ -279,7 +290,7 @@ export class Game {
     this.rackFlash = 1;
   }
 
-  note(text, color) { this.floaters.push({ text, color, x: MACHINE.x, y: 396, vy: -26, t: 1.6, big: true }); }
+  note(text, color) { this.floaters.push({ text, color, x: W / 2, y: 400, vy: -26, t: 1.6, big: true }); }
 
   // ── simulation ───────────────────────────────────────────────────────────
   update(dt) {
@@ -424,7 +435,7 @@ export class Game {
 
       if (d < WP_RADIUS + b.r * 0.3) {
         b.wi += b.step;
-        if (b.wi >= b.path.length) {                       // reached the machine
+        if (b.wi >= b.path.length) {                       // reached the safe
           b.wi = b.path.length - 1;
           b.step = -1;
           b.phase = 'out';
@@ -734,7 +745,7 @@ export class Game {
       p.t += dt;
       if (p.t < 0.6) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 160 * dt; }
       else {
-        const dx = MACHINE.x - p.x, dy = (MACHINE.y - 16) - p.y;
+        const dx = SAFE.x - p.x, dy = (SAFE.y - 22) - p.y;
         const d = Math.hypot(dx, dy) || 1;
         p.x += (dx / d) * 260 * dt; p.y += (dy / d) * 260 * dt;
         if (d < 14) { p.done = true; this.pages++; sfx.clank(); }

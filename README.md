@@ -49,10 +49,14 @@ then empties and refills from the bag. Any character *not* in a chamber is a
 ### One way in, one route across
 
 Everything comes through the single arch still standing on the back wall and
-walks the route painted on the floor — across, down a lane, back across — to the
-machine in the corner, where it takes a page of the formula and retraces the
-whole run to get out. Kill a carrier and the page comes home. Lose all **5
-pages** and the night is over.
+walks the route painted on the floor — four sweeps across, each a lane lower — to
+the **safe** in the corner opposite the cannon, where it takes a page of the
+formula and retraces the whole run to get out. Kill a carrier and the page goes
+back in the safe. Lose all **5 pages** and the night is over.
+
+The route is deliberately kept clear of the cannon's corner: nothing ever gets
+within about 135px of the muzzle, so the firing solution never has to swing
+through the vertical.
 
 ### Letters have levels
 

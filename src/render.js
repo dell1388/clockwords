@@ -1,6 +1,6 @@
 // render.js — all drawing. Sepia, brass and gaslight.
 
-import { W, H, PLAY_H, MACHINE, MUZZLE, PIVOT, DOORS, SEALED_DOORS, buildPath } from './game.js';
+import { W, H, PLAY_H, MACHINE, MUZZLE, PIVOT, SAFE, DOORS, SEALED_DOORS, buildPath } from './game.js';
 import { MATERIALS, CHAMBERS, START_PAGES, MAX_LEVEL } from './content.js';
 
 const TAU = Math.PI * 2;
@@ -138,19 +138,18 @@ export function makeBackground() {
   x.save();
   x.globalAlpha = 0.18;
   x.fillStyle = '#4a231c';
-  x.beginPath(); x.moveTo(300, 250); x.lineTo(660, 250); x.lineTo(846, 430); x.lineTo(114, 430); x.closePath(); x.fill();
+  x.beginPath(); x.moveTo(300, 250); x.lineTo(640, 250); x.lineTo(760, 412); x.lineTo(190, 412); x.closePath(); x.fill();
   x.strokeStyle = '#7a4b30'; x.lineWidth = 3; x.stroke();
   x.globalAlpha = 0.18;
-  x.beginPath(); x.moveTo(340, 272); x.lineTo(620, 272); x.lineTo(760, 408); x.lineTo(200, 408); x.closePath(); x.stroke();
+  x.beginPath(); x.moveTo(334, 270); x.lineTo(606, 270); x.lineTo(700, 392); x.lineTo(250, 392); x.closePath(); x.stroke();
   x.restore();
 
   // workbench silhouettes at the edges
   x.fillStyle = 'rgba(16,11,6,0.72)';
   roundRect(x, -14, 238, 66, 62, 6); x.fill();
-  roundRect(x, 898, 246, 116, 66, 6); x.fill();
-  roundRect(x, 912, 200, 88, 42, 4); x.fill();
+  roundRect(x, 900, 190, 112, 54, 6); x.fill();
   x.fillStyle = 'rgba(255,214,120,0.10)';
-  x.fillRect(-8, 244, 52, 4); x.fillRect(918, 206, 74, 4);
+  x.fillRect(-8, 244, 52, 4); x.fillRect(906, 196, 84, 4);
 
   // shelf of bottles high on the wall
   x.fillStyle = 'rgba(16,11,6,0.8)'; x.fillRect(660, 62, 210, 7);
@@ -231,6 +230,7 @@ export function draw(ctx, g, t) {
   for (const b of order) drawBug(ctx, b, t);
   drawMachine(ctx, g, t);
   for (const p of g.pageDrops) { ctx.save(); ctx.translate(p.x, p.y); drawPage(ctx, 0, 0, 1, t); ctx.restore(); }
+  drawSafe(ctx, g, t);
   for (const d of g.lootDrops) drawLoot(ctx, d, t);
   for (const sh of g.shots) drawShot(ctx, sh);
   for (const p of g.particles) if (!p.soft) drawParticle(ctx, p);
@@ -338,6 +338,80 @@ function gear(ctx, cx, cy, r, teeth, rot, fill, stroke) {
   ctx.restore();
 }
 
+// The strongbox the formula lives in, in the corner opposite the cannon.
+function drawSafe(ctx, g, t) {
+  const { x, y } = SAFE;
+  ctx.save();
+  ctx.translate(x, y);
+
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.beginPath(); ctx.ellipse(0, 34, 62, 14, 0, 0, TAU); ctx.fill();
+
+  // the pages on a rack above the box
+  for (let i = 0; i < START_PAGES; i++) {
+    drawPage(ctx, -52 + i * 26, -66 - Math.abs(i - 2) * 3, i < g.pages ? 1 : 0.13, t + i * 0.4);
+  }
+
+  // plinth
+  ctx.fillStyle = '#2b2419';
+  roundRect(ctx, -58, 24, 116, 12, 3); ctx.fill();
+
+  // iron body
+  const body = ctx.createLinearGradient(-52, 0, 52, 0);
+  body.addColorStop(0, '#26231d'); body.addColorStop(0.35, '#47433a');
+  body.addColorStop(0.6, '#38342c'); body.addColorStop(1, '#1d1a15');
+  ctx.fillStyle = body;
+  roundRect(ctx, -52, -34, 104, 60, 7); ctx.fill();
+  ctx.strokeStyle = '#15120e'; ctx.lineWidth = 3;
+  roundRect(ctx, -52, -34, 104, 60, 7); ctx.stroke();
+
+  // the door, inset
+  ctx.strokeStyle = 'rgba(200,164,90,0.42)'; ctx.lineWidth = 2;
+  roundRect(ctx, -44, -27, 88, 46, 5); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,232,175,0.35)';
+  for (const rx of [-47, 47]) for (const ry of [-29, 21]) {
+    ctx.beginPath(); ctx.arc(rx, ry, 2.2, 0, TAU); ctx.fill();
+  }
+  // hinges
+  ctx.fillStyle = '#6b5626';
+  roundRect(ctx, 40, -22, 7, 12, 2); ctx.fill();
+  roundRect(ctx, 40, 6, 7, 12, 2); ctx.fill();
+
+  // brass dial
+  ctx.save();
+  ctx.translate(-14, -4);
+  ctx.fillStyle = '#1a170f'; ctx.beginPath(); ctx.arc(0, 0, 15, 0, TAU); ctx.fill();
+  const dial = ctx.createRadialGradient(-4, -5, 1, 0, 0, 14);
+  dial.addColorStop(0, '#f0cd78'); dial.addColorStop(1, '#8d6f2c');
+  ctx.fillStyle = dial; ctx.beginPath(); ctx.arc(0, 0, 12, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#2a2110'; ctx.lineWidth = 1.2;
+  for (let i = 0; i < 12; i++) {
+    const a = i * TAU / 12;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * 8, Math.sin(a) * 8);
+    ctx.lineTo(Math.cos(a) * 11.5, Math.sin(a) * 11.5);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = '#2a2110'; ctx.lineWidth = 2.4;
+  const na = -1.1 + Math.sin(t * 0.6) * 0.25;
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(na) * 10, Math.sin(na) * 10); ctx.stroke();
+  ctx.restore();
+
+  // handle
+  ctx.strokeStyle = '#c9a04a'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(18, -12); ctx.lineTo(18, 10); ctx.stroke();
+  ctx.beginPath(); ctx.arc(18, -1, 9, -Math.PI / 2, Math.PI / 2); ctx.stroke();
+
+  // a gaslamp over it, so the corner reads
+  const gl = ctx.createRadialGradient(0, -20, 4, 0, -20, 96);
+  gl.addColorStop(0, 'rgba(255,214,120,0.16)');
+  gl.addColorStop(1, 'rgba(255,214,120,0)');
+  ctx.fillStyle = gl;
+  ctx.beginPath(); ctx.arc(0, -20, 96, 0, TAU); ctx.fill();
+
+  ctx.restore();
+}
+
 function drawMachine(ctx, g, t) {
   const { x, y } = MACHINE;
   const ang = g.cannonAngle ?? -Math.PI / 2;
@@ -348,10 +422,6 @@ function drawMachine(ctx, g, t) {
 
   ctx.fillStyle = 'rgba(0,0,0,0.45)';
   ctx.beginPath(); ctx.ellipse(0, 30, 82, 17, 0, 0, TAU); ctx.fill();
-
-  for (let i = 0; i < START_PAGES; i++) {
-    drawPage(ctx, -56 + i * 28, -34 - Math.abs(i - 2) * 3, i < g.pages ? 1 : 0.13, t + i * 0.4);
-  }
 
   // barrel, mounted on a yoke above the boiler
   ctx.save();

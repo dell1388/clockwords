@@ -77,8 +77,9 @@ above. Change it freely.
   its fire when the room is empty, computes a lead on its target with only a gentle
   in-flight trim, and counts damage already in the air so it never wastes a shell
   on a bug that is as good as dead. The original fired faster.
-- **Bug pathing.** One open door, and a single painted route: across, down a
-  lane, back across, and the same route in reverse on the way out.
+- **Bug pathing.** One open door, and a single painted route: four sweeps across
+  the floor, each a lane lower, and the same route in reverse on the way out. The
+  lowest lanes stop short of the cannon's corner so nothing is ever overhead.
 - **Loot tables** weighted by night number and by how tough the bug was, with the
   dropped letter rising out of the wreck and kept whether the night is won or lost.
 - **Score** as a pure tally: half a word's damage plus the square of its length,
@@ -94,7 +95,8 @@ above. Change it freely.
 - **Bug roster.** Spiders and roaches are documented; ticks, the Ironclad Beetle,
   the Cinder Moth, the Copper Centipede, the Steam Weaver and the Diabolical Box
   boss, along with all HP, speeds and armour, are ours.
-- **Five pages**, and pages returning when you kill the carrier.
+- **Five pages** in a safe in the corner opposite the cannon, returning to it when
+  you kill the carrier. The original kept them on the machine itself.
 - **The night's work** — the ranked per-word damage ledger in the boiler room.
 - **The campaign.** Ten handmade nights, then a procedural curve that keeps going
   indefinitely with a boss on every tenth. One boiler carries the whole run and
