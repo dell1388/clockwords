@@ -72,20 +72,21 @@ export const sfx = {
     tone(150, t, 0.01, 0.16, 'sawtooth', 0.18, 90);
     noise(t, 0.14, 320, 0.12, 'lowpass');
   }),
-  // one small pop per letter out of the barrel
+  // one gun report per letter: a crack off the muzzle brake over a low thump
   fire: guard((pitch = 1) => {
     const t = ctx.currentTime;
     const o = ctx.createOscillator();
-    o.type = 'sine';
-    o.frequency.setValueAtTime(760 * pitch, t);
-    o.frequency.exponentialRampToValueAtTime(170 * pitch, t + 0.055);
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(320 * pitch, t);
+    o.frequency.exponentialRampToValueAtTime(58 * pitch, t + 0.09);
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.22, t + 0.004);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    g.gain.exponentialRampToValueAtTime(0.26, t + 0.003);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
     o.connect(g); g.connect(master);
-    o.start(t); o.stop(t + 0.09);
-    noise(t, 0.022, 2600, 0.09, 'bandpass', 2.5);
+    o.start(t); o.stop(t + 0.13);
+    noise(t, 0.05, 1800, 0.16, 'bandpass', 1.1);      // the crack
+    noise(t + 0.02, 0.18, 260, 0.10, 'lowpass');       // the roll off the walls
   }),
   hit: guard(() => { const t = ctx.currentTime; noise(t, 0.05, 3200, 0.14, 'bandpass', 4); tone(820, t, 0.002, 0.04, 'triangle', 0.08); }),
   boom: guard(() => {
@@ -99,7 +100,7 @@ export const sfx = {
     tone(2100, t + 0.03, 0.01, 0.25, 'sine', 0.09, 900);
   }),
   burn: guard(() => { const t = ctx.currentTime; noise(t, 0.5, 1100, 0.12, 'bandpass', 0.8); }),
-  // a wet crunch: the shell goes, then whatever was inside it
+  // a hull kill: the plate lets go, then the ammunition inside it
   die: guard(() => {
     const t = ctx.currentTime;
     const s2 = getNoise();
@@ -110,11 +111,12 @@ export const sfx = {
     s2.connect(f);
     env(f, t, 0.008, 0.2, 0.34);
     s2.start(t); s2.stop(t + 0.26);
-    tone(190, t, 0.005, 0.16, 'triangle', 0.14, 48);
-    noise(t + 0.04, 0.09, 520, 0.14, 'bandpass', 0.9);
+    tone(150, t, 0.005, 0.22, 'sawtooth', 0.16, 40);
+    noise(t + 0.03, 0.14, 1600, 0.12, 'bandpass', 1.6);   // torn steel
+    noise(t + 0.09, 0.22, 380, 0.14, 'lowpass');          // the cook-off
   }),
 
-  // the word has been used already tonight
+  // the word has been used already this wave
   buzz: guard(() => {
     const t = ctx.currentTime;
     const o = ctx.createOscillator(), m = ctx.createOscillator(), md = ctx.createGain();
@@ -140,12 +142,12 @@ export const sfx = {
     noise(t, 0.12 + level * 0.02, 5200, 0.05 + level * 0.008, 'highpass', 0.8);
   }),
 
-  // a fresh word that actually spent the boiler
+  // a fresh word that actually spent the magazine — a radio ack
   ding: guard(() => {
     const t = ctx.currentTime;
-    tone(1318, t, 0.006, 0.42, 'sine', 0.10);
-    tone(1976, t + 0.008, 0.006, 0.30, 'sine', 0.055);
-    tone(2637, t + 0.016, 0.005, 0.18, 'sine', 0.025);
+    tone(1046, t, 0.004, 0.09, 'square', 0.07);
+    tone(1568, t + 0.075, 0.004, 0.13, 'square', 0.06);
+    noise(t, 0.05, 4200, 0.02, 'highpass', 0.8);
   }),
   steal: guard(() => {
     const t = ctx.currentTime;
@@ -156,11 +158,14 @@ export const sfx = {
     const t = ctx.currentTime;
     [440, 330, 247].forEach((f, i) => tone(f, t + i * 0.14, 0.01, 0.22, 'sawtooth', 0.18));
   }),
+  // a bugle call over the position
   win: guard(() => {
     const t = ctx.currentTime;
-    [523, 659, 784, 1047].forEach((f, i) => tone(f, t + i * 0.09, 0.01, 0.24, 'triangle', 0.16));
+    [392, 523, 659, 784, 659, 784].forEach((f, i) =>
+      tone(f, t + i * 0.13, 0.012, 0.26, 'sawtooth', 0.13));
   }),
-  steam: guard(() => { const t = ctx.currentTime; noise(t, 0.7, 2600, 0.10, 'highpass', 0.7); }),
+  // a breech block running back: the chamber opens
+  steam: guard(() => { const t = ctx.currentTime; noise(t, 0.22, 1400, 0.16, 'bandpass', 1.4); tone(240, t, 0.004, 0.14, 'square', 0.09, 120); }),
   clank: guard(() => { const t = ctx.currentTime; tone(160, t, 0.003, 0.16, 'square', 0.12, 90); noise(t, 0.1, 700, 0.16, 'bandpass', 2); }),
   overload: guard(() => {
     const t = ctx.currentTime;

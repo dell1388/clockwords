@@ -1,4 +1,4 @@
-// render.js — all drawing. Sepia, brass and gaslight.
+// render.js — all drawing. Olive drab, gunmetal and worklight.
 
 import { W, H, PLAY_H, MACHINE, MUZZLE, PIVOT, SAFE, DOORS, SEALED_DOORS, buildPath } from './game.js';
 import { MATERIALS, CHAMBERS, START_PAGES, MAX_LEVEL } from './content.js';
@@ -37,10 +37,10 @@ export function makeBackground() {
   const x = c.getContext('2d');
 
   const wall = x.createLinearGradient(0, 0, 0, PLAY_H);
-  wall.addColorStop(0, '#241d16');
-  wall.addColorStop(0.33, '#3a2f23');
-  wall.addColorStop(0.35, '#4a3b2b');
-  wall.addColorStop(1, '#6b543c');
+  wall.addColorStop(0, '#16190f');
+  wall.addColorStop(0.33, '#2b3123');
+  wall.addColorStop(0.35, '#3a4030');
+  wall.addColorStop(1, '#6a6a4c');
   x.fillStyle = wall; x.fillRect(0, 0, W, PLAY_H);
 
   x.strokeStyle = 'rgba(0,0,0,0.28)'; x.lineWidth = 2;
@@ -48,7 +48,7 @@ export function makeBackground() {
     const px = i * (W / 12);
     x.beginPath(); x.moveTo(px, 0); x.lineTo(px, 158); x.stroke();
   }
-  x.fillStyle = 'rgba(255,220,170,0.05)';
+  x.fillStyle = 'rgba(226,232,190,0.05)';
   x.fillRect(0, 150, W, 8);
 
   const hz = 158;
@@ -67,39 +67,39 @@ export function makeBackground() {
 
   const pipe = (px, py, w, h) => {
     const gr = x.createLinearGradient(px, 0, px + w, 0);
-    gr.addColorStop(0, '#5b4626'); gr.addColorStop(0.35, '#b58c3f');
-    gr.addColorStop(0.6, '#8d6b2c'); gr.addColorStop(1, '#3e2f16');
+    gr.addColorStop(0, '#22261d'); gr.addColorStop(0.35, '#7d8470');
+    gr.addColorStop(0.6, '#555c48'); gr.addColorStop(1, '#171a13');
     x.fillStyle = gr; x.fillRect(px, py, w, h);
     x.fillStyle = 'rgba(0,0,0,0.25)';
     for (let k = py; k < py + h; k += 46) x.fillRect(px - 3, k, w + 6, 6);
   };
   pipe(38, 0, 16, 150); pipe(906, 0, 16, 150);
   const hgr = x.createLinearGradient(0, 96, 0, 109);
-  hgr.addColorStop(0, '#5b4626'); hgr.addColorStop(0.4, '#b58c3f'); hgr.addColorStop(1, '#3e2f16');
+  hgr.addColorStop(0, '#22261d'); hgr.addColorStop(0.4, '#7d8470'); hgr.addColorStop(1, '#171a13');
   x.fillStyle = hgr; x.fillRect(0, 96, W, 13);
 
   for (const lx of [96, 480, 864]) {
     x.fillStyle = '#3a2c18'; x.fillRect(lx - 3, 108, 6, 16);
     const gr = x.createRadialGradient(lx, 130, 2, lx, 130, 74);
-    gr.addColorStop(0, 'rgba(255,214,120,0.5)');
-    gr.addColorStop(1, 'rgba(255,214,120,0)');
+    gr.addColorStop(0, 'rgba(255,200,90,0.5)');
+    gr.addColorStop(1, 'rgba(255,200,90,0)');
     x.fillStyle = gr; x.beginPath(); x.arc(lx, 130, 74, 0, TAU); x.fill();
     x.fillStyle = '#ffe9a8'; x.beginPath(); x.arc(lx, 130, 5, 0, TAU); x.fill();
   }
 
   const FLOOR = 158;
 
-  // the two arches that were bricked up years ago
+  // the two breaches that were filled in and sandbagged
   for (const d of SEALED_DOORS) {
     const w = 84, h = 68, px = d.x - w / 2, py = FLOOR - h;
     x.save();
     x.beginPath();
     x.moveTo(px, FLOOR); x.lineTo(px, py + w / 2);
     x.arc(d.x, py + w / 2, w / 2, Math.PI, 0); x.lineTo(px + w, FLOOR); x.closePath();
-    x.fillStyle = '#4a3c2b'; x.fill();
-    x.strokeStyle = '#5d492a'; x.lineWidth = 3; x.stroke();
+    x.fillStyle = '#4b4f38'; x.fill();
+    x.strokeStyle = '#6b7050'; x.lineWidth = 3; x.stroke();
     x.clip();
-    x.strokeStyle = 'rgba(20,14,8,0.5)'; x.lineWidth = 2;
+    x.strokeStyle = 'rgba(24,28,16,0.5)'; x.lineWidth = 2;
     for (let r = 0; r < 7; r++) {
       const yy = py + 6 + r * 9.6;
       x.beginPath(); x.moveTo(px, yy); x.lineTo(px + w, yy); x.stroke();
@@ -111,7 +111,7 @@ export function makeBackground() {
     x.restore();
   }
 
-  // the one arch still open — everything comes through here
+  // the one breach still open — everything comes through here
   for (const d of DOORS) {
     const w = 84, h = 68, px = d.x - w / 2, py = FLOOR - h;
     x.save();
@@ -119,9 +119,9 @@ export function makeBackground() {
     x.moveTo(px, FLOOR); x.lineTo(px, py + w / 2);
     x.arc(d.x, py + w / 2, w / 2, Math.PI, 0); x.lineTo(px + w, FLOOR); x.closePath();
     x.fillStyle = '#0d0906'; x.fill();
-    x.strokeStyle = '#8a6c33'; x.lineWidth = 4; x.stroke();
+    x.strokeStyle = '#8a8f6a'; x.lineWidth = 4; x.stroke();
     x.clip();
-    x.strokeStyle = 'rgba(150,118,64,0.45)'; x.lineWidth = 2;
+    x.strokeStyle = 'rgba(150,160,110,0.45)'; x.lineWidth = 2;
     for (let i = 1; i < 6; i++) { x.beginPath(); x.moveTo(px + i * 14, py); x.lineTo(px + i * 14, FLOOR); x.stroke(); }
     for (let i = 1; i < 5; i++) { x.beginPath(); x.moveTo(px, py + i * 16); x.lineTo(px + w, py + i * 16); x.stroke(); }
     const gl = x.createLinearGradient(0, py, 0, FLOOR);
@@ -134,28 +134,28 @@ export function makeBackground() {
 
   drawTracks(x);
 
-  // a rug, so the floor is not a desert
+  // churned mud, so the floor is not a desert
   x.save();
   x.globalAlpha = 0.18;
-  x.fillStyle = '#4a231c';
+  x.fillStyle = '#2f3323';
   x.beginPath(); x.moveTo(300, 250); x.lineTo(640, 250); x.lineTo(760, 412); x.lineTo(190, 412); x.closePath(); x.fill();
-  x.strokeStyle = '#7a4b30'; x.lineWidth = 3; x.stroke();
+  x.strokeStyle = '#4a5136'; x.lineWidth = 3; x.stroke();
   x.globalAlpha = 0.18;
   x.beginPath(); x.moveTo(334, 270); x.lineTo(606, 270); x.lineTo(700, 392); x.lineTo(250, 392); x.closePath(); x.stroke();
   x.restore();
 
-  // workbench silhouettes at the edges
+  // sandbag revetments at the edges
   x.fillStyle = 'rgba(16,11,6,0.72)';
   roundRect(x, -14, 238, 66, 62, 6); x.fill();
   roundRect(x, 900, 190, 112, 54, 6); x.fill();
-  x.fillStyle = 'rgba(255,214,120,0.10)';
+  x.fillStyle = 'rgba(255,200,90,0.10)';
   x.fillRect(-8, 244, 52, 4); x.fillRect(906, 196, 84, 4);
 
-  // shelf of bottles high on the wall
+  // a rack of ammunition crates high on the wall
   x.fillStyle = 'rgba(16,11,6,0.8)'; x.fillRect(660, 62, 210, 7);
   for (let i = 0; i < 7; i++) {
     const bx = 672 + i * 28, bh = 20 + (i % 3) * 9;
-    x.fillStyle = ['rgba(120,160,110,0.5)', 'rgba(150,120,80,0.5)', 'rgba(110,130,170,0.5)'][i % 3];
+    x.fillStyle = ['rgba(110,120,80,0.55)', 'rgba(140,130,90,0.5)', 'rgba(90,100,90,0.55)'][i % 3];
     roundRect(x, bx, 62 - bh, 15, bh, 3); x.fill();
   }
 
@@ -167,7 +167,7 @@ export function makeBackground() {
   bg = c;
 }
 
-// The bugs all walk the one route, so the route is painted on the floor: a worn
+// The tanks all walk the one route, so the route is painted on the floor: a worn
 // track, a dashed centre line, and chevrons pointing the way they come.
 function drawTracks(x) {
   const path = buildPath(DOORS[0]);
@@ -179,11 +179,11 @@ function drawTracks(x) {
     for (let i = 1; i < path.length; i++) x.lineTo(path[i].x, path[i].y);
   };
   trace(); x.strokeStyle = 'rgba(18,12,6,0.30)'; x.lineWidth = 40; x.stroke();
-  trace(); x.strokeStyle = 'rgba(255,226,170,0.075)'; x.lineWidth = 34; x.stroke();
-  trace(); x.strokeStyle = 'rgba(255,226,170,0.10)'; x.lineWidth = 20; x.stroke();
+  trace(); x.strokeStyle = 'rgba(226,232,190,0.075)'; x.lineWidth = 34; x.stroke();
+  trace(); x.strokeStyle = 'rgba(226,232,190,0.10)'; x.lineWidth = 20; x.stroke();
   trace();
   x.setLineDash([9, 13]);
-  x.strokeStyle = 'rgba(255,206,116,0.34)'; x.lineWidth = 2; x.stroke();
+  x.strokeStyle = 'rgba(214,232,140,0.34)'; x.lineWidth = 2; x.stroke();
   x.setLineDash([]);
 
   // chevrons, evenly spaced along the whole run
@@ -198,7 +198,7 @@ function drawTracks(x) {
       x.save();
       x.translate(cx, cy);
       x.rotate(Math.atan2(uy, ux));
-      x.strokeStyle = 'rgba(255,214,120,0.42)'; x.lineWidth = 2.6;
+      x.strokeStyle = 'rgba(214,232,140,0.45)'; x.lineWidth = 2.6;
       x.beginPath();
       x.moveTo(-6, -6); x.lineTo(5, 0); x.lineTo(-6, 6);
       x.stroke();
@@ -207,8 +207,8 @@ function drawTracks(x) {
     carry = STEP - ((len - carry) % STEP);
   }
 
-  // brass studs at every turn
-  x.fillStyle = 'rgba(214,172,88,0.45)';
+  // marker posts at every turn
+  x.fillStyle = 'rgba(200,214,130,0.45)';
   for (let i = 1; i < path.length - 1; i++) {
     x.beginPath(); x.arc(path[i].x, path[i].y, 4, 0, TAU); x.fill();
   }
@@ -302,8 +302,8 @@ function drawPage(ctx, px, py, alpha, t = 0) {
   ctx.translate(px, py);
   ctx.rotate(Math.sin(t * 1.4) * 0.05);
   ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(-9, -13, 20, 28);
-  ctx.fillStyle = '#e8dcbd'; ctx.fillRect(-10, -14, 20, 28);
-  ctx.strokeStyle = '#9d8c68'; ctx.lineWidth = 1; ctx.strokeRect(-10, -14, 20, 28);
+  ctx.fillStyle = '#d8c48a'; ctx.fillRect(-10, -14, 20, 28);
+  ctx.strokeStyle = '#8a7a4c'; ctx.lineWidth = 1; ctx.strokeRect(-10, -14, 20, 28);
   ctx.strokeStyle = 'rgba(90,70,40,0.75)';
   for (let i = 0; i < 5; i++) {
     ctx.beginPath(); ctx.moveTo(-7, -9 + i * 5.5); ctx.lineTo(6 - (i % 2) * 4, -9 + i * 5.5); ctx.stroke();
@@ -338,7 +338,7 @@ function gear(ctx, cx, cy, r, teeth, rot, fill, stroke) {
   ctx.restore();
 }
 
-// The strongbox the formula lives in, in the corner opposite the cannon.
+// The field safe the codebooks live in, in the corner opposite the gun.
 function drawSafe(ctx, g, t) {
   const { x, y } = SAFE;
   ctx.save();
@@ -347,7 +347,7 @@ function drawSafe(ctx, g, t) {
   ctx.fillStyle = 'rgba(0,0,0,0.45)';
   ctx.beginPath(); ctx.ellipse(0, 34, 62, 14, 0, 0, TAU); ctx.fill();
 
-  // the pages on a rack above the box
+  // the dossiers on a rack above the box
   for (let i = 0; i < START_PAGES; i++) {
     drawPage(ctx, -52 + i * 26, -66 - Math.abs(i - 2) * 3, i < g.pages ? 1 : 0.13, t + i * 0.4);
   }
@@ -368,21 +368,21 @@ function drawSafe(ctx, g, t) {
   // the door, inset
   ctx.strokeStyle = 'rgba(200,164,90,0.42)'; ctx.lineWidth = 2;
   roundRect(ctx, -44, -27, 88, 46, 5); ctx.stroke();
-  ctx.fillStyle = 'rgba(255,232,175,0.35)';
+  ctx.fillStyle = 'rgba(226,232,200,0.35)';
   for (const rx of [-47, 47]) for (const ry of [-29, 21]) {
     ctx.beginPath(); ctx.arc(rx, ry, 2.2, 0, TAU); ctx.fill();
   }
   // hinges
-  ctx.fillStyle = '#6b5626';
+  ctx.fillStyle = '#4c5540';
   roundRect(ctx, 40, -22, 7, 12, 2); ctx.fill();
   roundRect(ctx, 40, 6, 7, 12, 2); ctx.fill();
 
-  // brass dial
+  // combination dial
   ctx.save();
   ctx.translate(-14, -4);
   ctx.fillStyle = '#1a170f'; ctx.beginPath(); ctx.arc(0, 0, 15, 0, TAU); ctx.fill();
   const dial = ctx.createRadialGradient(-4, -5, 1, 0, 0, 14);
-  dial.addColorStop(0, '#f0cd78'); dial.addColorStop(1, '#8d6f2c');
+  dial.addColorStop(0, '#c9cfae'); dial.addColorStop(1, '#5d6650');
   ctx.fillStyle = dial; ctx.beginPath(); ctx.arc(0, 0, 12, 0, TAU); ctx.fill();
   ctx.strokeStyle = '#2a2110'; ctx.lineWidth = 1.2;
   for (let i = 0; i < 12; i++) {
@@ -398,14 +398,14 @@ function drawSafe(ctx, g, t) {
   ctx.restore();
 
   // handle
-  ctx.strokeStyle = '#c9a04a'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.strokeStyle = '#9aa284'; ctx.lineWidth = 4; ctx.lineCap = 'round';
   ctx.beginPath(); ctx.moveTo(18, -12); ctx.lineTo(18, 10); ctx.stroke();
   ctx.beginPath(); ctx.arc(18, -1, 9, -Math.PI / 2, Math.PI / 2); ctx.stroke();
 
-  // a gaslamp over it, so the corner reads
+  // a work lamp over it, so the corner reads
   const gl = ctx.createRadialGradient(0, -20, 4, 0, -20, 96);
-  gl.addColorStop(0, 'rgba(255,214,120,0.16)');
-  gl.addColorStop(1, 'rgba(255,214,120,0)');
+  gl.addColorStop(0, 'rgba(255,200,90,0.16)');
+  gl.addColorStop(1, 'rgba(255,200,90,0)');
   ctx.fillStyle = gl;
   ctx.beginPath(); ctx.arc(0, -20, 96, 0, TAU); ctx.fill();
 
@@ -423,20 +423,24 @@ function drawMachine(ctx, g, t) {
   ctx.fillStyle = 'rgba(0,0,0,0.45)';
   ctx.beginPath(); ctx.ellipse(0, 30, 82, 17, 0, 0, TAU); ctx.fill();
 
-  // barrel, mounted on a yoke above the boiler
+  // barrel, mounted on a yoke above the magazine
   ctx.save();
   ctx.translate(0, PIVOT.y - MACHINE.y);
   ctx.rotate(ang + Math.PI / 2);
   ctx.translate(0, rec);
   const bar = ctx.createLinearGradient(-14, 0, 14, 0);
-  bar.addColorStop(0, '#4c3a1a'); bar.addColorStop(0.35, '#d9ad4e');
-  bar.addColorStop(0.6, '#a37f30'); bar.addColorStop(1, '#3a2b12');
+  bar.addColorStop(0, '#171a13'); bar.addColorStop(0.35, '#8d9478');
+  bar.addColorStop(0.6, '#5d6650'); bar.addColorStop(1, '#14170f');
   ctx.fillStyle = bar;
   roundRect(ctx, -13, -82, 26, 88, 6); ctx.fill();
-  ctx.fillStyle = '#e7c368';
-  roundRect(ctx, -17, -88, 34, 14, 5); ctx.fill();
-  ctx.fillStyle = 'rgba(0,0,0,0.4)';
-  for (let i = 0; i < 4; i++) ctx.fillRect(-14, -64 + i * 17, 28, 4);
+  // muzzle brake
+  ctx.fillStyle = '#9aa284';
+  roundRect(ctx, -18, -92, 36, 18, 4); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(-18, -88, 7, 9); ctx.fillRect(11, -88, 7, 9);
+  // fume extractor
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  roundRect(ctx, -15, -52, 30, 16, 5); ctx.fill();
   if (g.muzzleFlash > 0) {
     ctx.globalAlpha = g.muzzleFlash;
     const fg = ctx.createRadialGradient(0, -90, 2, 0, -90, 34);
@@ -447,52 +451,59 @@ function drawMachine(ctx, g, t) {
   }
   ctx.restore();
 
-  // boiler body
+  // magazine body
   const body = ctx.createLinearGradient(-70, 0, 70, 0);
-  body.addColorStop(0, '#4a3718'); body.addColorStop(0.3, '#b98f38');
-  body.addColorStop(0.55, '#8f6d2a'); body.addColorStop(1, '#3d2d13');
+  body.addColorStop(0, '#242a1c'); body.addColorStop(0.3, '#7b8564');
+  body.addColorStop(0.55, '#586045'); body.addColorStop(1, '#1c2116');
   ctx.fillStyle = body;
   roundRect(ctx, -72, -18, 144, 52, 12); ctx.fill();
-  ctx.strokeStyle = '#2a1f0d'; ctx.lineWidth = 3;
+  ctx.strokeStyle = '#12150f'; ctx.lineWidth = 3;
   roundRect(ctx, -72, -18, 144, 52, 12); ctx.stroke();
 
-  gear(ctx, -46, 8, 13, 9, t * 1.1, '#d7ab4d', '#4a3718');
-  gear(ctx, 46, 8, 13, 9, -t * 1.1, '#d7ab4d', '#4a3718');
-  gear(ctx, 0, 16, 9, 8, t * 1.8, '#9c7c34', '#2a1f0d');
+  // road wheels under the emplacement
+  ctx.fillStyle = '#20241c';
+  roundRect(ctx, -70, 22, 140, 16, 7); ctx.fill();
+  for (let i = 0; i < 5; i++) {
+    const wx = -54 + i * 27;
+    ctx.fillStyle = '#7b8564';
+    ctx.beginPath(); ctx.arc(wx, 30, 9, 0, TAU); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.beginPath(); ctx.arc(wx, 30, 3.4, 0, TAU); ctx.fill();
+  }
 
   // trunnion the barrel swings in
-  ctx.fillStyle = '#7a5c24';
+  ctx.fillStyle = '#4c5540';
   roundRect(ctx, -16, -30, 32, 20, 6); ctx.fill();
-  ctx.strokeStyle = '#2a1f0d'; ctx.lineWidth = 2;
+  ctx.strokeStyle = '#12150f'; ctx.lineWidth = 2;
   roundRect(ctx, -16, -30, 32, 20, 6); ctx.stroke();
-  ctx.fillStyle = '#e7c368';
+  ctx.fillStyle = '#9aa284';
   ctx.beginPath(); ctx.arc(0, -20, 4, 0, TAU); ctx.fill();
 
   // pressure gauge
   ctx.save(); ctx.translate(0, -2);
-  ctx.fillStyle = '#1c1409'; ctx.beginPath(); ctx.arc(0, 0, 13, 0, TAU); ctx.fill();
-  ctx.fillStyle = '#e8dcbd'; ctx.beginPath(); ctx.arc(0, 0, 11, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#12150f'; ctx.beginPath(); ctx.arc(0, 0, 13, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#dfe0cf'; ctx.beginPath(); ctx.arc(0, 0, 11, 0, TAU); ctx.fill();
   const load = g.boiler ? g.boiler.loaded() / CHAMBERS : 1;
   const na = -Math.PI * 0.8 + load * Math.PI * 1.6;
   ctx.strokeStyle = '#a32b16'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(na) * 8, Math.sin(na) * 8); ctx.stroke();
   ctx.restore();
 
-  // rivets
-  ctx.fillStyle = 'rgba(255,236,180,0.5)';
+  // bolt heads
+  ctx.fillStyle = 'rgba(226,232,200,0.5)';
   for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.arc(-62 + i * 15.5, -13, 1.8, 0, TAU); ctx.fill(); }
 
-  // feet
-  ctx.fillStyle = '#2c2110';
+  // spades dug into the ground
+  ctx.fillStyle = '#1d2117';
   roundRect(ctx, -64, 30, 22, 10, 3); ctx.fill();
   roundRect(ctx, 42, 30, 22, 10, 3); ctx.fill();
 
   ctx.restore();
 
-  // steam from the boiler
+  // exhaust haze off the engine deck
   if (Math.random() < 0.4) {
     g.particles.push({ x: x + (Math.random() - 0.5) * 50, y: y - 20, vx: (Math.random() - 0.5) * 14,
-      vy: -26 - Math.random() * 20, t: 0.9, r: 4 + Math.random() * 5, c: 'rgba(230,220,200,0.42)', soft: true });
+      vy: -26 - Math.random() * 20, t: 0.9, r: 4 + Math.random() * 5, c: 'rgba(190,196,176,0.34)', soft: true });
   }
 }
 
@@ -518,8 +529,8 @@ function drawOutro(ctx, g) {
   ctx.scale(0.88 + 0.12 * grow, 0.88 + 0.12 * grow);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
-  const glow = won ? '#ffd66b' : '#e2563a';
-  const rule = won ? 'rgba(255,214,107,0.55)' : 'rgba(226,86,58,0.5)';
+  const glow = won ? '#ffc24b' : '#e2563a';
+  const rule = won ? 'rgba(255,194,75,0.55)' : 'rgba(226,86,58,0.5)';
   const w = 270;
   ctx.strokeStyle = rule; ctx.lineWidth = 2;
   for (const dy of [-46, 46]) {
@@ -529,7 +540,7 @@ function drawOutro(ctx, g) {
   ctx.fillStyle = rule;
   for (const dy of [-46, 46]) { ctx.beginPath(); ctx.arc(0, dy, 4, 0, TAU); ctx.fill(); }
 
-  ctx.font = "56px 'IM Fell English SC', Georgia, serif";
+  ctx.font = "56px 'Black Ops One', Impact, sans-serif";
   ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(0,0,0,0.8)';
   ctx.strokeText(won ? 'LEVEL CLEARED' : 'LEVEL FAILED', 0, 0);
   ctx.shadowColor = glow; ctx.shadowBlur = 26;
@@ -537,33 +548,33 @@ function drawOutro(ctx, g) {
   ctx.fillText(won ? 'LEVEL CLEARED' : 'LEVEL FAILED', 0, 0);
   ctx.shadowBlur = 0;
 
-  ctx.font = "italic 19px 'IM Fell English', Georgia, serif";
+  ctx.font = "italic 19px 'Roboto Condensed', Arial, sans-serif";
   ctx.fillStyle = 'rgba(232,220,189,0.85)';
   ctx.fillText(won
-    ? `${g.pages} of ${START_PAGES} pages still on the rack`
-    : 'every page of the formula is gone', 0, 74);
+    ? `${g.pages} of ${START_PAGES} dossiers still on the rack`
+    : 'every dossier of the formula is gone', 0, 74);
   ctx.restore();
 }
 
-// The proving floor: a running read-out of what each word actually did.
+// The firing range: a running read-out of what each word actually did.
 function drawProving(ctx, g) {
   ctx.save();
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = 'rgba(11,8,5,0.72)';
   roundRect(ctx, 12, 10, 250, 26, 6); ctx.fill();
-  ctx.strokeStyle = '#8d6f35'; ctx.lineWidth = 2;
+  ctx.strokeStyle = '#59623a'; ctx.lineWidth = 2;
   roundRect(ctx, 12, 10, 250, 26, 6); ctx.stroke();
-  ctx.fillStyle = '#ffd66b'; ctx.font = "14px 'IM Fell English SC', Georgia, serif";
-  ctx.fillText('THE PROVING FLOOR', 24, 28);
+  ctx.fillStyle = '#ffc24b'; ctx.font = "14px 'Black Ops One', Impact, sans-serif";
+  ctx.fillText('THE FIRING RANGE', 24, 28);
   ctx.textAlign = 'right';
-  ctx.fillStyle = 'rgba(230,214,180,0.5)'; ctx.font = "italic 12px 'IM Fell English', Georgia, serif";
+  ctx.fillStyle = 'rgba(214,222,186,0.5)'; ctx.font = "italic 12px 'Roboto Condensed', Arial, sans-serif";
   ctx.fillText('Esc to leave', 250, 28);
   ctx.textAlign = 'left';
 
   const log = (g.wordLog || []).slice(-9).reverse();
   if (!log.length) {
-    ctx.fillStyle = 'rgba(230,214,180,0.45)';
-    ctx.font = "italic 14px 'IM Fell English', Georgia, serif";
+    ctx.fillStyle = 'rgba(214,222,186,0.45)';
+    ctx.font = "italic 14px 'Roboto Condensed', Arial, sans-serif";
     ctx.fillText('type anything — the damage it does is listed here', 24, 56);
     ctx.restore();
     return;
@@ -574,7 +585,7 @@ function drawProving(ctx, g) {
   ctx.strokeStyle = '#55401f'; ctx.lineWidth = 1.5;
   roundRect(ctx, 12, 44, 250, h, 6); ctx.stroke();
   ctx.fillStyle = 'rgba(200,178,132,0.75)';
-  ctx.font = "11px 'IM Fell English SC', Georgia, serif";
+  ctx.font = "11px 'Black Ops One', Impact, sans-serif";
   ctx.fillText('WORD', 24, 62);
   ctx.textAlign = 'right';
   ctx.fillText('DEALT', 250, 62);
@@ -586,13 +597,13 @@ function drawProving(ctx, g) {
     ctx.font = "13px 'Special Elite', 'Courier New', monospace";
     for (let k = 0; k < e.word.length && x < 190; k++) {
       const m = e.marks[k] ? MATERIALS[e.marks[k]] : null;
-      ctx.fillStyle = m ? m.glow : 'rgba(216,203,170,0.45)';
+      ctx.fillStyle = m ? m.glow : 'rgba(214,218,182,0.45)';
       const ch = e.word[k].toUpperCase();
       ctx.fillText(ch, x, y);
       x += ctx.measureText(ch).width + 0.5;
     }
     ctx.textAlign = 'right';
-    ctx.fillStyle = i === 0 ? '#ffd66b' : '#e8d7ae';
+    ctx.fillStyle = i === 0 ? '#ffc24b' : '#dee2c2';
     ctx.fillText(Math.round(e.dealt).toLocaleString(), 250, y);
   });
   ctx.restore();
@@ -605,13 +616,13 @@ function drawBossBar(ctx, g) {
   ctx.save();
   ctx.fillStyle = 'rgba(0,0,0,0.65)';
   roundRect(ctx, x0 - 4, y0 - 4, w + 8, 24, 6); ctx.fill();
-  ctx.strokeStyle = '#c9a04a'; ctx.lineWidth = 2;
+  ctx.strokeStyle = '#a8b060'; ctx.lineWidth = 2;
   roundRect(ctx, x0 - 4, y0 - 4, w + 8, 24, 6); ctx.stroke();
   const k = Math.max(0, boss.hp / boss.maxHp);
   const gr = ctx.createLinearGradient(x0, 0, x0 + w, 0);
   gr.addColorStop(0, '#a5381f'); gr.addColorStop(1, '#e6a23c');
   ctx.fillStyle = gr; ctx.fillRect(x0, y0, w * k, 16);
-  ctx.fillStyle = '#f2e6c8'; ctx.font = "13px 'IM Fell English SC', Georgia, serif";
+  ctx.fillStyle = '#f2e6c8'; ctx.font = "13px 'Black Ops One', Impact, sans-serif";
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(boss.sp.name.toUpperCase(), W / 2, y0 + 8);
   ctx.restore();
@@ -621,7 +632,7 @@ function drawReticle(ctx, a, t) {
   ctx.save();
   ctx.translate(a.x, a.y);
   ctx.rotate(t * 0.8);
-  ctx.strokeStyle = 'rgba(255,214,107,0.85)'; ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(255,194,75,0.85)'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.arc(0, 0, 16, 0, TAU); ctx.stroke();
   for (let i = 0; i < 4; i++) {
     const ang = i * TAU / 4;
@@ -633,7 +644,7 @@ function drawReticle(ctx, a, t) {
   ctx.restore();
 }
 
-// ── bugs ───────────────────────────────────────────────────────────────────
+// ── tanks ───────────────────────────────────────────────────────────────────
 function drawBug(ctx, b, t) {
   const sp = b.sp;
   ctx.save();
@@ -646,105 +657,139 @@ function drawBug(ctx, b, t) {
   ctx.rotate(b.tilt);
 
   const body = sp.body, trim = sp.trim;
+  const r = b.r;
 
-  // legs
-  ctx.strokeStyle = '#140e07';
-  ctx.lineWidth = Math.max(2.6, b.r * 0.24);
-  ctx.lineCap = 'round';
-  const pairs = Math.max(3, sp.legs / 2);
-  for (let i = 0; i < pairs; i++) {
-    const ly = -b.r * 0.7 + (i / (pairs - 1)) * b.r * 1.4;
-    const swing = Math.sin(b.legPhase * 3 + i * 1.1) * b.r * 0.45;
-    for (const side of [-1, 1]) {
-      const kx = side * b.r * 1.05, ky = ly + swing * side * 0.4;
-      ctx.beginPath();
-      ctx.moveTo(side * b.r * 0.55, ly);
-      ctx.lineTo(kx, ky - b.r * 0.3);
-      ctx.lineTo(side * b.r * 1.5, ky + swing);
-      ctx.stroke();
-    }
-  }
-  ctx.strokeStyle = trim;
-  ctx.lineWidth = Math.max(1.4, b.r * 0.14);
-  for (let i = 0; i < pairs; i++) {
-    const ly = -b.r * 0.7 + (i / (pairs - 1)) * b.r * 1.4;
-    const swing = Math.sin(b.legPhase * 3 + i * 1.1) * b.r * 0.45;
-    for (const side of [-1, 1]) {
-      const kx = side * b.r * 1.05, ky = ly + swing * side * 0.4;
-      ctx.beginPath();
-      ctx.moveTo(side * b.r * 0.55, ly);
-      ctx.lineTo(kx, ky - b.r * 0.3);
-      ctx.lineTo(side * b.r * 1.5, ky + swing);
-      ctx.stroke();
-    }
-  }
-
-  // abdomen + thorax
-  ctx.fillStyle = body;
-  ctx.beginPath(); ctx.ellipse(0, b.r * 0.35, b.r * 0.78, b.r * 0.95, 0, 0, TAU); ctx.fill();
-  ctx.strokeStyle = '#140e07'; ctx.lineWidth = 2; ctx.stroke();
-  const sheen = ctx.createLinearGradient(-b.r, 0, b.r, 0);
-  sheen.addColorStop(0, 'rgba(255,235,190,0.28)');
-  sheen.addColorStop(0.5, 'rgba(255,235,190,0)');
-  sheen.addColorStop(1, 'rgba(0,0,0,0.3)');
-  ctx.fillStyle = sheen;
-  ctx.beginPath(); ctx.ellipse(0, b.r * 0.35, b.r * 0.78, b.r * 0.95, 0, 0, TAU); ctx.fill();
-  ctx.fillStyle = trim;
-  ctx.beginPath(); ctx.ellipse(0, -b.r * 0.5, b.r * 0.56, b.r * 0.5, 0, 0, TAU); ctx.fill();
-  ctx.strokeStyle = '#140e07'; ctx.lineWidth = 1.6; ctx.stroke();
-
-  // plating / wings by species
-  if (sp.id === 'box') {
-    const r = b.r;
-    ctx.fillStyle = '#2e2a24';
-    roundRect(ctx, -r * 0.85, -r * 0.75, r * 1.7, r * 1.6, r * 0.12); ctx.fill();
-    ctx.strokeStyle = '#1a1712'; ctx.lineWidth = 3; ctx.stroke();
-    const lid = ctx.createLinearGradient(0, -r * 0.75, 0, r * 0.85);
-    lid.addColorStop(0, 'rgba(255,225,160,0.22)'); lid.addColorStop(1, 'rgba(0,0,0,0.35)');
-    ctx.fillStyle = lid;
-    roundRect(ctx, -r * 0.85, -r * 0.75, r * 1.7, r * 1.6, r * 0.12); ctx.fill();
-    ctx.strokeStyle = sp.trim; ctx.lineWidth = Math.max(2, r * 0.09);
-    ctx.strokeRect(-r * 0.85, -r * 0.18, r * 1.7, r * 0.36);
-    ctx.beginPath(); ctx.moveTo(0, -r * 0.75); ctx.lineTo(0, r * 0.85); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,232,175,0.55)';
-    for (const cx2 of [-r * 0.7, r * 0.7]) for (const cy2 of [-r * 0.6, r * 0.68]) {
-      ctx.beginPath(); ctx.arc(cx2, cy2, Math.max(1.4, r * 0.06), 0, TAU); ctx.fill();
-    }
-    gear(ctx, -r * 0.45, r * 0.45, r * 0.22, 8, t * 1.6, sp.trim, '#1a1712');
-    gear(ctx, r * 0.45, r * 0.45, r * 0.22, 8, -t * 1.6, sp.trim, '#1a1712');
-    // the slot it keeps the stolen pages in
-    ctx.fillStyle = '#0c0a07';
-    roundRect(ctx, -r * 0.4, -r * 0.5, r * 0.8, r * 0.22, 3); ctx.fill();
-    ctx.fillStyle = '#ff6a2e'; ctx.shadowColor = '#ff6a2e'; ctx.shadowBlur = 14;
-    roundRect(ctx, -r * 0.34, -r * 0.46, r * 0.68, r * 0.1, 2); ctx.fill();
-    ctx.shadowBlur = 0;
-  } else if (sp.id === 'beetle') {
-    ctx.fillStyle = trim;
-    roundRect(ctx, -b.r * 0.72, -b.r * 0.1, b.r * 1.44, b.r * 1.2, b.r * 0.3); ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 1.6; ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0, -b.r * 0.1); ctx.lineTo(0, b.r * 1.1); ctx.stroke();
-  }
+  // ── running gear ─────────────────────────────────────────────────────────
   if (sp.flying) {
-    ctx.globalAlpha = 0.5; ctx.fillStyle = trim;
-    const flap = Math.sin(t * 26 + b.wob) * 0.4;
+    // a gunship: skids and a rotor instead of tracks
+    ctx.strokeStyle = '#1b1f18'; ctx.lineWidth = Math.max(2, r * 0.16); ctx.lineCap = 'round';
     for (const side of [-1, 1]) {
-      ctx.save(); ctx.rotate(side * (0.5 + flap));
-      ctx.beginPath(); ctx.ellipse(side * b.r * 0.9, 0, b.r * 0.95, b.r * 0.42, 0, 0, TAU); ctx.fill();
-      ctx.restore();
+      ctx.beginPath();
+      ctx.moveTo(side * r * 0.85, -r * 0.7); ctx.lineTo(side * r * 0.85, r * 0.8);
+      ctx.stroke();
     }
-    ctx.globalAlpha = 1;
+  } else {
+    for (const side of [-1, 1]) {
+      ctx.fillStyle = '#20241c';
+      roundRect(ctx, side * r * 0.9 - r * 0.24, -r * 1.0, r * 0.48, r * 2.0, r * 0.2); ctx.fill();
+      ctx.strokeStyle = '#12150f'; ctx.lineWidth = 1.6; ctx.stroke();
+      // tread links, marching as it drives
+      ctx.fillStyle = 'rgba(160,168,140,0.45)';
+      const pitch = r * 0.34;
+      const off = ((b.legPhase * r * 0.5) % pitch + pitch) % pitch;
+      for (let k = -r * 1.0 + off; k < r * 0.94; k += pitch) {
+        ctx.fillRect(side * r * 0.9 - r * 0.24, k, r * 0.48, r * 0.09);
+      }
+      // road wheels showing through
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      for (let k = -0.7; k <= 0.75; k += 0.48) {
+        ctx.beginPath(); ctx.arc(side * r * 0.9, k * r, r * 0.16, 0, TAU); ctx.fill();
+      }
+    }
   }
 
-  // gear back
-  gear(ctx, 0, b.r * 0.45, b.r * 0.34, 7, t * 2 + b.wob, 'rgba(0,0,0,0.35)', null);
+  // ── hull ─────────────────────────────────────────────────────────────────
+  ctx.fillStyle = body;
+  ctx.beginPath();
+  ctx.moveTo(-r * 0.62, -r * 0.72);
+  ctx.lineTo(-r * 0.34, -r * 1.02);          // glacis, sloped at the front
+  ctx.lineTo(r * 0.34, -r * 1.02);
+  ctx.lineTo(r * 0.62, -r * 0.72);
+  ctx.lineTo(r * 0.62, r * 0.9);
+  ctx.lineTo(-r * 0.62, r * 0.9);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#12150f'; ctx.lineWidth = 2; ctx.stroke();
+  const sheen = ctx.createLinearGradient(-r, 0, r, 0);
+  sheen.addColorStop(0, 'rgba(255,255,230,0.20)');
+  sheen.addColorStop(0.5, 'rgba(255,255,230,0)');
+  sheen.addColorStop(1, 'rgba(0,0,0,0.32)');
+  ctx.fillStyle = sheen; ctx.fill();
 
-  // eyes
+  // engine deck louvres at the back
+  ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = Math.max(1, r * 0.07);
+  for (let i = 0; i < 3; i++) {
+    const yy = r * 0.44 + i * r * 0.17;
+    ctx.beginPath(); ctx.moveTo(-r * 0.44, yy); ctx.lineTo(r * 0.44, yy); ctx.stroke();
+  }
+
+  // applique armour on the heavies
+  if (sp.id === 'beetle' || sp.id === 'box') {
+    ctx.fillStyle = trim;
+    roundRect(ctx, -r * 0.7, -r * 0.62, r * 1.4, r * 0.34, r * 0.08); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 1.4; ctx.stroke();
+  }
+
+  // ── turret ───────────────────────────────────────────────────────────────
+  const tr = r * (sp.id === 'box' ? 0.56 : 0.44);
+  const tg = ctx.createLinearGradient(-tr, 0, tr, 0);
+  tg.addColorStop(0, body); tg.addColorStop(0.45, trim); tg.addColorStop(1, body);
+  ctx.fillStyle = tg;
+  ctx.beginPath(); ctx.ellipse(0, -r * 0.06, tr, tr * 1.1, 0, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#12150f'; ctx.lineWidth = 2; ctx.stroke();
+
+  // main gun, pointing the way it is going
+  ctx.fillStyle = '#2b3026';
+  roundRect(ctx, -r * 0.09, -r * 1.8, r * 0.18, r * 1.5, r * 0.04); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = trim;
+  roundRect(ctx, -r * 0.15, -r * 1.86, r * 0.3, r * 0.16, r * 0.04); ctx.fill();
+  // mantlet
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  roundRect(ctx, -r * 0.26, -r * 0.62, r * 0.52, r * 0.22, r * 0.06); ctx.fill();
+  if (sp.id === 'box') {                       // the Colonel carries two
+    for (const side of [-1, 1]) {
+      ctx.fillStyle = '#2b3026';
+      roundRect(ctx, side * r * 0.42 - r * 0.07, -r * 1.3, r * 0.14, r * 0.9, r * 0.04); ctx.fill();
+    }
+  }
+
+  // hatch, aerial and a white star
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.beginPath(); ctx.arc(tr * 0.35, r * 0.1, Math.max(1.6, r * 0.13), 0, TAU); ctx.fill();
+  ctx.strokeStyle = 'rgba(20,24,16,0.8)'; ctx.lineWidth = Math.max(1, r * 0.05);
+  ctx.beginPath(); ctx.moveTo(-tr * 0.5, r * 0.12);
+  ctx.lineTo(-tr * 0.5 - r * 0.1, r * 0.12 + r * 0.55 + Math.sin(t * 6 + b.wob) * r * 0.1);
+  ctx.stroke();
+  if (r > 10) {
+    ctx.fillStyle = 'rgba(235,238,215,0.75)';
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + i * Math.PI / 5;
+      const rr = i % 2 ? r * 0.07 : r * 0.17;
+      ctx.lineTo(Math.cos(a) * rr, r * 0.6 + Math.sin(a) * rr);
+    }
+    ctx.closePath(); ctx.fill();
+  }
+
+  if (sp.flying) {
+    // rotor disc
+    ctx.save();
+    ctx.globalAlpha = 0.45; ctx.strokeStyle = trim;
+    ctx.lineWidth = Math.max(2, r * 0.16); ctx.lineCap = 'round';
+    ctx.rotate(t * 22 + b.wob);
+    for (let i = 0; i < 4; i++) {
+      ctx.rotate(Math.PI / 2);
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -r * 1.5); ctx.stroke();
+    }
+    ctx.restore();
+    ctx.fillStyle = '#20241c';
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.16, 0, TAU); ctx.fill();
+  }
+
+  if (sp.id === 'box') {
+    // the slot it keeps the stolen dossiers in
+    ctx.fillStyle = '#0c0a07';
+    roundRect(ctx, -r * 0.4, r * 0.56, r * 0.8, r * 0.22, 3); ctx.fill();
+    ctx.fillStyle = '#ff6a2e'; ctx.shadowColor = '#ff6a2e'; ctx.shadowBlur = 14;
+    roundRect(ctx, -r * 0.34, r * 0.6, r * 0.68, r * 0.1, 2); ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  // the vision slit, lit red until the engine is dead
   ctx.fillStyle = b.freeze > 0 ? '#9fd8ff' : '#ff5a2e';
-  for (const side of [-1, 1]) {
-    ctx.beginPath(); ctx.arc(side * b.r * 0.26, -b.r * 0.72, Math.max(1.5, b.r * 0.14), 0, TAU); ctx.fill();
-  }
-  ctx.shadowColor = '#ff5a2e'; ctx.shadowBlur = 6;
-  ctx.beginPath(); ctx.arc(0, -b.r * 0.78, Math.max(1, b.r * 0.1), 0, TAU); ctx.fill();
+  ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 6;
+  roundRect(ctx, -r * 0.2, -r * 0.34, r * 0.4, Math.max(1.6, r * 0.11), r * 0.05); ctx.fill();
   ctx.shadowBlur = 0;
 
   ctx.rotate(-b.tilt);
@@ -797,11 +842,11 @@ function drawLoot(ctx, d, t) {
 
   const halo = ctx.createRadialGradient(0, 0, 1, 0, 0, r * (2.2 + d.level * 0.22));
   halo.addColorStop(0, 'rgba(255,246,201,0.5)');
-  halo.addColorStop(1, 'rgba(255,214,107,0)');
+  halo.addColorStop(1, 'rgba(255,194,75,0)');
   ctx.fillStyle = halo;
   ctx.beginPath(); ctx.arc(0, 0, r * (2.2 + d.level * 0.22), 0, TAU); ctx.fill();
 
-  ctx.shadowColor = '#ffd66b'; ctx.shadowBlur = 16;
+  ctx.shadowColor = '#ffc24b'; ctx.shadowBlur = 16;
   ctx.fillStyle = MATERIALS.iron.body;
   ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.fill();
   ctx.shadowBlur = 0;
@@ -856,9 +901,9 @@ function drawShot(ctx, s) {
   } else {
     ctx.fillStyle = '#b9ac8d';
     ctx.beginPath(); ctx.arc(0, 0, rad, 0, TAU); ctx.fill();
-    ctx.strokeStyle = '#4a4030'; ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#3c4630'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(0, 0, rad, 0, TAU); ctx.stroke();
-    ctx.fillStyle = '#33291a';
+    ctx.fillStyle = '#1a2015';
     ctx.font = "14px 'Special Elite', 'Courier New', monospace";
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(s.shot.ch.toUpperCase(), 0, 0);
@@ -872,9 +917,9 @@ function drawHud(ctx, g, t) {
   const h = H - PLAY_H;
 
   const p = ctx.createLinearGradient(0, top, 0, H);
-  p.addColorStop(0, '#3b2e1e'); p.addColorStop(0.12, '#59452a'); p.addColorStop(1, '#2a2013');
+  p.addColorStop(0, '#2f3628'); p.addColorStop(0.12, '#454f31'); p.addColorStop(1, '#14170f');
   ctx.fillStyle = p; ctx.fillRect(0, top, W, h);
-  ctx.fillStyle = '#c9a04a'; ctx.fillRect(0, top, W, 4);
+  ctx.fillStyle = '#a8b060'; ctx.fillRect(0, top, W, 4);
   ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, top + 4, W, 3);
 
   // chambers — circular tanks, every one the same size; colour is the only
@@ -895,13 +940,13 @@ function drawHud(ctx, g, t) {
     // the tank itself
     ctx.fillStyle = open ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.72)';
     ctx.beginPath(); ctx.arc(cx, cy, CHAMBER_R, 0, TAU); ctx.fill();
-    ctx.strokeStyle = open ? '#8d6f35' : '#4a3a1c'; ctx.lineWidth = 2;
+    ctx.strokeStyle = open ? '#59623a' : '#333b25'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(cx, cy, CHAMBER_R, 0, TAU); ctx.stroke();
 
     if (!open) {
-      ctx.strokeStyle = 'rgba(190,160,96,0.30)'; ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(170,186,120,0.30)'; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.moveTo(cx - 13, cy); ctx.lineTo(cx + 13, cy); ctx.stroke();
-      ctx.fillStyle = 'rgba(190,160,96,0.35)';
+      ctx.fillStyle = 'rgba(170,186,120,0.35)';
       for (const a of [0, 1, 2, 3]) {
         const th = Math.PI / 4 + a * Math.PI / 2;
         ctx.beginPath(); ctx.arc(cx + Math.cos(th) * 17, cy + Math.sin(th) * 17, 2.2, 0, TAU); ctx.fill();
@@ -937,10 +982,10 @@ function drawHud(ctx, g, t) {
       ctx.globalAlpha = 1;
       if (spent) { ctx.fillStyle = m.glow; ctx.beginPath(); ctx.arc(cx + 19, cy - 19, 3, 0, TAU); ctx.fill(); }
     } else {
-      ctx.strokeStyle = 'rgba(190,160,96,0.22)'; ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(170,186,120,0.22)'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(cx, cy, CHAMBER_R - 8, 0, TAU); ctx.stroke();
-      ctx.fillStyle = 'rgba(255,230,180,0.18)';
-      ctx.font = "10px 'IM Fell English', Georgia, serif";
+      ctx.fillStyle = 'rgba(226,232,190,0.18)';
+      ctx.font = "10px 'Roboto Condensed', Arial, sans-serif";
       ctx.fillText('drawing', cx, cy);
     }
     ctx.restore();
@@ -950,7 +995,7 @@ function drawHud(ctx, g, t) {
   const rx = (W - total) / 2, ry = cy + CHAMBER_R + 10;
   ctx.fillStyle = 'rgba(0,0,0,0.55)';
   roundRect(ctx, rx, ry, total, 46, 8); ctx.fill();
-  ctx.strokeStyle = g.rackFlash > 0 ? '#c95330' : '#8d6f35';
+  ctx.strokeStyle = g.rackFlash > 0 ? '#c95330' : '#59623a';
   ctx.lineWidth = 2 + g.rackFlash * 2;
   roundRect(ctx, rx, ry, total, 46, 8); ctx.stroke();
 
@@ -969,7 +1014,7 @@ function drawHud(ctx, g, t) {
       const m = mat ? MATERIALS[mat] : null;
       const wch = ctx.measureText(ch.toUpperCase()).width;
       if (m) { ctx.fillStyle = m.glow; ctx.shadowColor = m.glow; ctx.shadowBlur = 10; }
-      else { ctx.fillStyle = 'rgba(216,203,170,0.62)'; ctx.shadowBlur = 0; }
+      else { ctx.fillStyle = 'rgba(214,218,182,0.62)'; ctx.shadowBlur = 0; }
       ctx.fillText(ch.toUpperCase(), tx, ry + 21);
       ctx.shadowBlur = 0;
       if (m) {
@@ -978,62 +1023,62 @@ function drawHud(ctx, g, t) {
       }
       tx += wch + 1;
     }
-    ctx.fillStyle = (t * 2) % 1 > 0.5 ? '#ffd66b' : 'transparent';
+    ctx.fillStyle = (t * 2) % 1 > 0.5 ? '#ffc24b' : 'transparent';
     ctx.fillRect(tx + 2, ry + 10, 12, 26);
   } else if (g.message) {
-    ctx.fillStyle = '#e39a78'; ctx.font = "italic 17px 'IM Fell English', Georgia, serif"; ctx.textAlign = 'center';
+    ctx.fillStyle = '#e39a78'; ctx.font = "italic 17px 'Roboto Condensed', Arial, sans-serif"; ctx.textAlign = 'center';
     ctx.fillText(g.message.text, W / 2, ry + 23);
   } else if (!g.outro) {
-    ctx.fillStyle = 'rgba(230,214,180,0.35)';
-    ctx.font = "italic 16px 'IM Fell English', Georgia, serif"; ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(214,222,186,0.35)';
+    ctx.font = "italic 16px 'Roboto Condensed', Arial, sans-serif"; ctx.textAlign = 'center';
     ctx.fillText('type a word, then press Enter', W / 2, ry + 23);
   }
 
   // left readouts
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = '#e8d7ae'; ctx.font = "17px 'IM Fell English SC', Georgia, serif";
-  ctx.fillText(g.sandbox ? 'TEST DRIVE' : `NIGHT ${g.levelNo}`, 16, top + 28);
-  ctx.font = "italic 14px 'IM Fell English', Georgia, serif"; ctx.fillStyle = '#bfa87c';
+  ctx.fillStyle = '#dee2c2'; ctx.font = "17px 'Black Ops One', Impact, sans-serif";
+  ctx.fillText(g.sandbox ? 'LIVE FIRE' : `WAVE ${g.levelNo}`, 16, top + 28);
+  ctx.font = "italic 14px 'Roboto Condensed', Arial, sans-serif"; ctx.fillStyle = '#b4b894';
   ctx.fillText(g.level ? g.level.name : '', 16, top + 47);
-  ctx.font = "14px 'Special Elite', 'Courier New', monospace"; ctx.fillStyle = '#ffd66b';
-  ctx.fillText(`⚙ ${g.secrets} secrets`, 16, top + 72);
-  ctx.fillStyle = '#e8d7ae'; ctx.font = "13px 'Special Elite', 'Courier New', monospace";
+  ctx.font = "14px 'Special Elite', 'Courier New', monospace"; ctx.fillStyle = '#ffc24b';
+  ctx.fillText(`★ ${g.secrets} intel`, 16, top + 72);
+  ctx.fillStyle = '#dee2c2'; ctx.font = "13px 'Special Elite', 'Courier New', monospace";
   ctx.fillText(`score ${g.score}`, 16, top + 92);
   ctx.fillStyle = '#d79a7a';
-  ctx.fillText(`pages ${g.pages}/${START_PAGES}   lost ${g.lost}`, 16, top + 112);
+  ctx.fillText(`dossiers ${g.pages}/${START_PAGES}   lost ${g.lost}`, 16, top + 112);
   ctx.fillStyle = '#9ec0d8';
   ctx.fillText(g.boiler.open >= CHAMBERS
     ? `chambers ${CHAMBERS}/${CHAMBERS} — all open`
     : `chambers ${g.boiler.open}/${CHAMBERS} · all ${g.boiler.loadedCount()} in one word unseals`,
     16, top + 132);
-  ctx.fillStyle = '#9fb6a0'; ctx.font = "italic 13px 'IM Fell English', Georgia, serif";
+  ctx.fillStyle = '#9fb6a0'; ctx.font = "italic 13px 'Roboto Condensed', Arial, sans-serif";
   ctx.fillText(`word of the day: ${g.wotd}`, 16, top + 152);
 
   // right readouts
   ctx.textAlign = 'right';
   const left = Math.max(0, g.spawns.length - g.spawnIdx) + g.bugs.length;
-  ctx.fillStyle = '#e8d7ae'; ctx.font = "17px 'IM Fell English SC', Georgia, serif";
-  ctx.fillText(g.sandbox ? 'dummies stand back up' : `${left} bugs remain`, W - 16, top + 28);
-  ctx.font = "13px 'Special Elite', 'Courier New', monospace"; ctx.fillStyle = '#bfa87c';
+  ctx.fillStyle = '#dee2c2'; ctx.font = "17px 'Black Ops One', Impact, sans-serif";
+  ctx.fillText(g.sandbox ? 'targets stand back up' : `${left} tanks remain`, W - 16, top + 28);
+  ctx.font = "13px 'Special Elite', 'Courier New', monospace"; ctx.fillStyle = '#b4b894';
   ctx.fillText(`${g.stats.words} words · ${g.stats.kills} killed`, W - 16, top + 48);
   if (g.lastWord) {
-    ctx.fillStyle = '#ffd66b';
+    ctx.fillStyle = '#ffc24b';
     ctx.fillText(`"${g.lastWord.word}" ×${g.lastWord.res.mult.toFixed(2)} → ${g.lastWord.total}`, W - 16, top + 68);
   }
   // bottom strip: queued letters on the left, controls on the right
   ctx.textAlign = 'left'; ctx.font = "13px 'Special Elite', 'Courier New', monospace";
   if (g.fireQueue.length) {
-    ctx.fillStyle = '#ffd66b';
+    ctx.fillStyle = '#ffc24b';
     const q = g.fireQueue;
     ctx.fillText(`breech: ${q.length} · ` + q.slice(0, 8).map(s => s.ch.toUpperCase()).join(' ')
       + (q.length > 8 ? ' …' : ''), 220, top + 152);
   }
   ctx.textAlign = 'right';
   if (g.holding && g.fireQueue.length) {
-    ctx.fillStyle = '#ffd66b'; ctx.font = "13px 'IM Fell English SC', Georgia, serif";
+    ctx.fillStyle = '#ffc24b'; ctx.font = "13px 'Black Ops One', Impact, sans-serif";
     ctx.fillText('BREECH HELD — nothing in the room to shoot', W - 16, top + 155);
   } else {
-    ctx.fillStyle = 'rgba(230,214,180,0.4)'; ctx.font = "italic 13px 'IM Fell English', Georgia, serif";
+    ctx.fillStyle = 'rgba(214,222,186,0.4)'; ctx.font = "italic 13px 'Roboto Condensed', Arial, sans-serif";
     ctx.fillText('click a tank to swap its letter · right-mouse aims · Del clears · Esc pauses', W - 16, top + 155);
   }
 }

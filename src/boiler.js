@@ -1,4 +1,4 @@
-// boiler.js — the letter economy: inventory, the bag the boiler draws from,
+// boiler.js — the letter economy: inventory, the bag the magazine draws from,
 // the chambers (which unseal one at a time), combining, and turning a typed
 // word into shots.
 
@@ -15,7 +15,7 @@ export class Boiler {
   constructor(inventory = [], store = [], open = START_CHAMBERS, quotas = {}) {
     this.inventory = inventory;
     this.store = store;
-    this.quotas = quotas;          // letter -> how many you want in the boiler; 0 = no cap
+    this.quotas = quotas;          // letter -> how many you want in the magazine; 0 = no cap
     this.open = Math.max(1, Math.min(CHAMBERS, open));
     this.bag = [];
     this.chambers = new Array(CHAMBERS).fill(null);
@@ -34,11 +34,11 @@ export class Boiler {
 
   // Pull one letter from the bag, preferring a character that is not already
   // sitting in a chamber. Only when the bag has nothing else to offer does the
-  // boiler load a second copy of a letter you already have.
+  // magazine load a second copy of a letter you already have.
   //
   // Chambers refill straight after every word. A new one only unseals when a
   // single word spends every chamber that was loaded — the same full house that
-  // earns a boiler overload.
+  // earns a full salvo.
   draw() {
     if (!this.bag.length) this.reshuffle();
     if (!this.bag.length) return null;
@@ -50,7 +50,7 @@ export class Boiler {
   }
 
   // Fill every open chamber from scratch. Never more of them than there are
-  // letters in the boiler; the bag recycles when it runs out.
+  // letters in the magazine; the bag recycles when it runs out.
   reload() {
     const room = Math.min(this.open, this.inventory.length);
     for (let i = 0; i < CHAMBERS; i++) {
@@ -73,7 +73,7 @@ export class Boiler {
 
   // ── quotas ───────────────────────────────────────────────────────────────
   // How many of a letter you want working. Three states: no quota at all
-  // (null — leave it alone), zero (keep none of it in the boiler), or a number.
+  // (null — leave it alone), zero (keep none of it in the magazine), or a number.
   // A quota is a target, not just a cap: it draws copies out of storage to
   // reach the number and sends anything above it back down.
   quotaFor(ch) {
@@ -102,7 +102,7 @@ export class Boiler {
     return { drawn, moved: this.tidy() };
   }
 
-  // Boiler letters beyond their quota, plainest first — a letter carrying a
+  // Magazine letters beyond their quota, plainest first — a letter carrying a
   // material is the one you meant to keep.
   overQuota() {
     const byLetter = {};
@@ -124,13 +124,13 @@ export class Boiler {
   }
 
   // Pull something wanted out of storage so an unwanted letter can leave
-  // without dropping the boiler under its minimum.
+  // without dropping the magazine under its minimum.
   backfill(exclude) {
     const l = this.store.find(x => x.letter !== exclude && this.roomFor(x.letter));
     return l ? this.toBoiler(l.id) : false;
   }
 
-  // Move the excess out, never below the minimum the boiler needs to run —
+  // Move the excess out, never below the minimum the magazine needs to run —
   // swapping in a replacement first when it is already at the line.
   tidy() {
     let moved = 0;
@@ -141,9 +141,9 @@ export class Boiler {
     return moved;
   }
 
-  // Would taking these letters out leave the boiler unable to run? Nothing that
+  // Would taking these letters out leave the magazine unable to run? Nothing that
   // strands it is ever allowed. Fusions always return to storage, so anything
-  // pulled out of the boiler is pulled out for good.
+  // pulled out of the magazine is pulled out for good.
   wouldStrand(ids) {
     const out = ids.filter(id => this.inBoiler(id)).length;
     return this.inventory.length - out < MIN_BOILER;
@@ -216,7 +216,7 @@ export class Boiler {
   // rack they come out one level higher, in the same material. Two level-5
   // letters burn away entirely and leave a material behind, seeded on a fresh
   // level-1 letter — which is the only way a material is ever made.
-  // Either way the crucible, not you, decides which letter comes out.
+  // Either way the foundry, not you, decides which letter comes out.
   canCombine(a, b) {
     return !!a && !!b && a.id !== b.id && a.level === b.level;
   }
@@ -245,7 +245,7 @@ export class Boiler {
     }
 
     this.discard(a.id); this.discard(b.id);
-    return this.deposit(letter, mat, level).letter;   // out of the crucible, into storage
+    return this.deposit(letter, mat, level).letter;   // out of the foundry, into storage
   }
 
   // Everything you are not using — storage, plus whatever sits over quota.
@@ -288,7 +288,7 @@ export class Boiler {
     return Object.values(byLevel).reduce((n, c) => n + (c >> 1), 0);
   }
 
-  // Any even number of letters of one level can go in at once — the crucible
+  // Any even number of letters of one level can go in at once — the foundry
   // just works through them two at a time.
   canCombineMany(list) {
     if (!list || list.length < 2 || list.length % 2) return false;
@@ -298,7 +298,7 @@ export class Boiler {
 
   strandsMany(list) { return this.wouldStrand(list.map(l => l.id)); }
 
-  // Pairs that would take the boiler under its minimum are skipped rather than
+  // Pairs that would take the magazine under its minimum are skipped rather than
   // spoiling the whole batch.
   viablePairs(list) {
     if (!this.canCombineMany(list)) return 0;
@@ -324,7 +324,7 @@ export class Boiler {
     return made;
   }
 
-  // Secrets keep the boiler topped up when the bugs have not been generous.
+  // Secrets keep the magazine topped up when the tanks have not been generous.
   stoke() {
     const pool = LETTER_LEVELS[1].pool;
     return this.deposit(pool[(Math.random() * pool.length) | 0], 'iron', 1);
@@ -462,7 +462,7 @@ export class Boiler {
   }
 
   // A letter you cannot use is not a dead end: tip it back into the bag and the
-  // boiler draws another. It does nothing towards unsealing.
+  // magazine draws another. It does nothing towards unsealing.
   dump(i) {
     const c = this.chambers[i];
     if (!c || i >= this.open) return 0;
@@ -488,7 +488,7 @@ export class Boiler {
   }
 }
 
-// The boiler you start with: fifteen plain Iron letters off the common rack —
+// The magazine you start with: fifteen plain Iron letters off the common rack —
 // the least it will run on.
 export function startingInventory() {
   return 'raisenogtdlrasi'.split('').map(ch => makeLetter(ch));

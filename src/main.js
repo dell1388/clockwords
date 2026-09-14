@@ -34,7 +34,7 @@ function fit() {
 }
 window.addEventListener('resize', fit);
 
-// ── the run, and what survives a bad night ─────────────────────────────────
+// ── the run, and what survives a bad wave ─────────────────────────────────
 const snapshot = g => ({
   boiler: g.boiler.serialize(), secrets: g.secrets, score: g.score,
   stats: g.stats, pending: g.pending,
@@ -51,7 +51,7 @@ function gameFrom(snap, levelNo) {
   return g;
 }
 
-// Only reachable from a save that records progress but no boiler (an old or
+// Only reachable from a save that records progress but no magazine (an old or
 // hand-edited one): build something plausible rather than a beginner's rack.
 function outfitFor(level) {
   const b = new Boiler(startingInventory());
@@ -82,7 +82,7 @@ function newGame() {
   toIntro(1);
 }
 
-// Whichever night you pick, you walk in with the run's boiler. It is not tied
+// Whichever wave you pick, you walk in with the run's boiler. It is not tied
 // to the level, so replaying an early one does not hand back an early loadout.
 function enterLevel(n) {
   game = gameFrom(progress.loadout() || (n === 1 ? null : outfitFor(n)), n);
@@ -110,7 +110,7 @@ function toProving(back = toTitle) {
   if (touch) focusKb(); else canvas.focus();
 }
 
-// The boiler room as a screen in its own right, reachable from the title, the
+// The armoury as a screen in its own right, reachable from the title, the
 // level select, or the card in front of a night.
 function toWorkshop(n, back = toTitle) {
   game = gameFrom(progress.loadout() || (n === 1 ? null : outfitFor(n)), n);
@@ -155,7 +155,7 @@ function toBoiler() {
 }
 
 function toOver() {
-  // Whatever fell tonight is yours, won or lost.
+  // Whatever fell this wave is yours, won or lost.
   if (game.pending.length) {
     for (const loot of game.pending) game.boiler.deposit(loot.letter, 'iron', loot.level);
     game.boiler.applyQuotas();
@@ -288,10 +288,10 @@ function frame(ts) {
   fit();
   syncMute();
   ui.show('loading');
-  ui.setLoading(0, 'Opening the lexicon…');
+  ui.setLoading(0, 'Opening the field manual…');
   // Wait for the period faces, but never let a slow font host hold up the game.
   try { await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 2500))]); } catch (_) {}
-  const n = await loadDictionary(p => ui.setLoading(p, `Opening the lexicon… ${Math.round(p * 100)}%`));
+  const n = await loadDictionary(p => ui.setLoading(p, `Opening the field manual… ${Math.round(p * 100)}%`));
   ui.setLoading(1, `${n.toLocaleString()} words ready`);
   makeBackground();
   game = gameFrom(null, 1);

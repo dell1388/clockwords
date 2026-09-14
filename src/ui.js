@@ -1,4 +1,4 @@
-// ui.js — DOM screens layered over the canvas: title, level cards, the boiler
+// ui.js — DOM screens layered over the canvas: title, level cards, the magazine
 // room between levels, and the end-of-run summary.
 
 import { MATERIALS, SPECIAL_MATERIALS, LETTER_LEVELS, MAX_LEVEL, CHAMBERS, START_CHAMBERS,
@@ -49,17 +49,17 @@ export function renderTitle(progress, on) {
   const t = $('#title');
   t.innerHTML = `
     <div class="plate">
-      <div class="crest">⚙</div>
-      <h1>CLOCKWORDS</h1>
-      <p class="sub">a defence of the lexicon &mdash; London, 18&mdash;</p>
-      <p class="story">Something mechanical is in the workshop, and it is after the
-      pages of your formula. The engine on your bench turns words into ammunition.
+      <div class="crest">★</div>
+      <h1>WORD WAR 3</h1>
+      <p class="sub">hold the line &mdash; one word at a time</p>
+      <p class="story">An armoured column has broken through, and it is after the
+      dossiers in your field safe. The breech on your gun turns words into ammunition.
       Type quickly. Type well.</p>
       <div class="btns">
-        ${started ? `<button id="b-cont" class="big">Continue &mdash; night ${progress.reached}</button>` : ''}
+        ${started ? `<button id="b-cont" class="big">Continue &mdash; wave ${progress.reached}</button>` : ''}
         <button id="b-play" class="big">${started ? 'Start over' : 'Begin'}</button>
-        <button id="b-boiler">Boiler room</button>
-        <button id="b-test">Test drive</button>
+        <button id="b-boiler">Armoury</button>
+        <button id="b-test">Live fire</button>
         <button id="b-how">How to play</button>
         <button id="b-sound">Sound: ${isMuted() ? 'off' : 'on'}</button>
       </div>
@@ -68,7 +68,7 @@ export function renderTitle(progress, on) {
         return `<li class="${got ? 'got' : ''}"><span class="bp">${got ? '★' : '☆'} ${b.pts}</span>
           <span><b class="bn">${b.name}</b> — ${b.desc}</span></li>`;
       }).join('')}</ul>
-      <p class="fine">${dictSize().toLocaleString()} words in the lexicon</p>
+      <p class="fine">${dictSize().toLocaleString()} words in the field manual</p>
     </div>`;
   const wire = wireIn(t);
   wire('#b-play', on.newGame);
@@ -86,7 +86,7 @@ export function renderHow(onBack) {
       <b>Level ${L.level}</b> — <span class="num">${L.dmg}</span> damage
       <br><span class="d">${L.pool.toUpperCase().split('').join(' ')}</span></li>`).join('');
   const mats = [MATERIALS.iron, ...SPECIAL_MATERIALS].map(m => `
-    <li>${swatch(m.id)} <b>${m.name}</b>${m.base ? '' : ` <span class="cost">${m.cost}⚙</span>`}
+    <li>${swatch(m.id)} <b>${m.name}</b>${m.base ? '' : ` <span class="cost">${m.cost}★</span>`}
     <br><span class="d">${m.desc}</span></li>`).join('');
   t.innerHTML = `
     <div class="plate wide">
@@ -95,22 +95,22 @@ export function renderHow(onBack) {
         <div>
           <h3>The engine</h3>
           <p>Type any English word and press <kbd>Enter</kbd>. Every letter of the word is
-          fired at the bugs, one after another. A word that is not in the lexicon simply
+          fired at the tanks, one after another. A word that is not in the field manual simply
           clears and tells you so — it costs you nothing but the typing.</p>
-          <p>The boiler has <b>${CHAMBERS} chambers</b>, but every level starts with
+          <p>The magazine has <b>${CHAMBERS} chambers</b>, but every level starts with
           <b>${START_CHAMBERS === 1 ? 'only one unsealed' : `${START_CHAMBERS} unsealed`}</b>.
           A chamber unseals only when <b>a single word spends every chamber that is loaded</b> —
-          the same full house that earns a boiler overload. Draining them across several words
+          the same full house that earns a full salvo. Draining them across several words
           does nothing. At the top of the next level they all bolt shut again.</p>
-          <p>Stuck with a letter you cannot use? <b>Click the tank</b> to tip it back into the bag
-          and draw another. The boiler never loads the same letter into two chambers at once
+          <p>Stuck with a letter you cannot use? <b>Click the chamber</b> to tip it back into the bag
+          and draw another. The magazine never loads the same letter into two chambers at once
           unless it has nothing else, and never fills more chambers than it has letters.</p>
           <p>If a character you type is sitting in an unsealed chamber, the chamber reads as
           drawn down the moment you type it, then fires and refills from the bag. Any character
           <i>not</i> in a chamber is a <b>blank</b> — a flat ${BLANK_DMG} damage that no bonus or
           penalty ever changes.</p>
           <p>The cannon fires <b>one shell per letter, one every 0.2 seconds</b> (${FIRE_RPM} rounds
-          a minute). It <b>leads</b> its target — works out where the bug will be — and the shell
+          a minute). It <b>leads</b> its target — works out where the tank will be — and the shell
           trims that lead gently in flight; it cannot turn sharply enough to circle back, so a
           shell that really misses is gone. It also counts what is already in the air, and holds
           the breech rather than spend a shell on something that is as good as dead.</p>
@@ -118,19 +118,19 @@ export function renderHow(onBack) {
           three times the length about six</b>. A word made <i>entirely</i> of chamber letters,
           with no blanks in it at all, does <b>double</b>. A word you have already used
           <i>on this level</i> does less each time you repeat it — every level starts the
-          ledger again. Use every loaded chamber in one word for a <b>boiler overload</b>. The
+          ledger again. Use every loaded chamber in one word for a <b>full salvo</b>. The
           <b>word of the day</b> doubles everything and explodes.</p>
-          <h3>The bugs</h3>
+          <h3>The tanks</h3>
           <p>Everything comes through the one arch still standing, and walks the route painted
           on the floor — across, down a lane, back across — to the <b>safe</b> in the corner
-          opposite the cannon, takes a page of the formula and retraces the whole run to get
-          out. Kill a carrier and the page goes back in the safe. Lose all ${START_PAGES} pages
-          and the night is over. Nothing ever comes near the cannon itself.</p>
-          <h3>The proving floor</h3>
-          <p><b>Test drive</b> puts you in a room of standing dummies with every chamber open
+          opposite the cannon, takes a dossier of the formula and retraces the whole run to get
+          out. Kill a carrier and the dossier goes back in the safe. Lose all ${START_PAGES} dossiers
+          and the wave is over. Nothing ever comes near the cannon itself.</p>
+          <h3>The firing range</h3>
+          <p><b>Live fire</b> puts you in a range of standing hulks with every chamber open
           and nothing that can reach you. Type anything and the damage each word actually deals
           is listed as it lands — the place to find out what a material really does before you
-          spend a night on it.</p>
+          spend a wave on it.</p>
           <h3>Controls</h3>
           <p><kbd>A&ndash;Z</kbd> type &middot; <kbd>Enter</kbd> or <kbd>Space</kbd> fire &middot;
           <kbd>Backspace</kbd> delete &middot; <kbd>Delete</kbd> clears the rack &middot;
@@ -139,9 +139,9 @@ export function renderHow(onBack) {
           the cannon by hand; otherwise it picks its own target.</p>
           <h3>Score</h3>
           <p>Score is a tally, not a currency — it buys nothing, though your best on each
-          night is kept. You earn <b>half the damage a word deals plus the square of
-          its length</b> for every word, <b>10 to 260</b> per bug depending on what it was, and
-          <b>250 plus 100 per page still on the rack</b> for clearing the night. So it rewards
+          wave is kept. You earn <b>half the damage a word deals plus the square of
+          its length</b> for every word, <b>10 to 260</b> per tank depending on what it was, and
+          <b>250 plus 100 per dossier still on the rack</b> for clearing the wave. So it rewards
           long, well-spent words and a clean defence, not just time on the floor.</p>
         </div>
         <div>
@@ -152,7 +152,7 @@ export function renderHow(onBack) {
           <ul class="mats">${levels}</ul>
 
           <h3>Materials</h3>
-          <p>Materials are read by <b>colour</b> alone. Bugs only ever drop plain Iron. The one
+          <p>Materials are read by <b>colour</b> alone. Tanks only ever drop plain Iron. The one
           way to make a material is to put <b>two level ${MAX_LEVEL} letters</b> in the crucible:
           they burn away and leave a material behind on a fresh level 1 letter, both chosen by
           the crucible.</p>
@@ -164,29 +164,29 @@ export function renderHow(onBack) {
           such letter hits for, the line under it is the effect it lends the whole word.</p>
           ${materialTable()}
           <p class="d">Damage shown is one letter at that level times the material's own
-          multiplier. <b>Freeze</b> is how long a bug stands still, capped at 9 seconds.
-          <b>Pierce</b> is how many bugs a shell passes through. <b>Splash</b> is the blast
-          radius. <b>Arcs</b> is how many further bugs the charge jumps to, and over what
+          multiplier. <b>Freeze</b> is how long a tank stands still, capped at 9 seconds.
+          <b>Pierce</b> is how many tanks a shell passes through. <b>Splash</b> is the blast
+          radius. <b>Arcs</b> is how many further tanks the charge jumps to, and over what
           distance. <b>Burn</b> is the total fire damage over 4 seconds, as a percentage of the
           hardest letter in the word. <b>Echo</b> is the damage the repeated volley does.</p>
 
-          <h3>The boiler room</h3>
-          <p>The boiler room is reachable without playing: the title screen, the level select
-          and the card in front of every night all open it.</p>
-          <p><b>Everything new lands in storage</b> — letters the bugs drop, anything out of the
-          crucible, anything you stoke. The boiler only ever holds what you put there. Set a
+          <h3>The armoury</h3>
+          <p>The armoury is reachable without playing: the title screen, the level select
+          and the card in front of every wave all open it.</p>
+          <p><b>Everything new lands in storage</b> — letters the tanks drop, anything out of the
+          foundry, anything you stoke. The magazine only ever holds what you put there. Set a
           <b>quota</b> per letter and it looks after itself: the number is drawn out of storage
           and anything above it is sent back down. A quota of <b>0</b> keeps a letter out of the
-          boiler entirely.</p>
+          magazine entirely.</p>
           <p><b>Fuse extras</b> sweeps up the plain Iron sitting in storage or over quota and
           pairs it off level by level in one pass. Letters carrying a material are never swept
           up — pairing one of those off is a decision you make yourself.</p>
-          <p>Between nights the <b>crucible</b> takes any even number of letters of one level and
+          <p>Between waves the <b>foundry</b> takes any even number of letters of one level and
           works through them in pairs: each pair becomes one letter of the level above in the
           same material, or — for level ${MAX_LEVEL} pairs — a material on a fresh level 1
-          letter. The crucible picks what comes out, not you. Scrap what you do not want for a
-          secret, and spend <b>${STOKE_COST} secrets</b> to stoke one fresh level 1 letter.</p>
-          <p>The boiler runs on between <b>${MIN_BOILER}</b> and <b>${MAX_BOILER}</b> letters.
+          letter. The foundry picks what comes out, not you. Scrap what you do not want for a
+          piece of intel, and spend <b>${STOKE_COST} intel</b> to requisition one fresh level 1 letter.</p>
+          <p>The magazine runs on between <b>${MIN_BOILER}</b> and <b>${MAX_BOILER}</b> letters.
           Anything else lives in <b>storage</b>, out of the mix, until you draw it back.</p>
         </div>
       </div>
@@ -203,17 +203,17 @@ export function renderIntro(n, { onGo, onBoiler, onBack }) {
   const t = $('#intro');
   t.innerHTML = `
     <div class="plate">
-      <div class="crest">${def.boss ? '☠' : '⚙'}</div>
+      <div class="crest">${def.boss ? '☠' : '★'}</div>
       <p class="kicker">Level ${n}</p>
       <h2>${def.name}</h2>
       <p class="story">${def.flavour}</p>
       <div class="btns">
         <button id="b-back">Back</button>
-        <button id="b-boiler">Boiler room</button>
-        <button id="b-go" class="big">Open the workshop</button>
+        <button id="b-boiler">Armoury</button>
+        <button id="b-go" class="big">Take the line</button>
       </div>
       <p class="fine">press Enter to begin, Esc for the menu &middot;
-      the boiler room is open until you do</p>
+      the armoury is open until you do</p>
     </div>`;
   const wire = wireIn(t);
   wire('#b-go', onGo);
@@ -222,7 +222,7 @@ export function renderIntro(n, { onGo, onBoiler, onBack }) {
   return () => { sfx.clank(); onGo(); };
 }
 
-// ── boiler room ────────────────────────────────────────────────────────────
+// ── magazine room ────────────────────────────────────────────────────────────
 // A word as it was actually fired: chamber letters lit in their material,
 // blanks left grey.
 function firedWord(entry) {
@@ -240,8 +240,8 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, onTest, s
   let fLevel = 0, fMat = '';  // rack filters: 0 / '' mean everything
   let quotaView = false;
 
-  // Whatever the bugs dropped tonight goes to storage. Nothing reaches the
-  // boiler unless you put it there — or a quota draws it in.
+  // Whatever the tanks dropped this wave goes to storage. Nothing reaches the
+  // magazine unless you put it there — or a quota draws it in.
   const recovered = game.pending.map(loot => {
     game.boiler.deposit(loot.letter, 'iron', loot.level);
     return loot;
@@ -344,34 +344,34 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, onTest, s
             <p class="kicker">${standalone
               ? `Before level ${game.levelNo} — ${getLevel(game.levelNo).name}`
               : `Level ${game.levelNo} cleared`}</p>
-            <h2>The Boiler Room</h2>
+            <h2>The Armoury</h2>
           </div>
           <div class="tally">
-            <span class="big-num">⚙ ${game.secrets}</span><span class="d">secrets</span>
+            <span class="big-num">★ ${game.secrets}</span><span class="d">intel</span>
           </div>
         </div>
         ${standalone
-          ? `<p class="d recap">Set the boiler up however you like. The chambers bolt shut
+          ? `<p class="d recap">Set the magazine up however you like. The chambers bolt shut
              to one when the level starts, and unseal as you spend them.</p>`
-          : `<p class="d recap">+${game.levelSecrets} secrets · ${game.levelKills} bugs ·
-             ${game.pages}/${START_PAGES} pages intact · the chambers bolt shut again at the next level</p>
-             <p class="recovered"><span class="lbl">Recovered tonight &rarr; storage</span> ${recHtml}</p>`}
+          : `<p class="d recap">+${game.levelSecrets} intel · ${game.levelKills} tanks ·
+             ${game.pages}/${START_PAGES} dossiers intact · the chambers bolt shut again at the next level</p>
+             <p class="recovered"><span class="lbl">Recovered this wave &rarr; storage</span> ${recHtml}</p>`}
 
         ${filterBar}
 
         <div class="cols3">
           <section>
-            <h3>Boiler ${gauge}
+            <h3>Magazine ${gauge}
               <button class="tinytab ${quotaView ? '' : 'sel'}" data-view="letters">letters</button>
               <button class="tinytab ${quotaView ? 'sel' : ''}" data-view="quotas">quotas</button>
             </h3>
             ${quotaView
               ? `<p class="d">How many of each letter you want working. <b>∞</b> leaves a letter
-                 alone; <b>0</b> keeps none of it in the boiler at all. Click the number to
+                 alone; <b>0</b> keeps none of it in the magazine at all. Click the number to
                  switch between the two.</p>
                  <div class="qgrid" data-scroll="qgrid">${quotaGrid}</div>
                  ${bo.overQuota().length && bo.inventory.length <= MIN_BOILER
-                   ? `<p class="d hot">The boiler is at its ${MIN_BOILER}-letter minimum, so the
+                   ? `<p class="d hot">The magazine is at its ${MIN_BOILER}-letter minimum, so the
                       last few cannot leave until you draw something else in.</p>` : ''}
                  <div class="benchrow">
                    <button id="b-tidy" class="small" ${bo.overQuota().length ? '' : 'disabled'}
@@ -394,11 +394,11 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, onTest, s
             <p class="d">Letters kept out of the mix. Nothing here is ever loaded
             into a chamber.</p>
             <div class="inv" data-scroll="inv-store">${chips(bo.store)}</div>
-            <button id="b-draw" class="small" ${canDraw ? '' : 'disabled'}>Move to boiler &uarr;</button>
+            <button id="b-draw" class="small" ${canDraw ? '' : 'disabled'}>Move to magazine &uarr;</button>
           </section>
 
           <section>
-            <h3>Crucible</h3>
+            <h3>Foundry</h3>
             <p class="d">Feed it any <b>even</b> number of letters of one level and it works
             through them two at a time, in the order you picked them. Of each pair, the
             <b>first</b> letter's material comes out — except that a material paired with plain
@@ -417,31 +417,31 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, onTest, s
                 ? `<p class="d hot">${picked.length} level ${MAX_LEVEL} letters burn away and
                    leave <b>${viable} material${viable === 1 ? '' : 's'}</b> behind in storage,
                    each on a fresh level 1 letter. This is the only way a material is ever
-                   made — and the crucible chooses both.</p>
+                   made — and the foundry chooses both.</p>
                    <div class="matrow">${SPECIAL_MATERIALS.map(m => swatch(m.id)).join('')}</div>
-                   <button id="b-fuse" class="big">Fire the crucible</button>`
+                   <button id="b-fuse" class="big">Fire the foundry</button>`
                 : `<p class="d">${picked.length} × level ${pickedLevel} &rarr;
                    <b>${viable} × level ${pickedLevel + 1}</b> into storage,
                    in ${swatch(picked[0].mat)} <b>${MATERIALS[picked[0].mat].name}</b> —
                    whichever letter goes in <i>first</i> sets the material.
-                   The crucible decides which letters come out.
+                   The foundry decides which letters come out.
                    ${viable < picked.length / 2
                      ? `<br>${picked.length / 2 - viable} pair(s) skipped — they would take the
-                        boiler under ${MIN_BOILER}.` : ''}</p>
+                        magazine under ${MIN_BOILER}.` : ''}</p>
                    <button id="b-fuse" class="big">Combine</button>`)
               : `<p class="d">${combineStrands
-                  ? `That would leave the boiler under ${MIN_BOILER} letters. Draw one back out
-                     of storage, or stoke a new one, first.`
+                  ? `That would leave the magazine under ${MIN_BOILER} letters. Draw one back out
+                     of storage, or requisition a new one, first.`
                   : !picked.length ? 'Pick a level above, or click letters directly.'
                     : !sameLevel ? 'Every letter must be the same level.'
-                      : 'Load an even number — the crucible works in pairs.'}</p>`}
+                      : 'Load an even number — the foundry works in pairs.'}</p>`}
             <div class="benchrow">
               <button id="b-extras" class="small" ${bo.extraPairs() ? '' : 'disabled'}
                 >Fuse ${bo.extraPairs()} extra pair${bo.extraPairs() === 1 ? '' : 's'}</button>
               <button id="b-stoke" class="small" ${game.secrets >= STOKE_COST ? '' : 'disabled'}
-                >Stoke for ${STOKE_COST} ⚙</button>
+                >Requisition for ${STOKE_COST} ★</button>
               <button id="b-scrap" class="small" ${one && !scrapStrands ? '' : 'disabled'}
-                >Scrap for 1 ⚙</button>
+                >Scrap for 1 ★</button>
             </div>
             <p class="d fine">Fusing extras pairs off the <b>plain Iron</b> in storage and over
             quota, level by level — a letter carrying a material is left alone. Stoking buys one
@@ -451,18 +451,18 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, onTest, s
 
         ${standalone ? '' : `<div class="afteraction">
           <section>
-            <h3>The night in figures</h3>
+            <h3>The wave in figures</h3>
             ${statsBlock(game.summary())}
           </section>
           ${wordLogHtml(game)}
         </div>`}
 
-        ${short ? `<p class="warn">The boiler needs ${short} more letter${short > 1 ? 's' : ''}
+        ${short ? `<p class="warn">The magazine needs ${short} more letter${short > 1 ? 's' : ''}
           before it will run.</p>` : ''}
         <div class="btns">
           <button id="${standalone ? 'b-back' : 'b-menu'}">${standalone ? 'Back' : 'Main menu'}</button>
-          <button id="b-test">Test drive</button>
-          <button id="b-next" class="big" ${short ? 'disabled' : ''}>To night ${nextLevel} &rarr;</button>
+          <button id="b-test">Live fire</button>
+          <button id="b-next" class="big" ${short ? 'disabled' : ''}>To wave ${nextLevel} &rarr;</button>
         </div>
       </div>`;
 
@@ -505,10 +505,10 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, onTest, s
     s.querySelectorAll('[data-all]').forEach(n => n.onclick = () => {
       const lv = +n.dataset.all;
       const ofLevel = all.filter(l => l.level === lv);
-      // storage first: those pairs never threaten the boiler minimum
+      // storage first: those pairs never threaten the magazine minimum
       ofLevel.sort((a, b) => (bo.inBoiler(a.id) ? 1 : 0) - (bo.inBoiler(b.id) ? 1 : 0));
       const ids = ofLevel.map(l => l.id);
-      if (ids.length % 2) ids.pop();                    // the crucible works in pairs
+      if (ids.length % 2) ids.pop();                    // the foundry works in pairs
       selected = ids;
       sfx.key(); draw();
     });
@@ -525,11 +525,11 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, onTest, s
       if (made.length === 1) {
         const m = made[0];
         toast({ name: `${m.letter.toUpperCase()} — level ${m.level}`,
-          desc: m.mat === 'iron' ? 'out of the crucible, into storage'
-            : `${MATERIALS[m.mat].name}, out of the crucible into storage`, pts: m.level });
+          desc: m.mat === 'iron' ? 'out of the foundry, into storage'
+            : `${MATERIALS[m.mat].name}, out of the foundry into storage`, pts: m.level });
       } else if (made.length) {
         toast({ name: made.map(m => m.letter.toUpperCase()).join(' '),
-          desc: `${made.length} out of the crucible, into storage`, pts: made.length });
+          desc: `${made.length} out of the foundry, into storage`, pts: made.length });
       }
       draw();
     });
@@ -541,7 +541,7 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, onTest, s
       if (made.length) {
         sfx.overload();
         toast({ name: made.slice(0, 12).map(m => m.letter.toUpperCase()).join(' '),
-          desc: `${made.length} out of the crucible, into storage`, pts: made.length });
+          desc: `${made.length} out of the foundry, into storage`, pts: made.length });
       }
       draw();
     });
@@ -564,7 +564,7 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, onTest, s
 }
 
 // Exactly what a material does at each letter level, worked out with the same
-// arithmetic the boiler uses, so the help can never drift from the game.
+// arithmetic the magazine uses, so the help can never drift from the game.
 const num = n => (Math.abs(n - Math.round(n)) < 0.05 ? Math.round(n) : n.toFixed(1));
 
 function materialAt(m, lvl) {
@@ -599,7 +599,7 @@ function materialTable() {
 
 const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
-// The night in figures — the same block whether the night was won or lost.
+// The wave in figures — the same block whether the wave was won or lost.
 export function statsBlock(sum, { secrets = true } = {}) {
   const row = (label, value) => `<li><span>${label}</span><b>${value}</b></li>`;
   const best = sum.best ? `${sum.best.word} (${Math.round(sum.best.dealt).toLocaleString()})` : '—';
@@ -612,12 +612,12 @@ export function statsBlock(sum, { secrets = true } = {}) {
     ${row('Hardest word', best)}
     ${row('Longest word', sum.longest ? sum.longest.word : '—')}
     ${row('Pages', `${sum.pages} intact · ${sum.lost} lost`)}
-    ${secrets ? row('Secrets earned', `⚙ ${sum.secrets}`) : ''}
+    ${secrets ? row('Secrets earned', `★ ${sum.secrets}`) : ''}
     ${row('Time on the floor', mmss(sum.time))}
   </ul>`;
 }
 
-// Every word of the night, hardest hitter first.
+// Every word of the wave, hardest hitter first.
 function wordLogHtml(game) {
   const log = [...(game.wordLog || [])].sort((a, b) => b.dealt - a.dealt);
   const total = log.reduce((n, e) => n + e.dealt, 0);
@@ -659,22 +659,22 @@ export function renderOver(game, on) {
         <div>
           <p class="kicker">Level ${game.levelNo} — ${getLevel(game.levelNo).name}</p>
           <h2>The formula is gone</h2>
-          <p class="story">All ${START_PAGES} pages were carried off into the dark.
-          Only tonight is lost — the workshop stands, and the ${game.lootKept
-            ? `${game.lootKept} letter${game.lootKept === 1 ? '' : 's'} that fell tonight
+          <p class="story">All ${START_PAGES} dossiers were carried off into the dark.
+          Only this wave is lost — the line holds, and the ${game.lootKept
+            ? `${game.lootKept} letter${game.lootKept === 1 ? '' : 's'} that fell this wave
                ${game.lootKept === 1 ? 'is' : 'are'} in storage`
             : 'boiler is as you carried it in'}.</p>
         </div>
       </div>
       <div class="afteraction">
         <section>
-          <h3>The night in figures</h3>
+          <h3>The wave in figures</h3>
           ${statsBlock(game.summary(), { secrets: false })}
         </section>
         ${wordLogHtml(game)}
       </div>
       <div class="btns">
-        <button id="b-retry" class="big">Fight night ${game.levelNo} again</button>
+        <button id="b-retry" class="big">Fight wave ${game.levelNo} again</button>
         <button id="b-title">Main menu</button>
       </div>
     </div>`;
@@ -691,18 +691,18 @@ export function renderPause(game, on) {
       <p class="kicker">Level ${game.levelNo} — ${getLevel(game.levelNo).name}</p>
       <h2>Paused</h2>
       <ul class="stats">
-        <li><span>Pages</span><b>${game.pages} intact · ${game.lost} lost</b></li>
-        <li><span>Bugs destroyed</span><b>${sum.kills}</b></li>
+        <li><span>Dossiers</span><b>${game.pages} intact · ${game.lost} lost</b></li>
+        <li><span>Tanks destroyed</span><b>${sum.kills}</b></li>
         <li><span>Words fired</span><b>${sum.words}</b></li>
         <li><span>Damage dealt</span><b>${Math.round(sum.dealt).toLocaleString()}</b></li>
         <li><span>Letters recovered</span><b>${game.pending.length}</b></li>
       </ul>
       <div class="btns">
         <button id="b-res" class="big">Resume</button>
-        <button id="b-restart">Restart night</button>
+        <button id="b-restart">Restart wave</button>
         <button id="b-title">Main menu</button>
       </div>
-      <p class="fine">Esc resumes &middot; letters you have found tonight are kept either way</p>
+      <p class="fine">Esc resumes &middot; letters you have found this wave are kept either way</p>
     </div>`;
   const wire = wireIn(t);
   wire('#b-res', on.resume);

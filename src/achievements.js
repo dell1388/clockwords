@@ -5,7 +5,7 @@ const KEY = 'clockwords.badges.v1';
 
 export const BADGES = [
   { id: 'hurt',  name: 'Words Will Never Hurt Me', pts: 5,
-    desc: 'Survive the first night with every page of the formula intact.' },
+    desc: 'Survive the first wave with every dossier of the formula intact.' },
   { id: 'sesqui', name: 'Sesquipedalian', pts: 15,
     desc: 'Fire a single word of twelve letters or more.' },
   { id: 'box',   name: 'Professor Dillingham and the Diabolical Box', pts: 30,

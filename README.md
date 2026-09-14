@@ -1,11 +1,29 @@
-# Clockwords
+# Word War 3
 
-A web remake of **Clockwords** (gabob — Ben Ruiz & Jeremiah Hollis, 2009), the
-Victorian typing-defence game where you turn words into ammunition.
+A military reskin of this repository's Clockwords remake — same game, same
+mechanics, same saves; tanks instead of clockwork bugs and a tank cannon instead
+of a steam gun. (The original: **Clockwords**, gabob — Ben Ruiz & Jeremiah
+Hollis, 2009.)
 
-> Something mechanical is in the workshop, and it is after the pages of your
-> formula. The engine on your bench turns words into ammunition. Type quickly.
+> An armoured column has broken through, and it is after the dossiers in your
+> field safe. The breech on your gun turns words into ammunition. Type quickly.
 > Type well.
+
+Nothing about the simulation changed: the letter levels, damage curve, materials,
+loot tables and save format are identical to the Clockwords branch, so progress
+carries across. Only theme, palette, typography, art and copy differ.
+
+| Clockwords | Word War 3 |
+| --- | --- |
+| boiler room | the armoury |
+| boiler | magazine |
+| crucible | foundry |
+| secrets ⚙ | intel ★ |
+| pages of the formula | dossiers |
+| night | wave |
+| proving floor / test drive | firing range / live fire |
+| Iron, Thermite, Amethyst, Lazurite, Brass, Jade, Aetherium | Ball, Incendiary, Sabot, Pulse, High Explosive, Double Feed, Arc |
+| spiders, beetles, moths, the Diabolical Box | light tanks, heavies, gunships, the Iron Colonel |
 
 No build step, no dependencies, no binary assets — the art and the sound are
 both generated at runtime.
@@ -18,26 +36,26 @@ python3 -m http.server 8000      # or: npx http-server -p 8000
 ```
 
 It must be served over HTTP rather than opened as a `file://` URL, because the
-lexicon is fetched and the code is ES modules.
+field manual is fetched and the code is ES modules.
 
 ## How it plays
 
 Type any English word and press <kbd>Enter</kbd>. Every letter of the word
 becomes one shell, and the cannon in the corner fires them **one every 0.2
-seconds** (300 rounds a minute). A word that is not in the lexicon just clears
+seconds** (300 rounds a minute). A word that is not in the field manual just clears
 the rack and says so — no pause, no penalty.
 
-**The cannon leads its target** — it solves for where the bug will be, and the
+**The cannon leads its target** — it solves for where the tank will be, and the
 shell trims that lead gently in flight. It can't turn sharply enough to circle,
 so a shell that really misses is gone. It also counts the damage already in the
-air and won't spend a shell on a bug that is as good as dead, so the breech holds
+air and won't spend a shell on a tank that is as good as dead, so the breech holds
 rather than waste one. In practice around 98–100% of shells connect.
 
-**Chambers unseal on a full house.** The boiler has 8 but each level opens with
+**Chambers unseal on a full house.** The magazine has 8 but each level opens with
 only **one**. A chamber unseals only when *a single word spends every chamber
-that is loaded* — the same full house that earns a boiler overload. Draining them
+that is loaded* — the same full house that earns a full salvo. Draining them
 across several words does nothing. Stuck with a letter you can't use? **Click the
-tank** to tip it back into the bag and draw another. The boiler won't load the
+tank** to tip it back into the bag and draw another. The magazine won't load the
 same letter into two chambers at once unless it has nothing else, and never fills
 more chambers than it has letters.
 
@@ -50,9 +68,9 @@ then empties and refills from the bag. Any character *not* in a chamber is a
 
 Everything comes through the single arch still standing on the back wall and
 walks the route painted on the floor — four sweeps across, each a lane lower — to
-the **safe** in the corner opposite the cannon, where it takes a page of the
-formula and retraces the whole run to get out. Kill a carrier and the page goes
-back in the safe. Lose all **5 pages** and the night is over.
+the **safe** in the corner opposite the cannon, where it takes a dossier of the
+formula and retraces the whole run to get out. Kill a carrier and the dossier goes
+back in the safe. Lose all **5 dossiers** and the wave is over.
 
 The route is a clean rectilinear serpentine — every turn a right angle, no
 diagonals — and it is deliberately kept clear of the cannon's corner: nothing
@@ -72,16 +90,16 @@ under the glyph**, and it is the level that sets the damage.
 | ●●●●  | 210 | F K V Y W |
 | ●●●●● | 500 | Z J X Q |
 
-### The crucible
+### The foundry
 
-Bugs only ever drop plain **Iron**. In the boiler room the crucible takes any
+Tanks only ever drop plain **Iron**. In the armoury the foundry takes any
 **even number of letters of one level** and works through them in pairs:
 
 - **Levels 1–4** → each pair becomes one letter of the level above, same material.
 - **Level 5 pairs** → they burn away and leave a **material** behind, seeded on a
   fresh level 1 letter. This is the only way a material is ever made.
 
-The crucible chooses *which letter* comes out, not you — but of each pair, the
+The foundry chooses *which letter* comes out, not you — but of each pair, the
 **first letter you picked** sets the material. Pair a material with plain **Iron**
 and the material simply moves across to a fresh letter of the *same* level, so a
 material can be carried without levelling it up. A row of level buttons selects
@@ -112,26 +130,26 @@ bonus; the line under it is the effect it lends the whole word.
 | **Jade** ×0.8 | 10<br>echo 70% | 29<br>echo 77% | 72<br>echo 85% | 168<br>echo 93% | 400<br>echo 100% |
 | **Aetherium** ×1.2 | 14<br>3 arcs · 140px | 43<br>5 arcs · 157px | 108<br>6 arcs · 174px | 252<br>8 arcs · 190px | 600<br>9 arcs · 207px |
 
-**Freeze** is how long a bug stands still, capped at 9 seconds. **Pierce** is how
-many bugs a shell passes through. **Splash** is the blast radius. **Arcs** is how
-many further bugs the charge jumps to, and over what distance. **Burn** is the
+**Freeze** is how long a tank stands still, capped at 9 seconds. **Pierce** is how
+many tanks a shell passes through. **Splash** is the blast radius. **Arcs** is how
+many further tanks the charge jumps to, and over what distance. **Burn** is the
 total fire damage over 4 seconds as a percentage of the hardest letter in the
 word. **Echo** is the damage Jade's repeated volley does.
 
 Under the hood the effect strength is `1 + (level − 1) × 0.4`, so a level 5
 letter works its material 2.6× as hard as a level 1 one.
 
-### Boiler and storage
+### Magazine and storage
 
-The boiler runs on between **15 and 50** letters. **Everything new lands in
-storage** — letters the bugs drop, anything out of the crucible, anything you
-stoke — so the boiler only ever holds what you put there and a deep collection
+The magazine runs on between **15 and 50** letters. **Everything new lands in
+storage** — letters the tanks drop, anything out of the foundry, anything you
+requisition — so the magazine only ever holds what you put there and a deep collection
 never dilutes what the chambers pull.
 
 The quota view lists **all 26 letters**, so you can set one for a letter you do
 not hold yet. Set a **quota** per letter and it looks after itself: the number is drawn out of
 storage, and anything above it is sent back down. **∞** leaves a letter alone;
-**0** keeps it out of the boiler entirely, swapping in something wanted so the
+**0** keeps it out of the magazine entirely, swapping in something wanted so the
 15-letter minimum still holds. **Tidy** applies the quotas in one click, **Fuse
 extras** sweeps up the plain **Iron** in storage and over quota and pairs it off
 level by level — letters carrying a material are never swept up — and the rack
@@ -144,62 +162,62 @@ filters by level and material.
 - **A pure word** — every letter out of a chamber, no blanks at all — does **double**.
 - **Repeating a word** halves its power each time you reuse it *within the same
   level*, down to 20%. Every level starts the ledger again.
-- **Boiler overload** — spend every loaded chamber in one word for a bonus barrage.
+- **Magazine overload** — spend every loaded chamber in one word for a bonus barrage.
 - **Word of the day** — one word, the same for everyone, doubles everything and explodes.
 - Loot is tabled by night: common letters fall constantly early on, and the rare
   ones only start appearing once you are deep enough — and off tougher bugs. A
   dropped letter lifts out of the wreck with a sparkle that gets busier the rarer
-  it is, and **the letters are yours whether you clear the night or lose it**.
+  it is, and **the letters are yours whether you clear the wave or lose it**.
 
-### The proving floor
+### The firing range
 
-**Test drive**, from the title screen or the boiler room, puts you in a room of
-standing dummies with every chamber open and nothing that can reach you. Type
+**Live fire**, from the title screen or the armoury, puts you in a room of
+standing hulks with every chamber open and nothing that can reach you. Type
 anything and the damage each word actually deals is listed as it lands — the
-place to find out what a material really does before you spend a night on it.
+place to find out what a material really does before you spend a wave on it.
 Esc leaves.
 
 ### Score
 
-Score is a tally, not a currency — it buys nothing, and your best on each night
+Score is a tally, not a currency — it buys nothing, and your best on each wave
 is kept. Per word you earn **half the damage it deals plus the
-square of its length**; per bug, **10 to 260** depending on what it was; per
-night cleared, **250 plus 100 for every page still on the rack**. It rewards
+square of its length**; per tank, **10 to 260** depending on what it was; per
+wave cleared, **250 plus 100 for every dossier still on the rack**. It rewards
 long, well-spent words and a clean defence rather than time on the floor.
-- Nights are long: the first runs about eighty seconds and twenty-odd bugs, the
+- Nights are long: the first runs about eighty seconds and twenty-odd tanks, the
   twentieth over two minutes and a hundred and twenty. Each wave starts before
   the last has finished, so the pressure never really lifts.
 
-When the last bug is off the floor the room holds for a beat with **LEVEL
+When the last tank is off the floor the room holds for a beat with **LEVEL
 CLEARED** — or **LEVEL FAILED** — across it before the panel comes up.
 
-Both end-of-level screens — the boiler room and the defeat panel — then show
-**the night in figures** (that level only: score, kills, words, damage, chamber
-letters against blanks, hardest and longest word, pages, secrets, time) beside
+Both end-of-level screens — the armoury and the defeat panel — then show
+**the wave in figures** (that level only: score, kills, words, damage, chamber
+letters against blanks, hardest and longest word, dossiers, intel, time) beside
 **the night's work**: every word you fired, ranked by the damage it actually
 dealt, with the letters that came out of a chamber lit in their material colour
 and the blanks left grey. Burn damage is credited back to the word that started
 the fire.
 
-### The nights keep coming
+### The waves keep coming
 
-Ten nights are written by hand, and every night after that is generated from the
-same curve — more bugs, faster, tougher, with a boss on every tenth. There is no
-end to reach and no level select: you play the next night, and the one after that.
-**Failing a night costs you that night, not the run** — the boiler is untouched
-and the letters you found are still yours, so you start the same night again.
+Ten waves are written by hand, and every wave after that is generated from the
+same curve — more tanks, faster, tougher, with a boss on every tenth. There is no
+end to reach and no level select: you play the next wave, and the one after that.
+**Failing a wave costs you that wave, not the run** — the magazine is untouched
+and the letters you found are still yours, so you start the same wave again.
 
-### Boiler and storage
+### Magazine and storage
 
-The boiler runs on between **15 and 50** letters. **Everything new lands in
-storage** — letters the bugs drop, anything out of the crucible, anything you
-stoke — so the boiler only ever holds what you put there and a deep collection
+The magazine runs on between **15 and 50** letters. **Everything new lands in
+storage** — letters the tanks drop, anything out of the foundry, anything you
+requisition — so the magazine only ever holds what you put there and a deep collection
 never dilutes what the chambers pull.
 
 The quota view lists **all 26 letters**, so you can set one for a letter you do
 not hold yet. Set a **quota** per letter and it looks after itself: the number is drawn out of
 storage, and anything above it is sent back down. **∞** leaves a letter alone;
-**0** keeps it out of the boiler entirely, swapping in something wanted so the
+**0** keeps it out of the magazine entirely, swapping in something wanted so the
 15-letter minimum still holds. **Tidy** applies the quotas in one click, **Fuse
 extras** sweeps up the plain **Iron** in storage and over quota and pairs it off
 level by level — letters carrying a material are never swept up — and the rack
@@ -212,56 +230,56 @@ filters by level and material.
 - **A pure word** — every letter out of a chamber, no blanks at all — does **double**.
 - **Repeating a word** halves its power each time you reuse it *within the same
   level*, down to 20%. Every level starts the ledger again.
-- **Boiler overload** — spend every loaded chamber in one word for a bonus barrage.
+- **Magazine overload** — spend every loaded chamber in one word for a bonus barrage.
 - **Word of the day** — one word, the same for everyone, doubles everything and explodes.
 - Loot is tabled by night: common letters fall constantly early on, and the rare
   ones only start appearing once you are deep enough — and off tougher bugs. A
   dropped letter lifts out of the wreck with a sparkle that gets busier the rarer
-  it is, and **the letters are yours whether you clear the night or lose it**.
+  it is, and **the letters are yours whether you clear the wave or lose it**.
 
-### The proving floor
+### The firing range
 
-**Test drive**, from the title screen or the boiler room, puts you in a room of
-standing dummies with every chamber open and nothing that can reach you. Type
+**Live fire**, from the title screen or the armoury, puts you in a room of
+standing hulks with every chamber open and nothing that can reach you. Type
 anything and the damage each word actually deals is listed as it lands — the
-place to find out what a material really does before you spend a night on it.
+place to find out what a material really does before you spend a wave on it.
 Esc leaves.
 
 ### Score
 
-Score is a tally, not a currency — it buys nothing, and your best on each night
+Score is a tally, not a currency — it buys nothing, and your best on each wave
 is kept. Per word you earn **half the damage it deals plus the
-square of its length**; per bug, **10 to 260** depending on what it was; per
-night cleared, **250 plus 100 for every page still on the rack**. It rewards
+square of its length**; per tank, **10 to 260** depending on what it was; per
+wave cleared, **250 plus 100 for every dossier still on the rack**. It rewards
 long, well-spent words and a clean defence rather than time on the floor.
-- Nights are long: the first runs about eighty seconds and twenty-odd bugs, the
+- Nights are long: the first runs about eighty seconds and twenty-odd tanks, the
   twentieth over two minutes and a hundred and twenty. Each wave starts before
   the last has finished, so the pressure never really lifts.
 
-When the last bug is off the floor the room holds for a beat with **LEVEL
+When the last tank is off the floor the room holds for a beat with **LEVEL
 CLEARED** — or **LEVEL FAILED** — across it before the panel comes up.
 
-Both end-of-level screens — the boiler room and the defeat panel — then show
-**the night in figures** (that level only: score, kills, words, damage, chamber
-letters against blanks, hardest and longest word, pages, secrets, time) beside
+Both end-of-level screens — the armoury and the defeat panel — then show
+**the wave in figures** (that level only: score, kills, words, damage, chamber
+letters against blanks, hardest and longest word, dossiers, intel, time) beside
 **the night's work**: every word you fired, ranked by the damage it actually
 dealt, with the letters that came out of a chamber lit in their material colour
 and the blanks left grey. Burn damage is credited back to the word that started
 the fire.
 
-### Twenty nights, and a level select
+### Twenty waves, and a level select
 
-**One boiler carries the whole run** — it belongs to the run, not to any night,
+**One magazine carries the whole run** — it belongs to the run, not to any wave,
 so you take the same letters into whatever comes next, and they only ever change
-in the boiler room.
+in the armoury.
 
 Progress lives in `localStorage` under `clockwords.progress.v1`.
 
 ### Sound
 
 Everything is synthesised at runtime: a typewriter clack per keystroke, a small
-pop per shell out of the barrel, a wet crunch when a bug comes apart, a soft ding
-for a fresh word that actually spent the boiler, and a quiet buzzer for one you
+pop per shell out of the barrel, a wet crunch when a tank comes apart, a soft ding
+for a fresh word that actually spent the magazine, and a quiet buzzer for one you
 have already used tonight. The speaker in the corner mutes it during play; the
 title screen has a Sound toggle.
 
@@ -278,17 +296,17 @@ On a phone, tapping the room raises the soft keyboard.
 ## Layout
 
 ```
-index.html            the page
+index.html            the dossier
 styles.css            screens, plates, chips
 assets/enable1.txt    the lexicon: ENABLE1, filtered to 3–24 letters
-src/content.js        materials, bug species, the campaign table
+src/content.js        materials, tank species, the campaign table
 src/boiler.js         inventory, the bag, the 8 chambers, transmuting,
                       and turning a typed word into shots
-src/dict.js           lexicon loading, word validation, word of the day
+src/dict.js           field manual loading, word validation, word of the day
 src/game.js           the simulation
 src/render.js         all drawing (canvas, procedural)
 src/audio.js          all sound (Web Audio, procedural)
-src/ui.js             DOM screens: title, how-to, level cards, boiler room
+src/ui.js             DOM screens: title, how-to, level cards, armoury
 src/achievements.js   the three badges
 src/progress.js       levels reached, best scores, per-level checkpoints
 src/main.js           bootstrap, loop, input, save/load
@@ -303,5 +321,5 @@ independent fan remake: no original code, art, or audio was used, and none was
 available to use. See [docs/FIDELITY.md](docs/FIDELITY.md) for exactly which
 mechanics are documented canon and which are reconstruction.
 
-The lexicon is [ENABLE1](https://github.com/dolph/dictionary), which is in the
+The field manual is [ENABLE1](https://github.com/dolph/dictionary), which is in the
 public domain.

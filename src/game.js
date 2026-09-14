@@ -47,7 +47,7 @@ export function leadAngle(from, target) {
     }
   }
   if (!(t > 0) || t > 3) t = 0;                 // no solution: just point at it
-  // Never lead past the corner the bug is about to turn — over-leading through
+  // Never lead past the corner the tank is about to turn — over-leading through
   // a waypoint is what actually makes shells miss.
   if (t > 0 && target.path && target.path[target.wi]) {
     const wp = target.path[target.wi];
@@ -63,9 +63,9 @@ export const SEALED_DOORS = [{ x: 200, y: 168 }, { x: 506, y: 168 }];
 
 // Things further up the room are further away.
 export const depthAt = y => 0.5 + 0.5 * Math.max(0, Math.min(1, (y - HORIZON) / (FLOOR_Y - HORIZON)));
-// The bugs do not walk straight at you. They sweep the room: across, down a
+// The tanks do not walk straight at you. They sweep the room: across, down a
 // lane, back across, down again — and the same way in reverse on the way out.
-// Where the proving dummies stand.
+// Where the proving hulks stand.
 export const SANDBOX_MARKS = [
   { x: 330, y: 214 }, { x: 560, y: 214 }, { x: 790, y: 214 },
   { x: 420, y: 316 }, { x: 650, y: 316 }, { x: 860, y: 316 },
@@ -127,7 +127,7 @@ export class Game {
   constructor(opts = {}) {
     this.boiler = opts.boiler || new Boiler(startingInventory());
     this.secrets = opts.secrets ?? 0;
-    this.pending = opts.pending || [];            // letters recovered this night
+    this.pending = opts.pending || [];            // letters recovered this wave
     this.score = opts.score ?? 0;
     this.levelNo = opts.levelNo || 1;
     this.usedWords = opts.usedWords || new Map();
@@ -175,7 +175,7 @@ export class Game {
   startSandbox() {
     this.reset();
     this.sandbox = true;
-    this.level = { name: 'The Proving Floor', flavour: 'Nothing here can reach you.' };
+    this.level = { name: 'The Firing Range', flavour: 'Nothing here can reach you.' };
     this.scale = 1;
     this.spawns = [];
     this.spawnIdx = 0;
@@ -207,7 +207,7 @@ export class Game {
     const def = getLevel(n);
     this.level = def;
     this.scale = def.scale || 1;
-    // Nights are long. Each wave in the table is stretched out, and the next one
+    // Waves are long. Each wave in the table is stretched out, and the next one
     // starts before the last has finished, so the pressure never really lifts.
     const stretch = Math.min(4, 2.6 + (n - 1) * 0.13);
     this.spawns = [];
@@ -274,7 +274,7 @@ export class Game {
 
     if (res.overload) {
       sfx.overload();
-      this.note('BOILER OVERLOAD', '#ffd66b');
+      this.note('FULL SALVO', '#ffc24b');
       for (let i = 0; i < 6; i++) {
         this.fireQueue.push({ ch: '*', mat: 'aetherium', dmg: Math.round(60 * res.mult), wid,
           pierce: 1, freeze: 0, burn: null, splash: 50, chain: 2, chainRange: 120 });
@@ -457,7 +457,7 @@ export class Game {
             b.carrying = true;
             sfx.steal();
             this.shake = Math.max(this.shake, 0.5);
-            this.floaters.push({ text: 'A page!', color: '#ff8f6b', x: b.x, y: b.y - 20, vy: -30, t: 1.4 });
+            this.floaters.push({ text: 'A dossier!', color: '#ff8f6b', x: b.x, y: b.y - 20, vy: -30, t: 1.4 });
           }
         } else if (b.wi < 0) {                             // back out through the door
           if (b.carrying) {
@@ -474,7 +474,7 @@ export class Game {
     this.bugs = this.bugs.filter(b => !b.dead);
   }
 
-  // Shells already in the air are counted against a bug, so the cannon does not
+  // Shells already in the air are counted against a tank, so the cannon does not
   // keep firing at something that is on its way down.
   target() {
     if (this.aim) return null;
@@ -531,7 +531,7 @@ export class Game {
     sfx.fire(shot.mat ? 1.25 : 0.85);
   }
 
-  // The closest bug inside the shell's forward cone, so it can never double back.
+  // The closest tank inside the shell's forward cone, so it can never double back.
   aheadOf(s) {
     const cur = Math.atan2(s.vy, s.vx);
     let best = null, bd = Infinity;
@@ -547,7 +547,7 @@ export class Game {
     return best;
   }
 
-  // What a shell is actually worth against this bug, armour included.
+  // What a shell is actually worth against this tank, armour included.
   effective(shot, b) { return shot.dmg * (1 - (b.armor || 0)); }
 
   nearest(p, except = null) {
@@ -705,7 +705,7 @@ export class Game {
     if (Math.random() < (b.sp.secret >= 1 ? 1 : b.sp.secret)) {
       const n = b.sp.secret >= 1 ? b.sp.secret : 1;
       this.secrets += n;
-      this.floaters.push({ text: `+${n} secret`, color: '#ffd66b', x: b.x, y: b.y - 26, vy: -30, t: 1.3 });
+      this.floaters.push({ text: `+${n} intel`, color: '#ffc24b', x: b.x, y: b.y - 26, vy: -30, t: 1.3 });
     }
     if (Math.random() < b.sp.drop) {
       const tier = b.sp.boss ? 4 : b.sp.hp > 80 ? 3 : b.sp.hp > 30 ? 2 : 1;
@@ -719,7 +719,7 @@ export class Game {
           x: b.x, y: b.y, vx: rand(-1, 1) * (30 + loot.level * 22),
           vy: rand(-1, 0.3) * (60 + loot.level * 30),
           t: rand(0.4, 0.5 + loot.level * 0.12), r: rand(1.2, 2.2 + loot.level * 0.3),
-          c: ['#fff6c9', '#ffd66b', '#9be8ff'][i % 3], g: 90,
+          c: ['#fff6c9', '#ffc24b', '#9be8ff'][i % 3], g: 90,
         });
       }
     }
@@ -729,7 +729,7 @@ export class Game {
 
   gameOver() {
     this.over = true;
-    this.lootKept = this.pending.length;      // what fell tonight is yours regardless
+    this.lootKept = this.pending.length;      // what fell this wave is yours regardless
     this.typed = '';
     this.fireQueue.length = 0;
     this.outro = { kind: 'lost', t: 0, hold: 2.8 };
@@ -747,7 +747,7 @@ export class Game {
       if (Math.random() < dt * (8 + d.level * 6)) {
         this.particles.push({ x: d.x + rand(-11, 11), y: d.y + rand(-11, 11),
           vx: rand(-14, 14), vy: rand(-26, -6), t: rand(0.25, 0.55), r: rand(1, 2.1),
-          c: Math.random() < 0.5 ? '#fff6c9' : '#ffd66b' });
+          c: Math.random() < 0.5 ? '#fff6c9' : '#ffc24b' });
       }
     }
     this.lootDrops = this.lootDrops.filter(d => d.t < d.hold);
@@ -767,7 +767,7 @@ export class Game {
     this.pageDrops = this.pageDrops.filter(p => !p.done);
   }
 
-  // Everything the night came to, for the panel afterwards.
+  // Everything the wave came to, for the panel afterwards.
   summary() {
     const log = this.wordLog || [];
     let dealt = 0, lit = 0, blanks = 0, best = null, longest = null;

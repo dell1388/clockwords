@@ -5,10 +5,10 @@ set -e
 out="${1:-build/page.html}"
 mkdir -p "$(dirname "$out")"
 {
-  echo '<title>Clockwords</title>'
+  echo '<title>Word War 3</title>'
   echo '<link rel="preconnect" href="https://fonts.googleapis.com">'
   echo '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
-  echo '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=IM+Fell+English:ital@0;1&family=Special+Elite&display=swap">'
+  echo '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Roboto+Condensed:wght@400;700&family=Special+Elite&display=swap">'
   echo '<style>'
   cat styles.css
   echo '</style>'
