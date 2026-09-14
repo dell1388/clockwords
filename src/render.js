@@ -6,7 +6,7 @@ import { MATERIALS, CHAMBERS, START_PAGES, MAX_LEVEL } from './content.js';
 const TAU = Math.PI * 2;
 const SHOT_R = 13;          // one radius for every letter fired
 const CHAMBER_R = 27;       // and one for every tank on the rack
-const CHAMBER_GAP = 74;
+const CHAMBER_GAP = 62;
 
 // Where each tank sits, so a click can find it.
 export function chamberAt(x, y) {
