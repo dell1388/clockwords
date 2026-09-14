@@ -129,6 +129,17 @@ export const sfx = {
     o.start(t); o.stop(t + 0.24); m.start(t); m.stop(t + 0.24);
   }),
 
+  // a letter lifting out of the wreck — brighter and busier the rarer it is
+  sparkle: guard((level = 1) => {
+    const t = ctx.currentTime;
+    const n = 3 + level;
+    for (let i = 0; i < n; i++) {
+      const f = 900 + i * 260 + level * 140 + Math.random() * 200;
+      tone(f, t + i * 0.045, 0.004, 0.16 + level * 0.02, 'sine', 0.055 + level * 0.006);
+    }
+    noise(t, 0.12 + level * 0.02, 5200, 0.05 + level * 0.008, 'highpass', 0.8);
+  }),
+
   // a fresh word that actually spent the boiler
   ding: guard(() => {
     const t = ctx.currentTime;

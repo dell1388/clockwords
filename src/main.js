@@ -2,7 +2,7 @@
 
 import { Game, W, H, PLAY_H } from './game.js';
 import { Boiler, startingInventory } from './boiler.js';
-import { CAMPAIGN, rollLoot } from './content.js';
+import { rollLoot } from './content.js';
 import * as progress from './progress.js';
 import { loadDictionary, dictSize } from './dict.js';
 import { draw, makeBackground, chamberAt } from './render.js';
@@ -17,7 +17,7 @@ const kb = document.getElementById('kb');
 const touch = matchMedia('(hover: none)').matches || 'ontouchstart' in window;
 if (touch) document.body.classList.add('touch');
 
-let game = null, state = 'loading', last = 0, clock = 0, introGo = null, howBack = null;
+let game = null, state = 'loading', last = 0, clock = 0, introGo = null, howBack = null, provingBack = null;
 
 onBadge(b => { ui.toast(b); sfx.win(); });
 
@@ -68,19 +68,12 @@ function toTitle() {
   ui.show('title');
   ui.renderTitle(progress.load(), {
     newGame,
-    cont: () => enterLevel(Math.min(CAMPAIGN, progress.furthest())),
-    levels: toLevels,
-    boiler: () => toWorkshop(Math.min(CAMPAIGN, progress.furthest()), toTitle),
+    cont: () => enterLevel(progress.furthest()),
+    boiler: () => toWorkshop(progress.furthest(), toTitle),
+    test: () => toProving(toTitle),
     how: () => { state = 'howto'; ui.show('howto'); howBack = ui.renderHow(toTitle); },
     sound: syncMute,
   });
-}
-
-function toLevels(back = toTitle) {
-  state = 'levels';
-  ui.show('levels');
-  ui.renderLevels(progress.load(), enterLevel, back,
-    () => toWorkshop(Math.min(CAMPAIGN, progress.furthest()), () => toLevels(back)));
 }
 
 function newGame() {
@@ -102,8 +95,19 @@ function toIntro(n) {
   introGo = ui.renderIntro(n, {
     onGo: () => beginLevel(n),
     onBoiler: () => toWorkshop(n, () => toIntro(n)),
-    onBack: () => toLevels(),
+    onBack: () => toTitle(),
   });
+}
+
+// A room of standing targets: type anything, read the damage off.
+function toProving(back = toTitle) {
+  game = gameFrom(progress.loadout(), Math.max(1, progress.furthest()));
+  game.startSandbox();
+  provingBack = back;
+  state = 'play';
+  ui.show('none');
+  kb.value = '';
+  if (touch) focusKb(); else canvas.focus();
 }
 
 // The boiler room as a screen in its own right, reachable from the title, the
@@ -118,6 +122,7 @@ function toWorkshop(n, back = toTitle) {
     onNext: () => { stash(); beginLevel(n); },
     onChange: stash,
     onBack: () => { stash(); back(); },
+    onTest: () => { stash(); toProving(() => toWorkshop(n, back)); },
   });
 }
 
@@ -139,37 +144,42 @@ function toBoiler() {
   stash();
   ui.renderBoiler(game, {
     onNext: () => {
-      if (next > CAMPAIGN) return toWin();
       game.levelNo = next;
       stash();
       toIntro(next);
     },
     onChange: stash,
     onMenu: () => { stash(); toTitle(); },
+    onTest: () => { stash(); toProving(toBoiler); },
   });
-}
-
-function toWin() {
-  state = 'over';
-  ui.show('gameover');
-  ui.renderWin(game, { levels: () => toLevels(toTitle), title: toTitle });
 }
 
 function toOver() {
+  // Whatever fell tonight is yours, won or lost.
+  if (game.pending.length) {
+    for (const loot of game.pending) game.boiler.deposit(loot.letter, 'iron', loot.level);
+    game.boiler.applyQuotas();
+    game.pending = [];
+    progress.setLoadout(snapshot(game));
+  }
   state = 'over';
   ui.show('gameover');
-  ui.renderOver(game, {
-    retry: () => enterLevel(game.levelNo),
-    levels: () => toLevels(toTitle),
-    title: toTitle,
-  });
+  ui.renderOver(game, { retry: () => enterLevel(game.levelNo), title: toTitle });
 }
 
 function togglePause() {
   if (state === 'play') {
-    state = 'pause'; ui.show('pause');
-    ui.renderPause(() => { state = 'play'; ui.show('none'); }, toTitle);
-  } else if (state === 'pause') { state = 'play'; ui.show('none'); }
+    state = 'pause';
+    ui.show('pause');
+    ui.renderPause(game, {
+      resume: () => { state = 'play'; ui.show('none'); if (touch) focusKb(); else canvas.focus(); },
+      restart: () => enterLevel(game.levelNo),
+      title: toTitle,
+    });
+  } else if (state === 'pause') {
+    state = 'play'; ui.show('none');
+    if (touch) focusKb(); else canvas.focus();
+  }
 }
 
 // ── input ──────────────────────────────────────────────────────────────────
@@ -202,7 +212,6 @@ window.addEventListener('keydown', e => {
   }
   if (state === 'boiler' && e.key === 'Escape') { e.preventDefault();
     const back = document.querySelector('#boiler #b-back'); if (back) back.click(); return; }
-  if (state === 'levels' && (e.key === 'Escape' || e.key === 'Backspace')) { e.preventDefault(); toTitle(); return; }
   if (state === 'howto' && (e.key === 'Escape' || e.key === 'Enter' || e.key === 'Backspace')) {
     e.preventDefault(); howBack ? howBack() : toTitle(); return;
   }
@@ -210,7 +219,13 @@ window.addEventListener('keydown', e => {
     if (e.key === 'Escape' && state === 'pause') togglePause();
     return;
   }
-  if (e.key === 'Escape') { if (game.typed) { game.clear(); kb.value = ''; } else togglePause(); e.preventDefault(); return; }
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    if (game.sandbox) { const back = provingBack || toTitle; provingBack = null; back(); }
+    else togglePause();
+    return;
+  }
+  if (e.key === 'Delete') { game.clear(); kb.value = ''; e.preventDefault(); return; }
   if (e.key === 'Enter') { game.submit(); kb.value = ''; e.preventDefault(); return; }
   if (e.key === 'Backspace') { game.backspace(); e.preventDefault(); return; }
   if (e.key === ' ') { game.submit(); kb.value = ''; e.preventDefault(); return; }

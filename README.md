@@ -76,7 +76,10 @@ Bugs only ever drop plain **Iron**. In the boiler room the crucible takes any
 - **Level 5 pairs** → they burn away and leave a **material** behind, seeded on a
   fresh level 1 letter. This is the only way a material is ever made.
 
-The crucible chooses what comes out, not you. A row of level buttons selects
+The crucible chooses *which letter* comes out, not you — but of each pair, the
+**first letter you picked** sets the material. Pair a material with plain **Iron**
+and the material simply moves across to a fresh letter of the *same* level, so a
+material can be carried without levelling it up. A row of level buttons selects
 every letter of a grade at once, so a big batch is one click. Level a materialised
 letter up and it keeps its material.
 
@@ -115,7 +118,8 @@ storage** — letters the bugs drop, anything out of the crucible, anything you
 stoke — so the boiler only ever holds what you put there and a deep collection
 never dilutes what the chambers pull.
 
-Set a **quota** per letter and it looks after itself: the number is drawn out of
+The quota view lists **all 26 letters**, so you can set one for a letter you do
+not hold yet. Set a **quota** per letter and it looks after itself: the number is drawn out of
 storage, and anything above it is sent back down. **∞** leaves a letter alone;
 **0** keeps it out of the boiler entirely, swapping in something wanted so the
 15-letter minimum still holds. **Tidy** applies the quotas in one click, **Fuse
@@ -132,7 +136,92 @@ level and material.
 - **Boiler overload** — spend every loaded chamber in one word for a bonus barrage.
 - **Word of the day** — one word, the same for everyone, doubles everything and explodes.
 - Loot is tabled by night: common letters fall constantly early on, and the rare
-  ones only start appearing once you are deep enough — and off tougher bugs.
+  ones only start appearing once you are deep enough — and off tougher bugs. A
+  dropped letter lifts out of the wreck with a sparkle that gets busier the rarer
+  it is, and **the letters are yours whether you clear the night or lose it**.
+
+### The proving floor
+
+**Test drive**, from the title screen or the boiler room, puts you in a room of
+standing dummies with every chamber open and nothing that can reach you. Type
+anything and the damage each word actually deals is listed as it lands — the
+place to find out what a material really does before you spend a night on it.
+Esc leaves.
+
+### Score
+
+Score is a tally, not a currency — it buys nothing, and your best on each night
+is kept. Per word you earn **half the damage it deals plus the
+square of its length**; per bug, **10 to 260** depending on what it was; per
+night cleared, **250 plus 100 for every page still on the rack**. It rewards
+long, well-spent words and a clean defence rather than time on the floor.
+- Nights are long: the first runs about eighty seconds and twenty-odd bugs, the
+  twentieth over two minutes and a hundred and twenty. Each wave starts before
+  the last has finished, so the pressure never really lifts.
+
+When the last bug is off the floor the room holds for a beat with **LEVEL
+CLEARED** — or **LEVEL FAILED** — across it before the panel comes up.
+
+Both end-of-level screens — the boiler room and the defeat panel — then show
+**the night in figures** (that level only: score, kills, words, damage, chamber
+letters against blanks, hardest and longest word, pages, secrets, time) beside
+**the night's work**: every word you fired, ranked by the damage it actually
+dealt, with the letters that came out of a chamber lit in their material colour
+and the blanks left grey. Burn damage is credited back to the word that started
+the fire.
+
+### The nights keep coming
+
+Ten nights are written by hand, and every night after that is generated from the
+same curve — more bugs, faster, tougher, with a boss on every tenth. There is no
+end to reach and no level select: you play the next night, and the one after that.
+**Failing a night costs you that night, not the run** — the boiler is untouched
+and the letters you found are still yours, so you start the same night again.
+
+### Boiler and storage
+
+The boiler runs on between **15 and 50** letters. **Everything new lands in
+storage** — letters the bugs drop, anything out of the crucible, anything you
+stoke — so the boiler only ever holds what you put there and a deep collection
+never dilutes what the chambers pull.
+
+The quota view lists **all 26 letters**, so you can set one for a letter you do
+not hold yet. Set a **quota** per letter and it looks after itself: the number is drawn out of
+storage, and anything above it is sent back down. **∞** leaves a letter alone;
+**0** keeps it out of the boiler entirely, swapping in something wanted so the
+15-letter minimum still holds. **Tidy** applies the quotas in one click, **Fuse
+extras** pairs off everything in storage and over quota, and the rack filters by
+level and material.
+
+### Other rules that matter
+
+- **Length pays steeply**: damage scales as `(length / 3) ^ 1.61`, so twice the
+  length is three times the damage and three times the length about six.
+- **A pure word** — every letter out of a chamber, no blanks at all — does **double**.
+- **Repeating a word** halves its power each time you reuse it *within the same
+  level*, down to 20%. Every level starts the ledger again.
+- **Boiler overload** — spend every loaded chamber in one word for a bonus barrage.
+- **Word of the day** — one word, the same for everyone, doubles everything and explodes.
+- Loot is tabled by night: common letters fall constantly early on, and the rare
+  ones only start appearing once you are deep enough — and off tougher bugs. A
+  dropped letter lifts out of the wreck with a sparkle that gets busier the rarer
+  it is, and **the letters are yours whether you clear the night or lose it**.
+
+### The proving floor
+
+**Test drive**, from the title screen or the boiler room, puts you in a room of
+standing dummies with every chamber open and nothing that can reach you. Type
+anything and the damage each word actually deals is listed as it lands — the
+place to find out what a material really does before you spend a night on it.
+Esc leaves.
+
+### Score
+
+Score is a tally, not a currency — it buys nothing, and your best on each night
+is kept. Per word you earn **half the damage it deals plus the
+square of its length**; per bug, **10 to 260** depending on what it was; per
+night cleared, **250 plus 100 for every page still on the rack**. It rewards
+long, well-spent words and a clean defence rather than time on the floor.
 - Nights are long: the first runs about eighty seconds and twenty-odd bugs, the
   twentieth over two minutes and a hundred and twenty. Each wave starts before
   the last has finished, so the pressure never really lifts.
@@ -150,15 +239,9 @@ the fire.
 
 ### Twenty nights, and a level select
 
-The campaign is twenty levels. **One boiler carries the whole run** — it belongs
-to the run, not to any level, so whichever night you pick you take the same
-letters in, and they only ever change in the boiler room. Letters the bugs drop
-during a night are only added when you reach the boiler room, so a night you fail
-changes nothing.
-
-**Failing a level costs you that night, not the campaign.** The level select
-lists all twenty with your best score on each, and lets you replay any night you
-have reached.
+**One boiler carries the whole run** — it belongs to the run, not to any night,
+so you take the same letters into whatever comes next, and they only ever change
+in the boiler room.
 
 Progress lives in `localStorage` under `clockwords.progress.v1`.
 
@@ -173,7 +256,8 @@ title screen has a Sound toggle.
 ### Controls
 
 <kbd>A</kbd>–<kbd>Z</kbd> type · <kbd>Enter</kbd> or <kbd>Space</kbd> fire ·
-<kbd>Backspace</kbd> delete · <kbd>Esc</kbd> clears the rack, and again to pause.
+<kbd>Backspace</kbd> delete · <kbd>Delete</kbd> clears the rack · <kbd>Esc</kbd>
+pauses, with the night's figures and Resume / Restart / Levels / Main menu.
 Hold the **right mouse button** over the room to aim the cannon by hand;
 otherwise it picks its own target. The gear in the corner mutes the sound.
 

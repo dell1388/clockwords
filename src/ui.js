@@ -2,7 +2,7 @@
 // room between levels, and the end-of-run summary.
 
 import { MATERIALS, SPECIAL_MATERIALS, LETTER_LEVELS, MAX_LEVEL, CHAMBERS, START_CHAMBERS,
-  START_PAGES, MIN_BOILER, MAX_BOILER, FIRE_RPM, STOKE_COST, CAMPAIGN, BLANK_DMG, getLevel } from './content.js';
+  START_PAGES, MIN_BOILER, MAX_BOILER, FIRE_RPM, STOKE_COST, BLANK_DMG, getLevel } from './content.js';
 import { dictSize } from './dict.js';
 import { BADGES, earned } from './achievements.js';
 import { sfx, isMuted, setMuted } from './audio.js';
@@ -55,10 +55,10 @@ export function renderTitle(progress, on) {
       pages of your formula. The engine on your bench turns words into ammunition.
       Type quickly. Type well.</p>
       <div class="btns">
-        ${started ? `<button id="b-cont" class="big">Continue &mdash; level ${Math.min(CAMPAIGN, progress.reached)}</button>` : ''}
+        ${started ? `<button id="b-cont" class="big">Continue &mdash; night ${progress.reached}</button>` : ''}
         <button id="b-play" class="big">${started ? 'Start over' : 'Begin'}</button>
-        <button id="b-levels">Levels</button>
         <button id="b-boiler">Boiler room</button>
+        <button id="b-test">Test drive</button>
         <button id="b-how">How to play</button>
         <button id="b-sound">Sound: ${isMuted() ? 'off' : 'on'}</button>
       </div>
@@ -72,46 +72,10 @@ export function renderTitle(progress, on) {
   const wire = wireIn(t);
   wire('#b-play', on.newGame);
   wire('#b-cont', on.cont);
-  wire('#b-levels', on.levels);
   wire('#b-boiler', on.boiler);
+  wire('#b-test', on.test);
   wire('#b-how', on.how);
   wire('#b-sound', () => { setMuted(!isMuted()); on.sound && on.sound(); renderTitle(progress, on); });
-}
-
-// ── level select ───────────────────────────────────────────────────────────
-export function renderLevels(progress, onPick, onBack, onBoiler) {
-  const t = $('#levels');
-  const cards = [];
-  for (let n = 1; n <= CAMPAIGN; n++) {
-    const def = getLevel(n);
-    const open = n <= progress.reached;
-    const best = progress.best[n];
-    cards.push(`
-      <button class="lvl ${open ? '' : 'locked'} ${def.boss ? 'boss' : ''}" data-lvl="${n}"
-        ${open ? '' : 'disabled'}>
-        <span class="ln">${String(n).padStart(2, '0')}</span>
-        <span class="lt">${open ? def.name : 'Sealed'}</span>
-        <span class="lb">${best ? `best ${best.toLocaleString()}`
-          : open ? (def.boss ? 'boss night' : 'not yet cleared') : '—'}</span>
-      </button>`);
-  }
-  t.innerHTML = `
-    <div class="plate wide">
-      <p class="kicker">The campaign</p>
-      <h2>Twenty Nights</h2>
-      <p class="d">One boiler carries the whole run: whichever night you pick, you take the
-      same letters in, and they only ever change in the boiler room. Fail a night and you
-      start that night again — never the whole campaign.</p>
-      <div class="lvlgrid">${cards.join('')}</div>
-      <div class="btns">
-        <button id="b-back" class="big">Back</button>
-        <button id="b-boiler">Boiler room</button>
-      </div>
-    </div>`;
-  t.querySelectorAll('[data-lvl]').forEach(n => n.onclick = () => { sfx.clank(); onPick(+n.dataset.lvl); });
-  const wire = wireIn(t);
-  wire('#b-back', onBack);
-  wire('#b-boiler', onBoiler);
 }
 
 export function renderHow(onBack) {
@@ -160,12 +124,23 @@ export function renderHow(onBack) {
           on the floor — across, down a lane, back across — until it reaches the machine, takes
           a page of the formula and retraces the whole run to get out. Kill a carrier and the
           page comes home. Lose all ${START_PAGES} pages and the night is over.</p>
+          <h3>The proving floor</h3>
+          <p><b>Test drive</b> puts you in a room of standing dummies with every chamber open
+          and nothing that can reach you. Type anything and the damage each word actually deals
+          is listed as it lands — the place to find out what a material really does before you
+          spend a night on it.</p>
           <h3>Controls</h3>
           <p><kbd>A&ndash;Z</kbd> type &middot; <kbd>Enter</kbd> or <kbd>Space</kbd> fire &middot;
-          <kbd>Backspace</kbd> delete &middot; <kbd>Esc</kbd> clears the rack, and clears again
-          to pause. Every letter key belongs to the word, so the sound toggle is the gear in
-          the corner. Hold the <b>right mouse button</b> over the room to aim the cannon by
-          hand; otherwise it picks its own target.</p>
+          <kbd>Backspace</kbd> delete &middot; <kbd>Delete</kbd> clears the rack &middot;
+          <kbd>Esc</kbd> pauses. Every letter key belongs to the word, so the sound toggle is
+          the speaker in the corner. Hold the <b>right mouse button</b> over the room to aim
+          the cannon by hand; otherwise it picks its own target.</p>
+          <h3>Score</h3>
+          <p>Score is a tally, not a currency — it buys nothing, though your best on each
+          night is kept. You earn <b>half the damage a word deals plus the square of
+          its length</b> for every word, <b>10 to 260</b> per bug depending on what it was, and
+          <b>250 plus 100 per page still on the rack</b> for clearing the night. So it rewards
+          long, well-spent words and a clean defence, not just time on the floor.</p>
         </div>
         <div>
           <h3>Letter levels</h3>
@@ -194,7 +169,7 @@ export function renderHow(onBack) {
           <b>quota</b> per letter and it looks after itself: the number is drawn out of storage
           and anything above it is sent back down. A quota of <b>0</b> keeps a letter out of the
           boiler entirely.</p>
-          <p>Between levels the <b>crucible</b> takes any even number of letters of one level and
+          <p>Between nights the <b>crucible</b> takes any even number of letters of one level and
           works through them in pairs: each pair becomes one letter of the level above in the
           same material, or — for level ${MAX_LEVEL} pairs — a material on a fresh level 1
           letter. The crucible picks what comes out, not you. Scrap what you do not want for a
@@ -225,7 +200,7 @@ export function renderIntro(n, { onGo, onBoiler, onBack }) {
         <button id="b-boiler">Boiler room</button>
         <button id="b-go" class="big">Open the workshop</button>
       </div>
-      <p class="fine">press Enter to begin, Esc to step back &middot;
+      <p class="fine">press Enter to begin, Esc for the menu &middot;
       the boiler room is open until you do</p>
     </div>`;
   const wire = wireIn(t);
@@ -247,7 +222,7 @@ function firedWord(entry) {
   }).join('');
 }
 
-export function renderBoiler(game, { onNext, onChange, onMenu, onBack, standalone = false } = {}) {
+export function renderBoiler(game, { onNext, onChange, onMenu, onBack, onTest, standalone = false } = {}) {
   const s = $('#boiler');
   let selected = [];         // letter ids picked out of either rack
   let fLevel = 0, fMat = '';  // rack filters: 0 / '' mean everything
@@ -276,17 +251,23 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, standalon
           ${chip(l.letter, l.mat, l.level)}</button>`).join('');
     };
 
-    // one row per letter you hold anywhere, for the quota view
+    // every letter in the alphabet gets a row, so a quota can be set for one
+    // you do not hold yet
     const held = {};
+    for (const L of LETTER_LEVELS.slice(1)) {
+      for (const ch of L.pool) held[ch] = { level: L.level, boiler: 0, store: 0 };
+    }
     for (const l of [...bo.inventory, ...bo.store]) {
-      const h = held[l.letter] = held[l.letter] || { level: l.level, boiler: 0, store: 0 };
+      const h = held[l.letter];
+      if (!h) continue;
       if (bo.inBoiler(l.id)) h.boiler++; else h.store++;
     }
     const quotaGrid = Object.keys(held)
       .sort((a, b) => held[b].level - held[a].level || a.localeCompare(b))
       .map(ch => {
         const q = bo.quotaFor(ch), h = held[ch];
-        const cls = q === null ? '' : q === 0 ? 'set zero' : 'set';
+        const cls = [q === null ? '' : q === 0 ? 'set zero' : 'set',
+          h.boiler + h.store ? '' : 'none'].join(' ');
         return `<div class="qcell ${cls}">
           ${chip(ch, 'iron', h.level)}
           <span class="qn">${h.boiler}${h.store ? `<i>+${h.store}</i>` : ''}</span>
@@ -299,7 +280,7 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, standalon
             <button data-q="${ch}" data-d="1" title="more">+</button>
           </span>
         </div>`;
-      }).join('') || '<p class="d">No letters yet.</p>';
+      }).join('');
 
     const mats = [...new Set([...bo.inventory, ...bo.store].map(l => l.mat))];
     const filterBar = `<div class="filters">
@@ -407,7 +388,9 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, standalon
           <section>
             <h3>Crucible</h3>
             <p class="d">Feed it any <b>even</b> number of letters of one level and it works
-            through them two at a time.</p>
+            through them two at a time, in the order you picked them. Of each pair, the
+            <b>first</b> letter's material comes out — except that a material paired with plain
+            <b>Iron</b> just moves across at the <i>same</i> level.</p>
             <div class="levelpicks">
               ${Object.keys(byLevel).sort().map(lv => `
                 <button class="letbtn ${pickedLevel === +lv && sameLevel ? 'sel' : ''}"
@@ -426,7 +409,9 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, standalon
                    <div class="matrow">${SPECIAL_MATERIALS.map(m => swatch(m.id)).join('')}</div>
                    <button id="b-fuse" class="big">Fire the crucible</button>`
                 : `<p class="d">${picked.length} × level ${pickedLevel} &rarr;
-                   <b>${viable} × level ${pickedLevel + 1}</b> into storage, same material.
+                   <b>${viable} × level ${pickedLevel + 1}</b> into storage,
+                   in ${swatch(picked[0].mat)} <b>${MATERIALS[picked[0].mat].name}</b> —
+                   whichever letter goes in <i>first</i> sets the material.
                    The crucible decides which letters come out.
                    ${viable < picked.length / 2
                      ? `<br>${picked.length / 2 - viable} pair(s) skipped — they would take the
@@ -463,7 +448,8 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, standalon
           before it will run.</p>` : ''}
         <div class="btns">
           <button id="${standalone ? 'b-back' : 'b-menu'}">${standalone ? 'Back' : 'Main menu'}</button>
-          <button id="b-next" class="big" ${short ? 'disabled' : ''}>${!standalone && game.levelNo >= CAMPAIGN ? "Finish" : `To level ${nextLevel}`} &rarr;</button>
+          <button id="b-test">Test drive</button>
+          <button id="b-next" class="big" ${short ? 'disabled' : ''}>To night ${nextLevel} &rarr;</button>
         </div>
       </div>`;
 
@@ -558,6 +544,7 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, standalon
     on('#b-next', () => { if (!bo.short()) { sfx.clank(); onNext(); } });
     on('#b-menu', () => { sfx.clank(); onMenu && onMenu(); });
     on('#b-back', () => { sfx.clank(); onBack && onBack(); });
+    on('#b-test', () => { sfx.clank(); onTest && onTest(); });
     if (onChange) onChange();
   }
   draw();
@@ -626,7 +613,10 @@ export function renderOver(game, on) {
           <p class="kicker">Level ${game.levelNo} — ${getLevel(game.levelNo).name}</p>
           <h2>The formula is gone</h2>
           <p class="story">All ${START_PAGES} pages were carried off into the dark.
-          Only tonight is lost — the workshop stands, and the boiler is as you carried it in.</p>
+          Only tonight is lost — the workshop stands, and the ${game.lootKept
+            ? `${game.lootKept} letter${game.lootKept === 1 ? '' : 's'} that fell tonight
+               ${game.lootKept === 1 ? 'is' : 'are'} in storage`
+            : 'boiler is as you carried it in'}.</p>
         </div>
       </div>
       <div class="afteraction">
@@ -637,56 +627,40 @@ export function renderOver(game, on) {
         ${wordLogHtml(game)}
       </div>
       <div class="btns">
-        <button id="b-retry" class="big">Fight level ${game.levelNo} again</button>
-        <button id="b-levels">Levels</button>
-        <button id="b-title">Title screen</button>
+        <button id="b-retry" class="big">Fight night ${game.levelNo} again</button>
+        <button id="b-title">Main menu</button>
       </div>
     </div>`;
   const wire = wireIn(t);
-  wire('#b-retry', on.retry); wire('#b-levels', on.levels); wire('#b-title', on.title);
+  wire('#b-retry', on.retry); wire('#b-title', on.title);
 }
 
-export function renderWin(game, on) {
-  const t = $('#gameover');
+export function renderPause(game, on) {
+  const t = $('#pause');
+  const sum = game.summary();
   t.innerHTML = `
     <div class="plate">
-      <div class="crest">★</div>
-      <p class="kicker">Twenty nights</p>
-      <h2>The formula holds</h2>
-      <p class="story">The last of them went back through the arch and did not come out
-      again. Whatever was sending them has run out of machines. London gets its genius
-      after all.</p>
+      <div class="crest">⏸</div>
+      <p class="kicker">Level ${game.levelNo} — ${getLevel(game.levelNo).name}</p>
+      <h2>Paused</h2>
       <ul class="stats">
-        <li><span>Final score</span><b>${game.score.toLocaleString()}</b></li>
-        <li><span>Bugs destroyed</span><b>${game.stats.kills}</b></li>
-        <li><span>Words fired</span><b>${game.stats.words}</b></li>
-        <li><span>Damage dealt</span><b>${Math.round(game.stats.damage).toLocaleString()}</b></li>
-        <li><span>Best word</span><b>${game.stats.best || '—'} (${game.stats.bestDmg})</b></li>
-        <li><span>Longest word</span><b>${game.stats.longest || '—'}</b></li>
+        <li><span>Pages</span><b>${game.pages} intact · ${game.lost} lost</b></li>
+        <li><span>Bugs destroyed</span><b>${sum.kills}</b></li>
+        <li><span>Words fired</span><b>${sum.words}</b></li>
+        <li><span>Damage dealt</span><b>${Math.round(sum.dealt).toLocaleString()}</b></li>
+        <li><span>Letters recovered</span><b>${game.pending.length}</b></li>
       </ul>
       <div class="btns">
-        <button id="b-levels" class="big">Levels</button>
-        <button id="b-title">Title screen</button>
+        <button id="b-res" class="big">Resume</button>
+        <button id="b-restart">Restart night</button>
+        <button id="b-title">Main menu</button>
       </div>
+      <p class="fine">Esc resumes &middot; letters you have found tonight are kept either way</p>
     </div>`;
   const wire = wireIn(t);
-  wire('#b-levels', on.levels); wire('#b-title', on.title);
-}
-
-export function renderPause(onResume, onTitle) {
-  const s = $('#pause');
-  s.innerHTML = `
-    <div class="plate">
-      <div class="crest">⏸</div>
-      <h2>Paused</h2>
-      <div class="btns">
-        <button id="b-res" class="big">Resume</button>
-        <button id="b-quit">Abandon the night</button>
-      </div>
-    </div>`;
-  const wire = wireIn(s);
-  wire('#b-res', onResume);
-  wire('#b-quit', onTitle);
+  wire('#b-res', on.resume);
+  wire('#b-restart', on.restart);
+  wire('#b-title', on.title);
 }
 
 export function setLoading(pct, msg) {

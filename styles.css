@@ -169,18 +169,6 @@ section h4{font-family:var(--display);margin:14px 0 4px;font-size:13px;letter-sp
 .d.hot{color:#e8c98d}
 section .fine{margin:6px 0 0;font-size:11px}
 
-.lvlgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:14px 0 4px}
-.lvl{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:9px 11px;
-  text-align:left;font-family:var(--body);border-radius:8px}
-.lvl .ln{font-family:var(--type);font-size:18px;color:var(--glow);line-height:1}
-.lvl .lt{font-family:var(--display);font-size:12.5px;letter-spacing:.4px;color:#f0e2c2;
-  line-height:1.25;min-height:2.4em}
-.lvl .lb{font-size:11px;color:rgba(200,178,132,.7);font-style:italic}
-.lvl.boss{border-color:#a2542c}
-.lvl.boss .ln{color:#f09a63}
-.lvl.locked{opacity:.32;background:linear-gradient(#3a2c17,#271d0f)}
-.lvl.locked .lt{color:#9e8c68}
-@media (max-width:760px){ .lvlgrid{grid-template-columns:repeat(2,1fr)} }
 
 /* a full-screen panel uses every corner, so toasts sit along the top edge */
 body.modal #toasts{left:50%;right:auto;top:10px;bottom:auto;transform:translateX(-50%);
@@ -245,6 +233,7 @@ body.modal .toast{text-align:center;max-width:300px}
   background:rgba(0,0,0,.22);border:1px solid transparent}
 .qcell.set{border-color:#7d6130;background:rgba(255,214,107,.07)}
 .qcell.zero{border-color:#8d4a2c;background:rgba(226,86,58,.09)}
+.qcell.none .chip,.qcell.none .qn{opacity:.42}
 .qcell.zero .qval{color:#e8845c}
 .qn{font-family:var(--type);font-size:12px;color:#e8d7ae;min-width:26px}
 .qn i{font-style:normal;font-size:10px;color:rgba(200,178,132,.65)}

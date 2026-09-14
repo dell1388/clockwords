@@ -224,16 +224,26 @@ export class Boiler {
   combine(a, b) {
     if (!this.canCombine(a, b)) return null;
     const pick = arr => arr[(Math.random() * arr.length) | 0];
+    const aIron = a.mat === 'iron', bIron = b.mat === 'iron';
     let level, letter, mat;
-    if (a.level >= MAX_LEVEL) {
+
+    if (aIron !== bIron) {
+      // One plain, one not: the material moves across to a fresh letter of the
+      // same level. Iron is not a material to trade away, so nothing goes up.
+      level = a.level;
+      mat = aIron ? b.mat : a.mat;
+      letter = pick(LETTER_LEVELS[level].pool);
+    } else if (a.level >= MAX_LEVEL) {
+      // Two of a kind at the top of the rack burn away and leave a material.
       level = 1;
       letter = pick(LETTER_LEVELS[1].pool);
       mat = pick(SPECIAL_MATERIALS).id;
     } else {
       level = a.level + 1;
       letter = pick(LETTER_LEVELS[level].pool);
-      mat = a.mat !== 'iron' ? a.mat : b.mat;
+      mat = a.mat;                 // whichever you loaded first sets the material
     }
+
     this.discard(a.id); this.discard(b.id);
     return this.deposit(letter, mat, level).letter;   // out of the crucible, into storage
   }
@@ -383,8 +393,8 @@ export class Boiler {
       if (m.pierce) spread.pierce = Math.max(spread.pierce, m.pierce + lvl - 1);
       if (m.splash) spread.splash = Math.max(spread.splash, m.splash * (0.75 + 0.25 * e));
       if (m.chain) {
-        spread.chain = Math.max(spread.chain, m.chain + lvl - 1);
-        spread.chainRange = Math.max(spread.chainRange, m.chainRange * (0.8 + 0.2 * e));
+        spread.chain = Math.max(spread.chain, m.chain + Math.round((lvl - 1) * 1.5));
+        spread.chainRange = Math.max(spread.chainRange, m.chainRange * (0.7 + 0.3 * e));
       }
       if (m.burn) {
         const frac = m.burn.frac * e;

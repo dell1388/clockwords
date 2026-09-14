@@ -1,6 +1,6 @@
 // game.js — the simulation. Pure state + update(); drawing lives in render.js.
 
-import { SPECIES, MATERIALS, getLevel, START_PAGES, MIN_WORD, rollLoot, FIRE_RPM } from './content.js';
+import { SPECIES, MATERIALS, getLevel, START_PAGES, MIN_WORD, rollLoot, FIRE_RPM, CHAMBERS } from './content.js';
 import { Boiler, startingInventory } from './boiler.js';
 import { isWord, wordOfTheDay } from './dict.js';
 import { sfx } from './audio.js';
@@ -62,6 +62,12 @@ export const SEALED_DOORS = [{ x: 200, y: 168 }, { x: 506, y: 168 }];
 export const depthAt = y => 0.5 + 0.5 * Math.max(0, Math.min(1, (y - HORIZON) / (FLOOR_Y - HORIZON)));
 // The bugs do not walk straight at you. They sweep the room: across, down a
 // lane, back across, down again — and the same way in reverse on the way out.
+// Where the proving dummies stand.
+export const SANDBOX_MARKS = [
+  { x: 330, y: 214 }, { x: 560, y: 214 }, { x: 790, y: 214 },
+  { x: 420, y: 316 }, { x: 650, y: 316 }, { x: 860, y: 316 },
+];
+
 export const LANES = [
   { y: 212, x0: 92, x1: 868 },
   { y: 274, x0: 92, x1: 868 },
@@ -112,6 +118,8 @@ export class Game {
     this.particles = [];
     this.floaters = [];
     this.pageDrops = [];
+    this.lootDrops = [];
+    this.respawns = [];
     this.fireQueue = [];
     this.fireTimer = 0;
     this.typed = '';
@@ -128,6 +136,7 @@ export class Game {
     this.rackFlash = 0;
     this.holding = false;
     this.outro = null;
+    this.sandbox = false;
     this.wordLog = [];
     this.levelSecrets = 0;
     this.levelKills = 0;
@@ -135,6 +144,36 @@ export class Game {
     this.spawnIdx = 0;
     this.level = this.level || null;
     this.scale = this.scale || 1;
+  }
+
+  // A room full of standing targets, so a word can be tried out and read off.
+  startSandbox() {
+    this.reset();
+    this.sandbox = true;
+    this.level = { name: 'The Proving Floor', flavour: 'Nothing here can reach you.' };
+    this.scale = 1;
+    this.spawns = [];
+    this.spawnIdx = 0;
+    this.wordLog = [];
+    this.usedWords = new Map();
+    this.levelStartScore = this.score;
+    this.boiler.open = CHAMBERS;
+    this.boiler.chambers.fill(null);
+    this.boiler.reshuffle();
+    this.boiler.reload();
+    for (const a of SANDBOX_MARKS) this.spawnDummy(a);
+  }
+
+  spawnDummy(anchor) {
+    const sp = SPECIES.dummy;
+    this.bugs.push({
+      sp, x: anchor.x, y: anchor.y, anchor, dummy: true,
+      hp: sp.hp, maxHp: sp.hp, r: sp.r, door: DOORS[0],
+      speed: 0, armor: 0, phase: 'in', carrying: false,
+      path: [{ x: anchor.x, y: anchor.y }], wi: 0, step: 1,
+      freeze: 0, burn: null, wob: Math.random() * 6.28, legPhase: 0,
+      flash: 0, tilt: 0, spawnT: 1, vx: 0, vy: 0,
+    });
   }
 
   startLevel(n) {
@@ -258,9 +297,16 @@ export class Game {
     this.bugStep(dt);
     this.shotStep(dt);
     this.dropStep(dt);
+    this.lootStep(dt);
+    if (this.sandbox) {
+      for (const r of this.respawns) r.t -= dt;
+      for (const r of this.respawns.filter(r => r.t <= 0)) this.spawnDummy(r.anchor);
+      this.respawns = this.respawns.filter(r => r.t > 0);
+    }
     this.decay(dt);
 
-    if (!this.won && this.spawnIdx >= this.spawns.length && !this.bugs.length && !this.pageDrops.length) {
+    if (!this.sandbox && !this.won && this.spawnIdx >= this.spawns.length
+        && !this.bugs.length && !this.pageDrops.length) {
       this.won = true;
       this.fireQueue.length = 0;
       this.typed = '';
@@ -351,6 +397,7 @@ export class Game {
         }
       }
 
+      if (b.dummy) { b.frost = Math.max(0, (b.frost || 0) - dt * 2); b.legPhase += dt * 0.6; continue; }
       if (b.freeze > 0) { b.frost = Math.min(1, (b.frost || 0) + dt * 4); continue; }
       b.frost = Math.max(0, (b.frost || 0) - dt * 2);
 
@@ -615,6 +662,10 @@ export class Game {
       this.pageDrops.push({ x: b.x, y: b.y, t: 0, vx: rand(-20, 20), vy: -40 });
       this.floaters.push({ text: 'page recovered', color: '#9be88b', x: b.x, y: b.y - 16, vy: -28, t: 1.4 });
     }
+    if (b.dummy) {
+      this.respawns.push({ anchor: b.anchor, t: 1.1 });
+      return;
+    }
     if (b.sp.splitOnDeath) {
       for (const t of b.sp.splitOnDeath) {
         const sp = SPECIES[t];
@@ -634,8 +685,17 @@ export class Game {
       const tier = b.sp.boss ? 4 : b.sp.hp > 80 ? 3 : b.sp.hp > 30 ? 2 : 1;
       const loot = rollLoot(this.levelNo, tier);
       this.pending.push(loot);
-      this.floaters.push({ text: loot.letter.toUpperCase() + ' ' + '•'.repeat(loot.level),
-        color: '#e8d7ae', x: b.x, y: b.y - 12, vy: -40, t: 1.6, big: true });
+      // the letter lifts out of the wreck
+      this.lootDrops.push({ ...loot, x: b.x, y: b.y, t: 0, hold: 1.7, spin: rand(-1, 1) });
+      sfx.sparkle(loot.level);
+      for (let i = 0; i < 5 + loot.level * 4; i++) {
+        this.particles.push({
+          x: b.x, y: b.y, vx: rand(-1, 1) * (30 + loot.level * 22),
+          vy: rand(-1, 0.3) * (60 + loot.level * 30),
+          t: rand(0.4, 0.5 + loot.level * 0.12), r: rand(1.2, 2.2 + loot.level * 0.3),
+          c: ['#fff6c9', '#ffd66b', '#9be8ff'][i % 3], g: 90,
+        });
+      }
     }
     if (b.sp.boss) { this.shake = 1.2; sfx.boom(); this.blast(b.x, b.y, 160, '#ffc857'); }
     badges.checkKill(b.sp);
@@ -643,6 +703,7 @@ export class Game {
 
   gameOver() {
     this.over = true;
+    this.lootKept = this.pending.length;      // what fell tonight is yours regardless
     this.typed = '';
     this.fireQueue.length = 0;
     this.outro = { kind: 'lost', t: 0, hold: 2.8 };
@@ -652,6 +713,19 @@ export class Game {
 
   // The panel only comes up once the room has had a moment to settle.
   outroDone() { return !!this.outro && this.outro.t >= this.outro.hold; }
+
+  lootStep(dt) {
+    for (const d of this.lootDrops) {
+      d.t += dt;
+      d.y -= (34 - d.t * 12) * dt;
+      if (Math.random() < dt * (8 + d.level * 6)) {
+        this.particles.push({ x: d.x + rand(-11, 11), y: d.y + rand(-11, 11),
+          vx: rand(-14, 14), vy: rand(-26, -6), t: rand(0.25, 0.55), r: rand(1, 2.1),
+          c: Math.random() < 0.5 ? '#fff6c9' : '#ffd66b' });
+      }
+    }
+    this.lootDrops = this.lootDrops.filter(d => d.t < d.hold);
+  }
 
   dropStep(dt) {
     for (const p of this.pageDrops) {

@@ -64,7 +64,7 @@ export const MATERIALS = {
   aetherium: {
     id: 'aetherium', name: 'Aetherium', mul: 1.2, cost: 20, chain: 3, chainRange: 140,
     body: '#d8d2c0', edge: '#5c5647', ink: '#3a3528', glow: '#fff6c9', dot: '#6a6252',
-    desc: 'The charge arcs on to three nearby bugs.',
+    desc: 'The charge arcs on to nearby bugs — three of them, and more from a rarer letter.',
   },
 };
 export const SPECIAL_MATERIALS = Object.values(MATERIALS).filter(m => !m.base);
@@ -83,7 +83,7 @@ export const MIN_BOILER = 15;       // the boiler will not run on less
 export const MAX_BOILER = 50;       // and will not hold more
 export const FIRE_RPM = 300;        // one shell per letter, one every 0.2s
 export const STOKE_COST = 3;        // secrets for one fresh level-1 Iron letter
-export const CAMPAIGN = 20;         // twenty nights, then the formula is safe
+export const HANDMADE = 10;         // ten written nights, then it generates forever
 
 // ── loot ───────────────────────────────────────────────────────────────────
 // Common letters fall constantly on the early nights; the rare ones only start
@@ -143,6 +143,11 @@ export const SPECIES = {
     legs: 8, gait: 'crawl', heals: { rate: 9, range: 120 }, bounty: 3,
     secret: 0.32, drop: 0.30, body: '#5d6b4a', trim: '#b9cf92',
   },
+  dummy: {
+    id: 'dummy', name: 'Proving Dummy', hp: 5000, speed: 0, r: 22,
+    legs: 6, gait: 'lumber', bounty: 0, secret: 0, drop: 0,
+    body: '#6b6455', trim: '#cfc3a4',
+  },
   box: {
     id: 'box', name: 'The Diabolical Box', hp: 2600, speed: 28, r: 46,
     legs: 8, gait: 'lumber', armor: 0.25, boss: true, spawns: 'tick',
@@ -177,7 +182,7 @@ export const LEVELS = [
     waves: [W(1, 'tick', 8, 0.6, 0), W(6, 'box', 1, 1, 1), W(20, 'roach', 6, 1.0, 2), W(38, 'beetle', 3, 2.5, 0), W(54, 'tick', 10, 0.5, 2)] },
 ];
 
-// Levels 11-20 are generated from the curve below so the campaign keeps going.
+// Past the written nights the curve takes over and keeps going indefinitely.
 const LATE = ['spider', 'roach', 'tick', 'beetle', 'moth', 'centipede', 'weaver'];
 export function proceduralLevel(n) {                       // n is 1-based
   const k = n - LEVELS.length;                             // 1,2,3...

@@ -50,8 +50,11 @@ above. Change it freely.
   The original's dots meant a flat 5 damage each; the steep curve here is a
   deliberate departure, so a rare letter feels rare.
 - **The crucible.** Any even number of letters of one level goes in at once and is
-  worked through in pairs: each pair fuses into one of the level above, keeping the
-  material, with the resulting letter chosen at random from that level's pool. Two level 5s instead yield a material on a fresh level 1
+  worked through in pairs: each pair fuses into one of the level above, taking the
+  material of whichever went in first, with the letter chosen at random from that
+  level's pool. A material paired with plain Iron instead moves across at the same
+  level. **The proving floor** — a sandbox of standing dummies with a live damage
+  read-out — is ours too. Two level 5s instead yield a material on a fresh level 1
   letter — the only source of materials in the game. The original transmuted by
   material value and let you buy materials with secrets.
 - **Materials** are read by colour with no written label, are applied as a
@@ -76,7 +79,10 @@ above. Change it freely.
   on a bug that is as good as dead. The original fired faster.
 - **Bug pathing.** One open door, and a single painted route: across, down a
   lane, back across, and the same route in reverse on the way out.
-- **Loot tables** weighted by night number and by how tough the bug was.
+- **Loot tables** weighted by night number and by how tough the bug was, with the
+  dropped letter rising out of the wreck and kept whether the night is won or lost.
+- **Score** as a pure tally: half a word's damage plus the square of its length,
+  a bounty per bug, and a clear bonus scaled by surviving pages.
 - **Exact numbers** for the long-word curve (`(length/3) ^ 1.61`, so double length
   is triple damage), the double for a word with no blanks in it,
   the repeat penalty (halving to a floor of 20%, and reckoned per level rather
@@ -90,11 +96,11 @@ above. Change it freely.
   boss, along with all HP, speeds and armour, are ours.
 - **Five pages**, and pages returning when you kill the carrier.
 - **The night's work** — the ranked per-word damage ledger in the boiler room.
-- **The campaign.** Twenty levels: ten handmade, then a procedural curve, with a
-  boss on the tenth and twentieth. One boiler carries the whole run, independent
-  of which level you enter, and only ever changes in the boiler room; failing a
-  level costs that night only. A level select lets you replay any night reached.
-  The original had no level select and no persistence between attempts.
+- **The campaign.** Ten handmade nights, then a procedural curve that keeps going
+  indefinitely with a boss on every tenth. One boiler carries the whole run and
+  only ever changes in the boiler room; failing a night costs that night only, and
+  the letters found during it are kept either way. The original was a fixed set of
+  levels with no persistence between attempts.
 - **The room.** The bricked-up arches, the perspective, the depth scaling, the
   machine design, and the whole visual and audio treatment. Nothing here is
   traced from the original art.

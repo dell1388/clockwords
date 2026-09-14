@@ -231,11 +231,13 @@ export function draw(ctx, g, t) {
   for (const b of order) drawBug(ctx, b, t);
   drawMachine(ctx, g, t);
   for (const p of g.pageDrops) { ctx.save(); ctx.translate(p.x, p.y); drawPage(ctx, 0, 0, 1, t); ctx.restore(); }
+  for (const d of g.lootDrops) drawLoot(ctx, d, t);
   for (const sh of g.shots) drawShot(ctx, sh);
   for (const p of g.particles) if (!p.soft) drawParticle(ctx, p);
   for (const f of g.floaters) drawFloater(ctx, f);
   if (g.aim) drawReticle(ctx, g.aim, t);
   drawBossBar(ctx, g);
+  if (g.sandbox) drawProving(ctx, g);
   drawOutro(ctx, g);
   ctx.restore();
   ctx.restore();
@@ -473,6 +475,59 @@ function drawOutro(ctx, g) {
   ctx.restore();
 }
 
+// The proving floor: a running read-out of what each word actually did.
+function drawProving(ctx, g) {
+  ctx.save();
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = 'rgba(11,8,5,0.72)';
+  roundRect(ctx, 12, 10, 250, 26, 6); ctx.fill();
+  ctx.strokeStyle = '#8d6f35'; ctx.lineWidth = 2;
+  roundRect(ctx, 12, 10, 250, 26, 6); ctx.stroke();
+  ctx.fillStyle = '#ffd66b'; ctx.font = "14px 'IM Fell English SC', Georgia, serif";
+  ctx.fillText('THE PROVING FLOOR', 24, 28);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = 'rgba(230,214,180,0.5)'; ctx.font = "italic 12px 'IM Fell English', Georgia, serif";
+  ctx.fillText('Esc to leave', 250, 28);
+  ctx.textAlign = 'left';
+
+  const log = (g.wordLog || []).slice(-9).reverse();
+  if (!log.length) {
+    ctx.fillStyle = 'rgba(230,214,180,0.45)';
+    ctx.font = "italic 14px 'IM Fell English', Georgia, serif";
+    ctx.fillText('type anything — the damage it does is listed here', 24, 56);
+    ctx.restore();
+    return;
+  }
+  const h = 20 * log.length + 34;
+  ctx.fillStyle = 'rgba(11,8,5,0.72)';
+  roundRect(ctx, 12, 44, 250, h, 6); ctx.fill();
+  ctx.strokeStyle = '#55401f'; ctx.lineWidth = 1.5;
+  roundRect(ctx, 12, 44, 250, h, 6); ctx.stroke();
+  ctx.fillStyle = 'rgba(200,178,132,0.75)';
+  ctx.font = "11px 'IM Fell English SC', Georgia, serif";
+  ctx.fillText('WORD', 24, 62);
+  ctx.textAlign = 'right';
+  ctx.fillText('DEALT', 250, 62);
+
+  log.forEach((e, i) => {
+    const y = 82 + i * 20;
+    ctx.textAlign = 'left';
+    let x = 24;
+    ctx.font = "13px 'Special Elite', 'Courier New', monospace";
+    for (let k = 0; k < e.word.length && x < 190; k++) {
+      const m = e.marks[k] ? MATERIALS[e.marks[k]] : null;
+      ctx.fillStyle = m ? m.glow : 'rgba(216,203,170,0.45)';
+      const ch = e.word[k].toUpperCase();
+      ctx.fillText(ch, x, y);
+      x += ctx.measureText(ch).width + 0.5;
+    }
+    ctx.textAlign = 'right';
+    ctx.fillStyle = i === 0 ? '#ffd66b' : '#e8d7ae';
+    ctx.fillText(Math.round(e.dealt).toLocaleString(), 250, y);
+  });
+  ctx.restore();
+}
+
 function drawBossBar(ctx, g) {
   const boss = g.bugs.find(b => b.sp.boss);
   if (!boss) return;
@@ -660,6 +715,42 @@ function drawBug(ctx, b, t) {
 }
 
 // ── projectiles ────────────────────────────────────────────────────────────
+// A letter rising out of a wreck, on its way to your storage.
+function drawLoot(ctx, d, t) {
+  const k = d.t / d.hold;
+  const a = k < 0.12 ? k / 0.12 : k > 0.75 ? (1 - k) / 0.25 : 1;
+  const r = SHOT_R + 2 + d.level;
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, a);
+  ctx.translate(d.x, d.y);
+  ctx.rotate(Math.sin(t * 3 + d.spin) * 0.12);
+
+  const halo = ctx.createRadialGradient(0, 0, 1, 0, 0, r * (2.2 + d.level * 0.22));
+  halo.addColorStop(0, 'rgba(255,246,201,0.5)');
+  halo.addColorStop(1, 'rgba(255,214,107,0)');
+  ctx.fillStyle = halo;
+  ctx.beginPath(); ctx.arc(0, 0, r * (2.2 + d.level * 0.22), 0, TAU); ctx.fill();
+
+  ctx.shadowColor = '#ffd66b'; ctx.shadowBlur = 16;
+  ctx.fillStyle = MATERIALS.iron.body;
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.fill();
+  ctx.shadowBlur = 0;
+  const sh = ctx.createRadialGradient(-r * 0.35, -r * 0.4, 1, 0, 0, r);
+  sh.addColorStop(0, 'rgba(255,255,255,0.4)');
+  sh.addColorStop(1, 'rgba(0,0,0,0.28)');
+  ctx.fillStyle = sh;
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#ffe9a8'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.stroke();
+
+  ctx.fillStyle = MATERIALS.iron.ink;
+  ctx.font = `${Math.round(r * 1.15)}px 'Special Elite', 'Courier New', monospace`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(d.letter.toUpperCase(), 0, -r * 0.18);
+  drawDots(ctx, 0, r * 0.55, d.level, 1.7, MATERIALS.iron.dot);
+  ctx.restore();
+}
+
 function drawShot(ctx, s) {
   const m = s.shot.mat ? MATERIALS[s.shot.mat] : null;
   const lvl = s.shot.level || 0;
@@ -831,7 +922,7 @@ function drawHud(ctx, g, t) {
   // left readouts
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = '#e8d7ae'; ctx.font = "17px 'IM Fell English SC', Georgia, serif";
-  ctx.fillText(`LEVEL ${g.levelNo}`, 16, top + 28);
+  ctx.fillText(g.sandbox ? 'TEST DRIVE' : `NIGHT ${g.levelNo}`, 16, top + 28);
   ctx.font = "italic 14px 'IM Fell English', Georgia, serif"; ctx.fillStyle = '#bfa87c';
   ctx.fillText(g.level ? g.level.name : '', 16, top + 47);
   ctx.font = "14px 'Special Elite', 'Courier New', monospace"; ctx.fillStyle = '#ffd66b';
@@ -852,7 +943,7 @@ function drawHud(ctx, g, t) {
   ctx.textAlign = 'right';
   const left = Math.max(0, g.spawns.length - g.spawnIdx) + g.bugs.length;
   ctx.fillStyle = '#e8d7ae'; ctx.font = "17px 'IM Fell English SC', Georgia, serif";
-  ctx.fillText(`${left} bugs remain`, W - 16, top + 28);
+  ctx.fillText(g.sandbox ? 'dummies stand back up' : `${left} bugs remain`, W - 16, top + 28);
   ctx.font = "13px 'Special Elite', 'Courier New', monospace"; ctx.fillStyle = '#bfa87c';
   ctx.fillText(`${g.stats.words} words · ${g.stats.kills} killed`, W - 16, top + 48);
   if (g.lastWord) {
@@ -873,6 +964,6 @@ function drawHud(ctx, g, t) {
     ctx.fillText('BREECH HELD — nothing in the room to shoot', W - 16, top + 155);
   } else {
     ctx.fillStyle = 'rgba(230,214,180,0.4)'; ctx.font = "italic 13px 'IM Fell English', Georgia, serif";
-    ctx.fillText('click a tank to swap its letter · right-mouse aims · Esc clears, then pauses', W - 16, top + 155);
+    ctx.fillText('click a tank to swap its letter · right-mouse aims · Del clears · Esc pauses', W - 16, top + 155);
   }
 }
