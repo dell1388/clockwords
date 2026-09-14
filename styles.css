@@ -243,3 +243,22 @@ body.modal .toast{text-align:center;max-width:300px}
   padding:2px 4px;border-radius:4px;background:none;border:1px solid transparent;box-shadow:none}
 .qval:hover:not(:disabled){border-color:var(--brass-d);background:rgba(255,214,107,.1)}
 @media (max-width:760px){ .qgrid{grid-template-columns:1fr} }
+
+/* the material reference: one row per material, one column per letter level */
+.mattable{display:flex;flex-direction:column;gap:3px;margin:10px 0 8px;
+  background:rgba(20,14,8,.4);border:1px solid #55401f;border-radius:8px;padding:8px}
+.mrow{display:grid;grid-template-columns:118px repeat(5,1fr);gap:4px;align-items:stretch}
+.mrow.mhead .mn,.mh{color:var(--brass);font-family:var(--display);font-size:10px;letter-spacing:1.5px}
+.mn{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-family:var(--display);
+  font-size:12px;letter-spacing:.5px;color:#f0e2c2;padding:3px 2px}
+.mn i{font-style:normal;font-family:var(--type);font-size:10px;color:rgba(200,178,132,.7)}
+.mh{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2px}
+.mh i{font-style:normal;font-family:var(--type);font-size:10px;color:rgba(200,178,132,.6)}
+.mc{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  padding:4px 2px;border-radius:5px;background:rgba(0,0,0,.28);text-align:center}
+.mc b{font-family:var(--type);font-size:13px;color:var(--glow);line-height:1}
+.mc i{font-style:normal;font-size:9.5px;line-height:1.15;color:rgba(216,203,170,.8)}
+@media (max-width:900px){
+  .mrow{grid-template-columns:90px repeat(5,1fr)}
+  .mc i{font-size:8.5px}
+}

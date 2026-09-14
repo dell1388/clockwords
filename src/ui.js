@@ -2,6 +2,7 @@
 // room between levels, and the end-of-run summary.
 
 import { MATERIALS, SPECIAL_MATERIALS, LETTER_LEVELS, MAX_LEVEL, CHAMBERS, START_CHAMBERS,
+  effectScale, levelDamage,
   START_PAGES, MIN_BOILER, MAX_BOILER, FIRE_RPM, STOKE_COST, BLANK_DMG, getLevel } from './content.js';
 import { dictSize } from './dict.js';
 import { BADGES, earned } from './achievements.js';
@@ -145,22 +146,29 @@ export function renderHow(onBack) {
         <div>
           <h3>Letter levels</h3>
           <p>Letters are graded the way Scrabble grades them, and the grade is drawn as dots
-          under the glyph. The level is what sets the damage — a rare letter is worth many
-          common ones.</p>
+          under the glyph. The level is what sets the damage — a rare letter is worth a great
+          many common ones.</p>
           <ul class="mats">${levels}</ul>
+
           <h3>Materials</h3>
           <p>Materials are read by <b>colour</b> alone. Bugs only ever drop plain Iron. The one
           way to make a material is to put <b>two level ${MAX_LEVEL} letters</b> in the crucible:
           they burn away and leave a material behind on a fresh level 1 letter, both chosen by
-          the crucible. Level that letter up and it keeps its material.</p>
+          the crucible.</p>
           <p>A material lends its effect to <b>every letter in the word it is fired with</b>,
           blanks included, and different materials <b>stack</b>: one Lazurite and one Thermite
           and the whole word freezes and burns. Each letter still does its own damage.</p>
-          <p>The <b>level of the letter carrying it</b> sets how hard the effect works, the way
-          it sets damage. Lazurite on a level 1 letter freezes for 4 seconds; on a level
-          ${MAX_LEVEL} letter, 9. Amethyst pierces 2 targets, or 6. Jade echoes at 70%, or full
-          strength.</p>
-          <ul class="mats">${mats}</ul>
+          <p>Both the damage and the effect come from the <b>level of the letter carrying the
+          material</b>. Here is every figure, before any word bonus — the top number is what one
+          such letter hits for, the line under it is the effect it lends the whole word.</p>
+          ${materialTable()}
+          <p class="d">Damage shown is one letter at that level times the material's own
+          multiplier. <b>Freeze</b> is how long a bug stands still, capped at 9 seconds.
+          <b>Pierce</b> is how many bugs a shell passes through. <b>Splash</b> is the blast
+          radius. <b>Arcs</b> is how many further bugs the charge jumps to, and over what
+          distance. <b>Burn</b> is the total fire damage over 4 seconds, as a percentage of the
+          hardest letter in the word. <b>Echo</b> is the damage the repeated volley does.</p>
+
           <h3>The boiler room</h3>
           <p>The boiler room is reachable without playing: the title screen, the level select
           and the card in front of every night all open it.</p>
@@ -548,6 +556,40 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, onTest, s
     if (onChange) onChange();
   }
   draw();
+}
+
+// Exactly what a material does at each letter level, worked out with the same
+// arithmetic the boiler uses, so the help can never drift from the game.
+const num = n => (Math.abs(n - Math.round(n)) < 0.05 ? Math.round(n) : n.toFixed(1));
+
+function materialAt(m, lvl) {
+  const e = effectScale(lvl);
+  const dmg = Math.round(levelDamage(lvl) * m.mul);
+  let effect = '—';
+  if (m.freeze) effect = `freeze ${num(Math.min(9, m.freeze * e))}s`;
+  else if (m.pierce) effect = `pierce ${m.pierce + lvl - 1}`;
+  else if (m.chain) effect = `${m.chain + Math.round((lvl - 1) * 1.5)} arcs · ${Math.round(m.chainRange * (0.7 + 0.3 * e))}px`;
+  else if (m.splash) effect = `splash ${Math.round(m.splash * (0.75 + 0.25 * e))}px`;
+  else if (m.burn) effect = `burn ${Math.round(m.burn.frac * e * 100)}%`;
+  else if (m.echo) effect = `echo ${Math.round(Math.min(1, m.echo + (lvl - 1) * 0.075) * 100)}%`;
+  return { dmg, effect };
+}
+
+function materialTable() {
+  const head = LETTER_LEVELS.slice(1)
+    .map(L => `<span class="mh">${'•'.repeat(L.level)}<i>${L.dmg}</i></span>`).join('');
+  const rows = [MATERIALS.iron, ...SPECIAL_MATERIALS].map(m => {
+    const cells = LETTER_LEVELS.slice(1).map(L => {
+      const { dmg, effect } = materialAt(m, L.level);
+      return `<span class="mc"><b>${dmg}</b><i>${effect}</i></span>`;
+    }).join('');
+    return `<div class="mrow"><span class="mn">${swatch(m.id)}${m.name}
+      <i>×${m.mul.toFixed(1)}</i></span>${cells}</div>`;
+  }).join('');
+  return `<div class="mattable">
+    <div class="mrow mhead"><span class="mn">Level &rarr;<i>base damage</i></span>${head}</div>
+    ${rows}
+  </div>`;
 }
 
 const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;

@@ -91,25 +91,30 @@ Nothing on the rack is labelled: you read a material off its colour.
 
 A material lends its effect to **every letter in the word it is fired with** —
 blanks included — and different materials **stack**. One Lazurite and one
-Thermite and the whole word freezes *and* burns. Each letter still does its own
-damage.
+Thermite and the whole word freezes *and* burns.
 
-The **level of the letter carrying a material** sets how hard the effect works,
-the way it sets damage — the figures below are level 1 → level 5.
+Both the damage and the effect come from the **level of the letter carrying the
+material**. The top figure is what one such letter hits for before any word
+bonus; the line under it is the effect it lends the whole word.
 
-| Material | Damage | Effect (spreads to the whole word) |
-|---|---|---|
-| Iron | ×1.0 | plain shot |
-| Thermite | ×0.5 | sets bugs alight for 4 seconds, burning for 80% → 208% of the word's best letter |
-| Amethyst | ×0.7 | passes through 2 → 6 targets |
-| Lazurite | ×0.4 | freezes bugs for 4 → 9 seconds |
-| Brass | ×0.9 | splash damage, radius ×1.0 → ×1.4 |
-| Jade | ×0.8 | the whole word is fired again, at 70% → 100% damage |
-| Aetherium | ×1.2 | the charge arcs to 3 → 7 nearby bugs |
+| | ● (12) | ●● (36) | ●●● (90) | ●●●● (210) | ●●●●● (500) |
+|---|---|---|---|---|---|
+| **Iron** ×1.0 | 12 | 36 | 90 | 210 | 500 |
+| **Thermite** ×0.5 | 6<br>burn 80% | 18<br>burn 112% | 45<br>burn 144% | 105<br>burn 176% | 250<br>burn 208% |
+| **Amethyst** ×0.7 | 8<br>pierce 2 | 25<br>pierce 3 | 63<br>pierce 4 | 147<br>pierce 5 | 350<br>pierce 6 |
+| **Lazurite** ×0.4 | 5<br>freeze 4s | 14<br>freeze 5.6s | 36<br>freeze 7.2s | 84<br>freeze 8.8s | 200<br>freeze 9s |
+| **Brass** ×0.9 | 11<br>splash 68px | 32<br>splash 75px | 81<br>splash 82px | 189<br>splash 88px | 450<br>splash 95px |
+| **Jade** ×0.8 | 10<br>echo 70% | 29<br>echo 77% | 72<br>echo 85% | 168<br>echo 93% | 400<br>echo 100% |
+| **Aetherium** ×1.2 | 14<br>3 arcs · 140px | 43<br>5 arcs · 157px | 108<br>6 arcs · 174px | 252<br>8 arcs · 190px | 600<br>9 arcs · 207px |
 
-The boiler room is a screen in its own right, with a **Boiler room** button on
-the title screen, on the level select, and on the card in front of every night.
-Anything you change there is saved straight away, and Esc backs out.
+**Freeze** is how long a bug stands still, capped at 9 seconds. **Pierce** is how
+many bugs a shell passes through. **Splash** is the blast radius. **Arcs** is how
+many further bugs the charge jumps to, and over what distance. **Burn** is the
+total fire damage over 4 seconds as a percentage of the hardest letter in the
+word. **Echo** is the damage Jade's repeated volley does.
+
+Under the hood the effect strength is `1 + (level − 1) × 0.4`, so a level 5
+letter works its material 2.6× as hard as a level 1 one.
 
 ### Boiler and storage
 
