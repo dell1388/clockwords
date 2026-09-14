@@ -178,6 +178,8 @@ export class Game {
 
     this.stats.words++;
     badges.checkWord(word);
+    if (repeats > 0) sfx.buzz();
+    else if (res.slots.length) sfx.ding();
     if (total > this.stats.bestDmg) { this.stats.bestDmg = total; this.stats.best = word; }
     if (word.length > (this.stats.longest || '').length) this.stats.longest = word;
     this.score += Math.round(total * 0.5 + word.length * word.length);

@@ -70,14 +70,17 @@ function toTitle() {
     newGame,
     cont: () => enterLevel(Math.min(CAMPAIGN, progress.furthest())),
     levels: toLevels,
+    boiler: () => toWorkshop(Math.min(CAMPAIGN, progress.furthest()), toTitle),
     how: () => { state = 'howto'; ui.show('howto'); howBack = ui.renderHow(toTitle); },
+    sound: syncMute,
   });
 }
 
 function toLevels(back = toTitle) {
   state = 'levels';
   ui.show('levels');
-  ui.renderLevels(progress.load(), enterLevel, back);
+  ui.renderLevels(progress.load(), enterLevel, back,
+    () => toWorkshop(Math.min(CAMPAIGN, progress.furthest()), () => toLevels(back)));
 }
 
 function newGame() {
@@ -98,13 +101,15 @@ function toIntro(n) {
   ui.show('intro');
   introGo = ui.renderIntro(n, {
     onGo: () => beginLevel(n),
-    onBoiler: () => toWorkshop(n),
+    onBoiler: () => toWorkshop(n, () => toIntro(n)),
+    onBack: () => toLevels(),
   });
 }
 
-// The boiler room on its own, before a level rather than after one.
-function toWorkshop(n) {
-  game.levelNo = n;
+// The boiler room as a screen in its own right, reachable from the title, the
+// level select, or the card in front of a night.
+function toWorkshop(n, back = toTitle) {
+  game = gameFrom(progress.loadout() || (n === 1 ? null : outfitFor(n)), n);
   state = 'boiler';
   ui.show('boiler');
   const stash = () => progress.setLoadout(snapshot(game));
@@ -112,7 +117,7 @@ function toWorkshop(n) {
     standalone: true,
     onNext: () => { stash(); beginLevel(n); },
     onChange: stash,
-    onMenu: () => { stash(); toTitle(); },
+    onBack: () => { stash(); back(); },
   });
 }
 
@@ -186,7 +191,17 @@ canvas.addEventListener('touchstart', focusKb, { passive: true });
 window.addEventListener('keydown', e => {
   unlock();
   if (e.target === kb) return;
-  if (state === 'intro' && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); introGo && introGo(); return; }
+  if (state === 'intro') {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); introGo && introGo(); return; }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      const back = document.querySelector('#intro #b-back');
+      if (back) back.click();
+      return;
+    }
+  }
+  if (state === 'boiler' && e.key === 'Escape') { e.preventDefault();
+    const back = document.querySelector('#boiler #b-back'); if (back) back.click(); return; }
   if (state === 'levels' && (e.key === 'Escape' || e.key === 'Backspace')) { e.preventDefault(); toTitle(); return; }
   if (state === 'howto' && (e.key === 'Escape' || e.key === 'Enter' || e.key === 'Backspace')) {
     e.preventDefault(); howBack ? howBack() : toTitle(); return;
@@ -218,11 +233,15 @@ canvas.addEventListener('pointermove', e => {
 window.addEventListener('pointerup', () => { if (game) game.aim = null; });
 
 const muteBtn = document.getElementById('mute');
-function syncMute() { muteBtn.textContent = isMuted() ? '🔇' : '⚙'; muteBtn.title = isMuted() ? 'Sound off' : 'Sound on'; }
+function syncMute() {
+  muteBtn.textContent = isMuted() ? '🔇' : '🔊';
+  muteBtn.title = isMuted() ? 'Sound off — click for sound' : 'Sound on — click to mute';
+  muteBtn.setAttribute('aria-label', muteBtn.title);
+}
 muteBtn.onclick = () => { unlock(); setMuted(!isMuted()); syncMute(); };
 
 // exposed for debugging and for the automated smoke tests
-window.CLOCKWORDS = { get game() { return game; }, get state() { return state; } };
+window.CLOCKWORDS = { get game() { return game; }, get state() { return state; }, sfx };
 
 // ── loop ───────────────────────────────────────────────────────────────────
 function frame(ts) {

@@ -46,7 +46,7 @@ above. Change it freely.
 
 - **Letter levels.** Grading letters 1–5 (R A I S E / N O G T D L / C B U P M H /
   F K V Y W / Z J X Q), drawing the grade as dots under the glyph, and making the
-  level (not the material) set the damage: 8 / 24 / 60 / 140 / 320.
+  level (not the material) set the damage: 12 / 36 / 90 / 210 / 500.
   The original's dots meant a flat 5 damage each; the steep curve here is a
   deliberate departure, so a rare letter feels rare.
 - **The crucible.** Any even number of letters of one level goes in at once and is
@@ -57,7 +57,7 @@ above. Change it freely.
 - **Materials** are read by colour with no written label, and are applied as a
   *multiplier* on the letter's level damage rather than as a flat damage of
   their own. Aetherium is invented outright.
-- **Blanks are flat.** 3 damage, untouched by word length, repeats, Jade or the
+- **Blanks are flat.** 5 damage, untouched by word length, repeats, Jade or the
   word of the day. The original's 1-damage blank scaled with nothing either, but
   the exact figure is ours.
 - **Chambers unseal one at a time**, starting from one, each time every letter

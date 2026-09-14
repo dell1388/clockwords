@@ -41,7 +41,7 @@ load, and never fills more chambers than it has letters.
 Type a character that is sitting in an open chamber and that chamber reads as
 drawn down at once — you can see what a word will cost before you fire it. It
 then empties and refills from the bag. Any character *not* in a chamber is a
-**blank**: a flat 3 damage that no bonus or penalty ever touches.
+**blank**: a flat 5 damage that no bonus or penalty ever touches.
 
 ### One way in, one route across
 
@@ -58,11 +58,11 @@ under the glyph**, and it is the level that sets the damage.
 
 | Level | Damage | Letters |
 |---|---|---|
-| ●     | 8   | R A I S E |
-| ●●    | 24  | N O G T D L |
-| ●●●   | 60  | C B U P M H |
-| ●●●●  | 140 | F K V Y W |
-| ●●●●● | 320 | Z J X Q |
+| ●     | 12  | R A I S E |
+| ●●    | 36  | N O G T D L |
+| ●●●   | 90  | C B U P M H |
+| ●●●●  | 210 | F K V Y W |
+| ●●●●● | 500 | Z J X Q |
 
 ### The crucible
 
@@ -93,9 +93,9 @@ Nothing on the rack is labelled: you read a material off its colour.
 | Jade | ×0.8 | every letter in the word hits harder, +5% per letter of the word |
 | Aetherium | ×1.2 | the charge arcs to 3 nearby bugs |
 
-The boiler room is also reachable without playing a level: the card in front of
-every night has a **Boiler room** button, so you can rearrange the loadout you
-are about to walk in with. Anything you change is checkpointed straight away.
+The boiler room is a screen in its own right, with a **Boiler room** button on
+the title screen, on the level select, and on the card in front of every night.
+Anything you change there is saved straight away, and Esc backs out.
 
 ### Boiler and storage
 
@@ -140,6 +140,14 @@ lists all twenty with your best score on each, and lets you replay any night you
 have reached.
 
 Progress lives in `localStorage` under `clockwords.progress.v1`.
+
+### Sound
+
+Everything is synthesised at runtime: a typewriter clack per keystroke, a small
+pop per shell out of the barrel, a wet crunch when a bug comes apart, a soft ding
+for a fresh word that actually spent the boiler, and a quiet buzzer for one you
+have already used tonight. The speaker in the corner mutes it during play; the
+title screen has a Sound toggle.
 
 ### Controls
 

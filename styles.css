@@ -15,10 +15,13 @@ body{
 #wrap{position:absolute;width:960px;height:640px;transform-origin:0 0}
 canvas#stage{display:block;width:960px;height:640px;image-rendering:auto;
   box-shadow:0 0 0 3px #6b5327,0 0 40px rgba(0,0,0,.9),0 0 90px rgba(255,190,90,.06)}
-#mute{position:absolute;right:10px;top:10px;z-index:40;width:34px;height:34px;
-  border-radius:50%;border:2px solid var(--brass-d);background:rgba(20,14,8,.75);
-  color:var(--glow);font-size:17px;cursor:pointer;line-height:1}
-#mute:hover{background:rgba(60,44,22,.9)}
+#mute{position:absolute;right:10px;top:10px;z-index:40;width:34px;height:34px;padding:0;
+  border-radius:50%;border:2px solid var(--brass-d);background:rgba(20,14,8,.8);
+  color:var(--glow);font-size:15px;cursor:pointer;line-height:1;
+  display:flex;align-items:center;justify-content:center;box-shadow:none}
+#mute:hover:not(:disabled){background:rgba(60,44,22,.95)}
+/* the panels carry their own sound control, so it never sits on top of one */
+body.modal #mute{display:none}
 
 .screen{position:absolute;inset:0;z-index:30;display:none;align-items:flex-start;justify-content:center;
   background:rgba(10,7,4,.82);backdrop-filter:blur(2px);padding:14px;overflow:auto}

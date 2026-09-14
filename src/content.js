@@ -10,11 +10,11 @@
 
 export const LETTER_LEVELS = [
   null,
-  { level: 1, dmg: 8,   pool: 'raise' },
-  { level: 2, dmg: 24,  pool: 'nogtdl' },
-  { level: 3, dmg: 60,  pool: 'cbupmh' },
-  { level: 4, dmg: 140, pool: 'fkvyw' },
-  { level: 5, dmg: 320, pool: 'zjxq' },
+  { level: 1, dmg: 12,  pool: 'raise' },
+  { level: 2, dmg: 36,  pool: 'nogtdl' },
+  { level: 3, dmg: 90,  pool: 'cbupmh' },
+  { level: 4, dmg: 210, pool: 'fkvyw' },
+  { level: 5, dmg: 500, pool: 'zjxq' },
 ];
 export const MAX_LEVEL = 5;
 
@@ -68,7 +68,7 @@ export const SPECIAL_MATERIALS = Object.values(MATERIALS).filter(m => !m.base);
 
 // A letter that is NOT loaded in a chamber is a blank: a small, flat amount of
 // damage that no bonus or penalty ever touches.
-export const BLANK_DMG = 3;
+export const BLANK_DMG = 5;
 export const CHAMBERS = 8;          // the boiler feeds eight chambers (canon)
 export const START_CHAMBERS = 1;    // sealed back down to one at the top of every level
 export const MIN_WORD = 3;

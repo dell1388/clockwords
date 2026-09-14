@@ -2,10 +2,10 @@
 // room between levels, and the end-of-run summary.
 
 import { MATERIALS, SPECIAL_MATERIALS, LETTER_LEVELS, MAX_LEVEL, CHAMBERS, START_CHAMBERS,
-  START_PAGES, MIN_BOILER, MAX_BOILER, FIRE_RPM, STOKE_COST, CAMPAIGN, getLevel } from './content.js';
+  START_PAGES, MIN_BOILER, MAX_BOILER, FIRE_RPM, STOKE_COST, CAMPAIGN, BLANK_DMG, getLevel } from './content.js';
 import { dictSize } from './dict.js';
 import { BADGES, earned } from './achievements.js';
-import { sfx } from './audio.js';
+import { sfx, isMuted, setMuted } from './audio.js';
 
 const $ = sel => document.querySelector(sel);
 // Screens share button ids (#b-back, #b-next, #b-title...), and every screen's
@@ -58,7 +58,9 @@ export function renderTitle(progress, on) {
         ${started ? `<button id="b-cont" class="big">Continue &mdash; level ${Math.min(CAMPAIGN, progress.reached)}</button>` : ''}
         <button id="b-play" class="big">${started ? 'Start over' : 'Begin'}</button>
         <button id="b-levels">Levels</button>
+        <button id="b-boiler">Boiler room</button>
         <button id="b-how">How to play</button>
+        <button id="b-sound">Sound: ${isMuted() ? 'off' : 'on'}</button>
       </div>
       <ul class="badges">${BADGES.map(b => {
         const got = !!earned()[b.id];
@@ -71,11 +73,13 @@ export function renderTitle(progress, on) {
   wire('#b-play', on.newGame);
   wire('#b-cont', on.cont);
   wire('#b-levels', on.levels);
+  wire('#b-boiler', on.boiler);
   wire('#b-how', on.how);
+  wire('#b-sound', () => { setMuted(!isMuted()); on.sound && on.sound(); renderTitle(progress, on); });
 }
 
 // ── level select ───────────────────────────────────────────────────────────
-export function renderLevels(progress, onPick, onBack) {
+export function renderLevels(progress, onPick, onBack, onBoiler) {
   const t = $('#levels');
   const cards = [];
   for (let n = 1; n <= CAMPAIGN; n++) {
@@ -99,10 +103,15 @@ export function renderLevels(progress, onPick, onBack) {
       same letters in, and they only ever change in the boiler room. Fail a night and you
       start that night again — never the whole campaign.</p>
       <div class="lvlgrid">${cards.join('')}</div>
-      <div class="btns"><button id="b-back" class="big">Back</button></div>
+      <div class="btns">
+        <button id="b-back" class="big">Back</button>
+        <button id="b-boiler">Boiler room</button>
+      </div>
     </div>`;
   t.querySelectorAll('[data-lvl]').forEach(n => n.onclick = () => { sfx.clank(); onPick(+n.dataset.lvl); });
-  wireIn(t)('#b-back', onBack);
+  const wire = wireIn(t);
+  wire('#b-back', onBack);
+  wire('#b-boiler', onBoiler);
 }
 
 export function renderHow(onBack) {
@@ -133,8 +142,8 @@ export function renderHow(onBack) {
           nothing else left to load, and it never fills more chambers than it has letters.</p>
           <p>If a character you type is sitting in an unsealed chamber, the chamber reads as
           drawn down the moment you type it, then fires and refills from the bag. Any character
-          <i>not</i> in a chamber is a <b>blank</b> — a flat 3 damage that no bonus or penalty
-          ever changes.</p>
+          <i>not</i> in a chamber is a <b>blank</b> — a flat ${BLANK_DMG} damage that no bonus or
+          penalty ever changes.</p>
           <p>The cannon fires <b>one shell per letter, one every 0.2 seconds</b> (${FIRE_RPM} rounds
           a minute), and every shell finds a target: if its mark dies in flight the charge picks
           the next one. With nothing in the room the breech simply holds.</p>
@@ -186,7 +195,7 @@ export function renderHow(onBack) {
 }
 
 // ── level card ─────────────────────────────────────────────────────────────
-export function renderIntro(n, { onGo, onBoiler }) {
+export function renderIntro(n, { onGo, onBoiler, onBack }) {
   const def = getLevel(n);
   const t = $('#intro');
   t.innerHTML = `
@@ -196,14 +205,17 @@ export function renderIntro(n, { onGo, onBoiler }) {
       <h2>${def.name}</h2>
       <p class="story">${def.flavour}</p>
       <div class="btns">
+        <button id="b-back">Back</button>
         <button id="b-boiler">Boiler room</button>
         <button id="b-go" class="big">Open the workshop</button>
       </div>
-      <p class="fine">press Enter to begin &middot; the boiler room is open until you do</p>
+      <p class="fine">press Enter to begin, Esc to step back &middot;
+      the boiler room is open until you do</p>
     </div>`;
   const wire = wireIn(t);
   wire('#b-go', onGo);
   wire('#b-boiler', onBoiler);
+  wire('#b-back', onBack);
   return () => { sfx.clank(); onGo(); };
 }
 
@@ -219,7 +231,7 @@ function firedWord(entry) {
   }).join('');
 }
 
-export function renderBoiler(game, { onNext, onChange, onMenu, standalone = false } = {}) {
+export function renderBoiler(game, { onNext, onChange, onMenu, onBack, standalone = false } = {}) {
   const s = $('#boiler');
   let selected = [];         // letter ids picked out of either rack
 
@@ -356,7 +368,7 @@ export function renderBoiler(game, { onNext, onChange, onMenu, standalone = fals
         ${short ? `<p class="warn">The boiler needs ${short} more letter${short > 1 ? 's' : ''}
           before it will run.</p>` : ''}
         <div class="btns">
-          <button id="b-menu">Main menu</button>
+          <button id="${standalone ? 'b-back' : 'b-menu'}">${standalone ? 'Back' : 'Main menu'}</button>
           <button id="b-next" class="big" ${short ? 'disabled' : ''}>${!standalone && game.levelNo >= CAMPAIGN ? "Finish" : `To level ${nextLevel}`} &rarr;</button>
         </div>
       </div>`;
@@ -407,6 +419,7 @@ export function renderBoiler(game, { onNext, onChange, onMenu, standalone = fals
     });
     on('#b-next', () => { if (!bo.short()) { sfx.clank(); onNext(); } });
     on('#b-menu', () => { sfx.clank(); onMenu && onMenu(); });
+    on('#b-back', () => { sfx.clank(); onBack && onBack(); });
     if (onChange) onChange();
   }
   draw();

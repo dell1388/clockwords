@@ -5,7 +5,7 @@ function ac() {
   if (!ctx) {
     ctx = new (window.AudioContext || window.webkitAudioContext)();
     master = ctx.createGain();
-    master.gain.value = 0.55;
+    master.gain.value = muted ? 0 : 0.55;
     master.connect(ctx.destination);
   }
   if (ctx.state === 'suspended') ctx.resume();
@@ -35,20 +35,30 @@ function tone(freq, t, a, d, type = 'square', peak = 0.3, slideTo = null) {
 }
 
 let noiseBuf = null;
-function noise(t, dur, filterFreq, peak = 0.3, type = 'bandpass', q = 1) {
+function getNoise() {
   if (!noiseBuf) {
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 1.2, ctx.sampleRate);
     const d = noiseBuf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   }
-  const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true;
+  const s = ctx.createBufferSource();
+  s.buffer = noiseBuf; s.loop = true;
+  return s;
+}
+
+function noise(t, dur, filterFreq, peak = 0.3, type = 'bandpass', q = 1) {
+  const s = getNoise();
   const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = filterFreq; f.Q.value = q;
   s.connect(f);
   env(f, t, 0.005, dur, peak);
   s.start(t); s.stop(t + dur + 0.05);
 }
 
-const guard = fn => (...a) => { if (muted) return; try { ac(); fn(...a); } catch (_) {} };
+// A sound that throws would otherwise just go quiet, which is hard to notice.
+const guard = fn => (...a) => {
+  if (muted) return;
+  try { ac(); fn(...a); } catch (e) { console.error('sfx failed:', e); }
+};
 
 export const sfx = {
   key: guard(() => {                                  // typewriter clack
@@ -62,10 +72,20 @@ export const sfx = {
     tone(150, t, 0.01, 0.16, 'sawtooth', 0.18, 90);
     noise(t, 0.14, 320, 0.12, 'lowpass');
   }),
+  // one small pop per letter out of the barrel
   fire: guard((pitch = 1) => {
     const t = ctx.currentTime;
-    tone(330 * pitch, t, 0.004, 0.07, 'square', 0.12, 140 * pitch);
-    noise(t, 0.06, 1800, 0.16, 'bandpass', 1.5);
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(760 * pitch, t);
+    o.frequency.exponentialRampToValueAtTime(170 * pitch, t + 0.055);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.22, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + 0.09);
+    noise(t, 0.022, 2600, 0.09, 'bandpass', 2.5);
   }),
   hit: guard(() => { const t = ctx.currentTime; noise(t, 0.05, 3200, 0.14, 'bandpass', 4); tone(820, t, 0.002, 0.04, 'triangle', 0.08); }),
   boom: guard(() => {
@@ -79,10 +99,42 @@ export const sfx = {
     tone(2100, t + 0.03, 0.01, 0.25, 'sine', 0.09, 900);
   }),
   burn: guard(() => { const t = ctx.currentTime; noise(t, 0.5, 1100, 0.12, 'bandpass', 0.8); }),
+  // a wet crunch: the shell goes, then whatever was inside it
   die: guard(() => {
     const t = ctx.currentTime;
-    noise(t, 0.16, 1500, 0.22, 'bandpass', 1.2);
-    tone(240, t, 0.004, 0.14, 'square', 0.1, 70);
+    const s2 = getNoise();
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass'; f.Q.value = 6;
+    f.frequency.setValueAtTime(1800, t);
+    f.frequency.exponentialRampToValueAtTime(180, t + 0.2);
+    s2.connect(f);
+    env(f, t, 0.008, 0.2, 0.34);
+    s2.start(t); s2.stop(t + 0.26);
+    tone(190, t, 0.005, 0.16, 'triangle', 0.14, 48);
+    noise(t + 0.04, 0.09, 520, 0.14, 'bandpass', 0.9);
+  }),
+
+  // the word has been used already tonight
+  buzz: guard(() => {
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator(), m = ctx.createOscillator(), md = ctx.createGain();
+    o.type = 'square'; o.frequency.value = 104;
+    m.type = 'square'; m.frequency.value = 32;
+    md.gain.value = 40;
+    m.connect(md); md.connect(o.frequency);
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass'; f.frequency.value = 700;
+    o.connect(f);
+    env(f, t, 0.01, 0.2, 0.085);
+    o.start(t); o.stop(t + 0.24); m.start(t); m.stop(t + 0.24);
+  }),
+
+  // a fresh word that actually spent the boiler
+  ding: guard(() => {
+    const t = ctx.currentTime;
+    tone(1318, t, 0.006, 0.42, 'sine', 0.10);
+    tone(1976, t + 0.008, 0.006, 0.30, 'sine', 0.055);
+    tone(2637, t + 0.016, 0.005, 0.18, 'sine', 0.025);
   }),
   steal: guard(() => {
     const t = ctx.currentTime;
