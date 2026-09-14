@@ -78,8 +78,9 @@ above. Change it freely.
   in-flight trim, and counts damage already in the air so it never wastes a shell
   on a bug that is as good as dead. The original fired faster.
 - **Bug pathing.** One open door, and a single painted route: four sweeps across
-  the floor, each a lane lower, and the same route in reverse on the way out. The
-  lowest lanes stop short of the cannon's corner so nothing is ever overhead.
+  the floor, each a lane lower, every turn a right angle, and the same route in
+  reverse on the way out. The lowest lanes stop short of the cannon's corner so
+  nothing is ever overhead.
 - **Loot tables** weighted by night number and by how tough the bug was, with the
   dropped letter rising out of the wreck and kept whether the night is won or lost.
 - **Score** as a pure tally: half a word's damage plus the square of its length,

@@ -54,9 +54,10 @@ the **safe** in the corner opposite the cannon, where it takes a page of the
 formula and retraces the whole run to get out. Kill a carrier and the page goes
 back in the safe. Lose all **5 pages** and the night is over.
 
-The route is deliberately kept clear of the cannon's corner: nothing ever gets
-within about 135px of the muzzle, so the firing solution never has to swing
-through the vertical.
+The route is a clean rectilinear serpentine — every turn a right angle, no
+diagonals — and it is deliberately kept clear of the cannon's corner: nothing
+ever gets within about 170px of the muzzle, so the firing solution never has to
+swing through the vertical.
 
 ### Letters have levels
 

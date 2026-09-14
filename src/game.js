@@ -78,7 +78,7 @@ export const LANES = [
   { y: 196, x0: 92, x1: 868 },
   { y: 246, x0: 92, x1: 868 },
   { y: 296, x0: 210, x1: 868 },
-  { y: 346, x0: 350, x1: 868 },
+  { y: 346, x0: 350, x1: 828 },   // ends directly above the safe
 ];
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -90,13 +90,26 @@ export function buildPath(door) {
   const endRight = SAFE.x > W / 2;
   const lastFlip = (LANES.length % 2 === 1);
   let dir = (lastFlip === endRight) ? 1 : -1;
-  for (const ln of LANES) {
+
+  // Every turn is a right angle: slide along the lane you are on, then drop
+  // straight down to the next. No diagonals anywhere on the route.
+  for (let i = 0; i < LANES.length; i++) {
+    const ln = LANES[i], next = LANES[i + 1];
     const prev = wps[wps.length - 1];
-    wps.push({ x: clamp(prev.x, ln.x0, ln.x1), y: ln.y });
-    wps.push({ x: dir > 0 ? ln.x1 : ln.x0, y: ln.y });
+    const entry = clamp(prev.x, ln.x0, ln.x1);
+    if (entry !== prev.x) wps.push({ x: entry, y: prev.y });
+    wps.push({ x: entry, y: ln.y });
+    // Stop where the next lane can actually be entered, so the drop is a clean
+    // right angle and never doubles back along the lane it just walked.
+    let end = dir > 0 ? ln.x1 : ln.x0;
+    end = next ? clamp(end, next.x0, next.x1) : clamp(end, ln.x0, ln.x1);
+    if (end !== entry) wps.push({ x: end, y: ln.y });
     dir = -dir;
   }
-  wps.push({ x: SAFE.x - 44, y: SAFE.y - 28 });
+  // and straight down into the safe
+  const last = wps[wps.length - 1];
+  if (last.x !== SAFE.x) wps.push({ x: SAFE.x, y: last.y });
+  wps.push({ x: SAFE.x, y: SAFE.y - 34 });
   return wps;
 }
 
