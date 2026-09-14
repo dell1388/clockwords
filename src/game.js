@@ -13,13 +13,46 @@ export const FLOOR_Y = 418;
 export const MUZZLE = { x: 152, y: 318 };
 export const PIVOT = { x: 152, y: 394 };
 
-// The barrel is mounted on top of the boiler: it swings, but never below level.
+// The barrel is on a trunnion above the boiler: it can dip a little below level
+// to reach something almost on top of the machine, but no further.
+const MAX_DIP = 0.35;
 export const clampAim = a => {
-  let n = Math.atan2(Math.sin(a), Math.cos(a));
-  if (n > -0.22 && n < Math.PI / 2) n = -0.22;
-  else if (n >= Math.PI / 2 || n < -Math.PI + 0.22) n = -Math.PI + 0.22;
+  const n = Math.atan2(Math.sin(a), Math.cos(a));
+  if (n > MAX_DIP && n <= Math.PI / 2) return MAX_DIP;
+  if (n > Math.PI / 2 && n < Math.PI - MAX_DIP) return Math.PI - MAX_DIP;
   return n;
 };
+
+// Where to point so a shell at SHOT_SPEED meets a target that keeps moving.
+// Solve |p + v t| = SHOT_SPEED t for the earliest positive t.
+export function leadAngle(from, target) {
+  const px = target.x - from.x, py = target.y - from.y;
+  const vx = target.vx || 0, vy = target.vy || 0;
+  const a = vx * vx + vy * vy - SHOT_SPEED * SHOT_SPEED;
+  const b = 2 * (px * vx + py * vy);
+  const c = px * px + py * py;
+  let t = 0;
+  if (Math.abs(a) < 1e-6) {
+    if (Math.abs(b) > 1e-6) t = -c / b;
+  } else {
+    const disc = b * b - 4 * a * c;
+    if (disc >= 0) {
+      const rt = Math.sqrt(disc);
+      const t1 = (-b + rt) / (2 * a), t2 = (-b - rt) / (2 * a);
+      const good = [t1, t2].filter(x => x > 0);
+      if (good.length) t = Math.min(...good);
+    }
+  }
+  if (!(t > 0) || t > 3) t = 0;                 // no solution: just point at it
+  // Never lead past the corner the bug is about to turn — over-leading through
+  // a waypoint is what actually makes shells miss.
+  if (t > 0 && target.path && target.path[target.wi]) {
+    const wp = target.path[target.wi];
+    const legT = Math.hypot(wp.x - target.x, wp.y - target.y) / (Math.hypot(vx, vy) || 1e6);
+    t = Math.min(t, legT + 0.15);
+  }
+  return Math.atan2(py + vy * t, px + vx * t);
+}
 export const HORIZON = 158;
 // One way in. The other two arches were bricked up years ago.
 export const DOORS = [{ x: 812, y: 168 }];
@@ -51,8 +84,9 @@ export function buildPath(door) {
 }
 
 const FIRE_GAP = 60 / FIRE_RPM;   // one shell per letter, 200 rounds a minute
-const SHOT_SPEED = 1040;
-const TURN_RATE = 32;             // rad/s — tight enough that no shell ever misses
+const SHOT_SPEED = 1900;
+const TURN_RATE = 5.5;            // rad/s — enough to correct a lead, far too slow to circle
+const TRACK_CONE = Math.PI / 3;   // and it only corrects towards something in front of it
 const WP_RADIUS = 13;
 
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -162,7 +196,7 @@ export class Game {
     const res = this.boiler.resolve(word, { repeats, wotd });
     const entry = {
       word, marks: res.shots.map(sh => sh.mat), planned: 0, dealt: 0,
-      wotd, overload: res.overload, pure: res.pure, repeats, at: this.time,
+      wotd, overload: res.overload, pure: res.pure, effects: res.effects, repeats, at: this.time,
     };
     const wid = this.wordLog.push(entry) - 1;
     for (const sh of res.shots) sh.wid = wid;
@@ -183,6 +217,7 @@ export class Game {
       }
     }
     if (res.pure) this.note('PURE WORD — DOUBLE', '#9be8ff');
+    if (res.jade) this.note(res.jade > 1 ? `JADE ×${res.jade} — ECHO` : 'JADE — ECHO', '#61e6b0');
     if (wotd) { this.note('WORD OF THE DAY', '#9be8ff'); sfx.overload(); }
     if (repeats > 0) this.note(`repeated ×${repeats + 1} — ${Math.round(res.penalty * 100)}% power`, '#c8a27a');
 
@@ -328,6 +363,9 @@ export class Game {
       const sway = Math.sin(b.wob) * (b.sp.gait === 'flit' ? 26 : b.sp.gait === 'scurry' ? 11 : 6);
       const px = -dy, py = dx;
       const sp = b.speed * (b.carrying ? 1.2 : 1);
+      // Aim off the steady travel down the lane. The wobble on top of it is
+      // oscillation, not travel — leading on it only overshoots.
+      b.vx = dx * sp; b.vy = dy * sp;
       b.x += (dx * sp + px * sway) * dt;
       b.y += (dy * sp + py * sway) * dt;
       b.tilt = Math.atan2(dy, dx) + Math.PI / 2;
@@ -364,6 +402,8 @@ export class Game {
     this.bugs = this.bugs.filter(b => !b.dead);
   }
 
+  // Shells already in the air are counted against a bug, so the cannon does not
+  // keep firing at something that is on its way down.
   target() {
     if (this.aim) return null;
     let best = null, bestScore = -Infinity;
@@ -371,6 +411,8 @@ export class Game {
       if (b.spawnT < 0.15) continue;
       // prefer whatever is closest to stealing, then carriers on their way out
       const prog = b.carrying ? 10000 - b.wi * 10 : b.wi * 10 - dist(b, b.path[b.wi]) / 100;
+      // Already dead, it just does not know yet: do not waste a shell on it.
+      if (b.hp - (b.incoming || 0) <= 0) continue;
       if (prog > bestScore) { bestScore = prog; best = b; }
     }
     return best;
@@ -382,7 +424,7 @@ export class Game {
     const t = this.target();
     let want = -Math.PI / 2;
     if (this.aim) want = Math.atan2(this.aim.y - PIVOT.y, this.aim.x - PIVOT.x);
-    else if (t) want = Math.atan2(t.y - PIVOT.y, t.x - PIVOT.x);
+    else if (t) want = leadAngle(PIVOT, t);
     want = clampAim(want);
     const cur = this.cannonAngle ?? want;
     let d = want - cur;
@@ -402,19 +444,38 @@ export class Game {
 
     const shot = this.fireQueue.shift();
     this.fireTimer = FIRE_GAP;
-    let ang = Math.atan2(tgt.y - PIVOT.y, tgt.x - PIVOT.x);
-    ang = clampAim(ang);
+    let ang = clampAim(leadAngle(PIVOT, tgt));
     this.cannonAngle = ang;
     const reach = MUZZLE.y - PIVOT.y;            // barrel length, as a radius
     this.shots.push({
       x: PIVOT.x + Math.cos(ang) * -reach, y: PIVOT.y + Math.sin(ang) * -reach,
       vx: Math.cos(ang) * SHOT_SPEED, vy: Math.sin(ang) * SHOT_SPEED,
-      shot, target: tgt, hit: new Set(), life: 8, spin: rand(-6, 6), rot: 0, trail: [],
+      shot, hit: new Set(), life: 3, spin: rand(-6, 6), rot: 0, trail: [], aimed: tgt,
     });
+    tgt.incoming = (tgt.incoming || 0) + this.effective(shot, tgt);
     this.muzzleFlash = 1; this.recoil = 1;
     this.shake = Math.max(this.shake, shot.mat === 'aetherium' ? 0.35 : 0.12);
     sfx.fire(shot.mat ? 1.25 : 0.85);
   }
+
+  // The closest bug inside the shell's forward cone, so it can never double back.
+  aheadOf(s) {
+    const cur = Math.atan2(s.vy, s.vx);
+    let best = null, bd = Infinity;
+    for (const b of this.bugs) {
+      if (b.dead || b.hp - (b.incoming || 0) <= 0) continue;
+      let diff = Math.atan2(b.y - s.y, b.x - s.x) - cur;
+      while (diff > Math.PI) diff -= 2 * Math.PI;
+      while (diff < -Math.PI) diff += 2 * Math.PI;
+      if (Math.abs(diff) > TRACK_CONE) continue;
+      const d = dist(b, s);
+      if (d < bd) { bd = d; best = b; }
+    }
+    return best;
+  }
+
+  // What a shell is actually worth against this bug, armour included.
+  effective(shot, b) { return shot.dmg * (1 - (b.armor || 0)); }
 
   nearest(p, except = null) {
     let best = null, bd = Infinity;
@@ -429,17 +490,28 @@ export class Game {
   shotStep(dt) {
     for (const s of this.shots) {
       s.life -= dt;
-      // Every shell that leaves the barrel finds something: if its mark dies in
-      // flight the charge simply picks the next one.
-      if (!s.target || s.target.dead || !this.bugs.includes(s.target)) s.target = this.nearest(s);
-      if (s.target) {
-        const want = Math.atan2(s.target.y - s.y, s.target.x - s.x);
+      // The cannon leads its mark; the shell then trims that lead very gently.
+      // It cannot turn tightly enough to circle, only to correct — and it never
+      // picks a new target, so a genuine miss stays a miss and flies off.
+      // If its mark dies the shell may look for something else, but only ahead
+      // of it and only once — it never turns around.
+      if (s.aimed && (s.aimed.dead || !this.bugs.includes(s.aimed))) {
+        this.release(s);
+        s.aimed = this.aheadOf(s);
+        s.released = false;
+        if (s.aimed) s.aimed.incoming = (s.aimed.incoming || 0) + this.effective(s.shot, s.aimed);
+      }
+      const tgt = s.aimed;
+      if (tgt && !tgt.dead && this.bugs.includes(tgt)) {
+        const want = Math.atan2(tgt.y - s.y, tgt.x - s.x);
         const cur = Math.atan2(s.vy, s.vx);
         let diff = want - cur;
         while (diff > Math.PI) diff -= 2 * Math.PI;
         while (diff < -Math.PI) diff += 2 * Math.PI;
-        const a = cur + Math.max(-TURN_RATE * dt, Math.min(TURN_RATE * dt, diff));
-        s.vx = Math.cos(a) * SHOT_SPEED; s.vy = Math.sin(a) * SHOT_SPEED;
+        if (Math.abs(diff) < TRACK_CONE) {
+          const a = cur + Math.max(-TURN_RATE * dt, Math.min(TURN_RATE * dt, diff));
+          s.vx = Math.cos(a) * SHOT_SPEED; s.vy = Math.sin(a) * SHOT_SPEED;
+        }
       }
       s.trail.push({ x: s.x, y: s.y });
       if (s.trail.length > 6) s.trail.shift();
@@ -448,19 +520,27 @@ export class Game {
 
       for (const b of this.bugs) {
         if (s.hit.has(b)) continue;
-        if (dist(s, b) > b.r + 9) continue;
+        if (dist(s, b) > b.r + 14) continue;
         this.impact(s, b);
         s.hit.add(b);
         if (s.hit.size > s.shot.pierce) s.done = true;
         break;
       }
-      // Only ever discarded when the room is empty and it has nothing to chase.
-      if (!this.bugs.length && (s.life <= 0 || s.x < -60 || s.x > W + 60 || s.y < -60 || s.y > PLAY_H + 60)) s.done = true;
+      if (s.life <= 0 || s.x < -60 || s.x > W + 60 || s.y < -60 || s.y > PLAY_H + 60) s.done = true;
+      if (s.done) this.release(s);
     }
     this.shots = this.shots.filter(s => !s.done);
   }
 
+  // A shell no longer counts against its mark once it has landed or gone by.
+  release(s) {
+    if (s.released || !s.aimed) return;
+    s.released = true;
+    s.aimed.incoming = Math.max(0, (s.aimed.incoming || 0) - this.effective(s.shot, s.aimed));
+  }
+
   impact(s, b) {
+    this.release(s);
     const sh = s.shot;
     let dealt = this.damage(b, sh.dmg);
     sfx.hit();

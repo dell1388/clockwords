@@ -54,9 +54,12 @@ above. Change it freely.
   material, with the resulting letter chosen at random from that level's pool. Two level 5s instead yield a material on a fresh level 1
   letter — the only source of materials in the game. The original transmuted by
   material value and let you buy materials with secrets.
-- **Materials** are read by colour with no written label, and are applied as a
-  *multiplier* on the letter's level damage rather than as a flat damage of
-  their own. Aetherium is invented outright.
+- **Materials** are read by colour with no written label, are applied as a
+  *multiplier* on the letter's level damage rather than as a flat damage of their
+  own, and lend their effect to every letter in the word, stacking with each
+  other and scaling with the level of the letter carrying them. Jade's canon
+  "makes all your letters do more damage" became an echo volley once every
+  material spread word-wide. Aetherium is invented outright.
 - **Blanks are flat.** 5 damage, untouched by word length, repeats, Jade or the
   word of the day. The original's 1-damage blank scaled with nothing either, but
   the exact figure is ours.
@@ -68,8 +71,9 @@ above. Change it freely.
   in storage is entirely ours, as are the per-letter quotas, the bulk fuse and the
   rack filters; the original had no cap and no such tools.
 - **The cannon** sits in a corner, fires one shell per letter at 300 rpm, holds
-  its fire when the room is empty, and never misses — every shell re-targets in
-  flight. The original fired faster and its letters could miss.
+  its fire when the room is empty, computes a lead on its target with only a gentle
+  in-flight trim, and counts damage already in the air so it never wastes a shell
+  on a bug that is as good as dead. The original fired faster.
 - **Bug pathing.** One open door, and a single painted route: across, down a
   lane, back across, and the same route in reverse on the way out.
 - **Loot tables** weighted by night number and by how tough the bug was.

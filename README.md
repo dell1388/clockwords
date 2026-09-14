@@ -27,9 +27,11 @@ becomes one shell, and the cannon in the corner fires them **one every 0.2
 seconds** (300 rounds a minute). A word that is not in the lexicon just clears
 the rack and says so — no pause, no penalty.
 
-**Every shell finds a target.** If its mark dies in flight the charge picks the
-next one; with nothing in the room the breech simply holds until something walks
-in.
+**The cannon leads its target** — it solves for where the bug will be, and the
+shell trims that lead gently in flight. It can't turn sharply enough to circle,
+so a shell that really misses is gone. It also counts the damage already in the
+air and won't spend a shell on a bug that is as good as dead, so the breech holds
+rather than waste one. In practice around 98–100% of shells connect.
 
 **Chambers unseal on a full house.** The boiler has 8 but each level opens with
 only **one**. A chamber unseals only when *a single word spends every chamber
@@ -84,15 +86,23 @@ Secrets buy a fresh level 1 Iron letter (3 ⚙) and come back from scrapping (1 
 
 Nothing on the rack is labelled: you read a material off its colour.
 
-| Material | Damage | Effect |
+A material lends its effect to **every letter in the word it is fired with** —
+blanks included — and different materials **stack**. One Lazurite and one
+Thermite and the whole word freezes *and* burns. Each letter still does its own
+damage.
+
+The **level of the letter carrying a material** sets how hard the effect works,
+the way it sets damage — the figures below are level 1 → level 5.
+
+| Material | Damage | Effect (spreads to the whole word) |
 |---|---|---|
 | Iron | ×1.0 | plain shot |
-| Thermite | ×0.5 | sets bugs alight, burning for 4 seconds |
-| Amethyst | ×0.7 | passes through up to 2 targets |
-| Lazurite | ×0.4 | freezes bugs for 4 seconds |
-| Brass | ×0.9 | splash, and detonates every Iron letter in the same word |
-| Jade | ×0.8 | every letter in the word hits harder, +5% per letter of the word |
-| Aetherium | ×1.2 | the charge arcs to 3 nearby bugs |
+| Thermite | ×0.5 | sets bugs alight for 4 seconds, burning for 80% → 208% of the word's best letter |
+| Amethyst | ×0.7 | passes through 2 → 6 targets |
+| Lazurite | ×0.4 | freezes bugs for 4 → 9 seconds |
+| Brass | ×0.9 | splash damage, radius ×1.0 → ×1.4 |
+| Jade | ×0.8 | the whole word is fired again, at 70% → 100% damage |
+| Aetherium | ×1.2 | the charge arcs to 3 → 7 nearby bugs |
 
 The boiler room is a screen in its own right, with a **Boiler room** button on
 the title screen, on the level select, and on the card in front of every night.
@@ -100,9 +110,17 @@ Anything you change there is saved straight away, and Esc backs out.
 
 ### Boiler and storage
 
-The boiler runs on between **15 and 50** letters. Everything else lives in
-**storage**, out of the mix, until you draw it back — so a deep collection does
-not dilute what the chambers pull.
+The boiler runs on between **15 and 50** letters. **Everything new lands in
+storage** — letters the bugs drop, anything out of the crucible, anything you
+stoke — so the boiler only ever holds what you put there and a deep collection
+never dilutes what the chambers pull.
+
+Set a **quota** per letter and it looks after itself: the number is drawn out of
+storage, and anything above it is sent back down. **∞** leaves a letter alone;
+**0** keeps it out of the boiler entirely, swapping in something wanted so the
+15-letter minimum still holds. **Tidy** applies the quotas in one click, **Fuse
+extras** pairs off everything in storage and over quota, and the rack filters by
+level and material.
 
 ### Other rules that matter
 

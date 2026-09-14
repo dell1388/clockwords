@@ -4,7 +4,7 @@
 
 import {
   MATERIALS, SPECIAL_MATERIALS, BLANK_DMG, CHAMBERS, START_CHAMBERS, MIN_WORD,
-  MIN_BOILER, MAX_BOILER, LENGTH_POWER, LETTER_LEVELS, MAX_LEVEL, levelOf, levelDamage,
+  MIN_BOILER, MAX_BOILER, LENGTH_POWER, LETTER_LEVELS, MAX_LEVEL, levelOf, levelDamage, effectScale,
 } from './content.js';
 
 let nextId = 1;
@@ -72,24 +72,35 @@ export class Boiler {
   short() { return Math.max(0, MIN_BOILER - this.inventory.length); }
 
   // ── quotas ───────────────────────────────────────────────────────────────
-  // Say how many of a letter you want working, and the rest looks after itself:
-  // anything over the number goes to storage instead of diluting the bag.
-  quotaFor(ch) { return this.quotas[ch] || 0; }
+  // How many of a letter you want working. Three states: no quota at all
+  // (null — leave it alone), zero (keep none of it in the boiler), or a number.
+  // A quota is a target, not just a cap: it draws copies out of storage to
+  // reach the number and sends anything above it back down.
+  quotaFor(ch) {
+    const q = this.quotas[ch];
+    return q === undefined ? null : q;
+  }
+  hasQuota(ch) { return this.quotas[ch] !== undefined; }
   countIn(ch) { return this.inventory.filter(l => l.letter === ch).length; }
 
-  // A quota is a target, not just a cap: raising it draws copies back out of
-  // storage, lowering it sends the excess down.
   setQuota(ch, n) {
-    if (n > 0) this.quotas[ch] = n; else delete this.quotas[ch];
-    let drawn = 0;
-    while (n > 0 && this.countIn(ch) < n && !this.full()) {
-      const l = this.store.find(x => x.letter === ch);
-      if (!l || !this.toBoiler(l.id)) break;
-      drawn++;
-    }
-    return { moved: this.tidy(), drawn };
+    if (n === null) delete this.quotas[ch];
+    else this.quotas[ch] = Math.max(0, Math.min(MAX_BOILER, n));
+    return this.applyQuotas();
   }
   clearQuotas() { this.quotas = {}; }
+
+  applyQuotas() {
+    let drawn = 0;
+    for (const ch of Object.keys(this.quotas)) {
+      while (this.countIn(ch) < this.quotas[ch] && !this.full()) {
+        const l = this.store.find(x => x.letter === ch);
+        if (!l || !this.toBoiler(l.id)) break;
+        drawn++;
+      }
+    }
+    return { drawn, moved: this.tidy() };
+  }
 
   // Boiler letters beyond their quota, plainest first — a letter carrying a
   // material is the one you meant to keep.
@@ -99,34 +110,43 @@ export class Boiler {
     const out = [];
     for (const ch of Object.keys(byLetter)) {
       const q = this.quotaFor(ch), list = byLetter[ch];
-      if (!q || list.length <= q) continue;
+      if (q === null || list.length <= q) continue;
       list.sort((a, b) => (a.mat === 'iron' ? 1 : 0) - (b.mat === 'iron' ? 1 : 0));
       out.push(...list.slice(q));
     }
     return out;
   }
 
-  // Move the excess out, never below the minimum the boiler needs to run.
+  // Is there room for another of this letter under its quota?
+  roomFor(ch) {
+    const q = this.quotaFor(ch);
+    return q === null || this.countIn(ch) < q;
+  }
+
+  // Pull something wanted out of storage so an unwanted letter can leave
+  // without dropping the boiler under its minimum.
+  backfill(exclude) {
+    const l = this.store.find(x => x.letter !== exclude && this.roomFor(x.letter));
+    return l ? this.toBoiler(l.id) : false;
+  }
+
+  // Move the excess out, never below the minimum the boiler needs to run —
+  // swapping in a replacement first when it is already at the line.
   tidy() {
     let moved = 0;
     for (const l of this.overQuota()) {
-      if (this.inventory.length <= MIN_BOILER) break;
+      if (this.inventory.length <= MIN_BOILER && !this.backfill(l.letter)) break;
       if (this.toStore(l.id)) moved++;
     }
     return moved;
   }
 
-  // Would taking these letters out (and putting `returning` back) leave the
-  // boiler unable to run? Nothing that strands it is ever allowed.
-  wouldStrand(ids, returning = 0) {
+  // Would taking these letters out leave the boiler unable to run? Nothing that
+  // strands it is ever allowed. Fusions always return to storage, so anything
+  // pulled out of the boiler is pulled out for good.
+  wouldStrand(ids) {
     const out = ids.filter(id => this.inBoiler(id)).length;
-    return this.inventory.length - out + returning < MIN_BOILER;
-  }
-
-  // Where the crucible's output lands, worked out before anything is consumed.
-  combineLandsInBoiler(a, b) {
-    const out = [a, b].filter(l => this.inBoiler(l.id)).length;
-    return out > 0 && this.inventory.length - out < MAX_BOILER;
+    return this.inventory.length - out < MIN_BOILER;
   }
 
   // Every level starts with the chambers bolted shut again; you earn them back
@@ -161,16 +181,14 @@ export class Boiler {
     this.refill();
     return true;
   }
-  // Where a new letter lands: the boiler while there is room under its quota,
-  // storage after.
-  stow(letter, mat = 'iron', level = null) {
-    const q = this.quotaFor(letter);
-    const blocked = this.full() || (q > 0 && this.countIn(letter) >= q);
-    if (!blocked) return { where: 'boiler', letter: this.add(letter, mat, level) };
+  // Anything new — loot, a fusion, a stoked letter — lands in storage. You
+  // decide what actually goes into the boiler.
+  deposit(letter, mat = 'iron', level = null) {
     const l = makeLetter(letter, mat, level);
     this.store.push(l);
     return { where: 'store', letter: l };
   }
+  stow(letter, mat = 'iron', level = null) { return this.deposit(letter, mat, level); }
   discard(id) {
     const i = this.store.findIndex(x => x.id === id);
     if (i >= 0) { this.store.splice(i, 1); return true; }
@@ -203,7 +221,7 @@ export class Boiler {
     return !!a && !!b && a.id !== b.id && a.level === b.level;
   }
 
-  combine(a, b, { toStorage = false } = {}) {
+  combine(a, b) {
     if (!this.canCombine(a, b)) return null;
     const pick = arr => arr[(Math.random() * arr.length) | 0];
     let level, letter, mat;
@@ -216,16 +234,13 @@ export class Boiler {
       letter = pick(LETTER_LEVELS[level].pool);
       mat = a.mat !== 'iron' ? a.mat : b.mat;
     }
-    const toBoiler = !toStorage && (this.inBoiler(a.id) || this.inBoiler(b.id));
     this.discard(a.id); this.discard(b.id);
-    return toBoiler && !this.full()
-      ? this.add(letter, mat, level)
-      : this.stow(letter, mat, level).letter;
+    return this.deposit(letter, mat, level).letter;   // out of the crucible, into storage
   }
 
   // Everything you are not using — storage, plus whatever sits over quota —
-  // paired off by level in one pass. Results go through stow, so they land
-  // wherever your quotas say they should.
+  // paired off by level in one pass. Everything the crucible makes goes to
+  // storage, so nothing appears in the boiler without you putting it there.
   extras() {
     const seen = new Set();
     return [...this.store, ...this.overQuota()].filter(l => {
@@ -246,7 +261,7 @@ export class Boiler {
       const list = byLevel[lv];
       for (let i = 0; i + 1 < list.length; i += 2) {
         if (this.strandsMany([list[i], list[i + 1]])) continue;
-        const r = this.combine(list[i], list[i + 1], { toStorage: true });
+        const r = this.combine(list[i], list[i + 1]);
         if (r) made.push(r);
       }
     }
@@ -271,22 +286,28 @@ export class Boiler {
     return list.every(l => l.level === lvl);
   }
 
-  // Conservative: only a pair drawn entirely from the boiler is assumed to put
-  // something back into it, so the minimum can never be undershot by surprise.
-  strandsMany(list) {
-    const out = list.filter(l => this.inBoiler(l.id)).length;
-    let back = 0;
+  strandsMany(list) { return this.wouldStrand(list.map(l => l.id)); }
+
+  // Pairs that would take the boiler under its minimum are skipped rather than
+  // spoiling the whole batch.
+  viablePairs(list) {
+    if (!this.canCombineMany(list)) return 0;
+    let out = list.filter(l => this.inBoiler(l.id)).length;
+    let n = 0;
     for (let i = 0; i + 1 < list.length; i += 2) {
-      if (this.inBoiler(list[i].id) && this.inBoiler(list[i + 1].id)) back++;
+      const cost = (this.inBoiler(list[i].id) ? 1 : 0) + (this.inBoiler(list[i + 1].id) ? 1 : 0);
+      if (this.inventory.length - cost < MIN_BOILER) continue;
+      n++;
     }
-    back = Math.min(back, Math.max(0, MAX_BOILER - (this.inventory.length - out)));
-    return this.inventory.length - out + back < MIN_BOILER;
+    void out;
+    return n;
   }
 
   combineMany(list) {
     if (!this.canCombineMany(list)) return [];
     const made = [];
     for (let i = 0; i + 1 < list.length; i += 2) {
+      if (this.strandsMany([list[i], list[i + 1]])) continue;
       const r = this.combine(list[i], list[i + 1]);
       if (r) made.push(r);
     }
@@ -296,7 +317,7 @@ export class Boiler {
   // Secrets keep the boiler topped up when the bugs have not been generous.
   stoke() {
     const pool = LETTER_LEVELS[1].pool;
-    return this.stow(pool[(Math.random() * pool.length) | 0], 'iron', 1);
+    return this.deposit(pool[(Math.random() * pool.length) | 0], 'iron', 1);
   }
 
   // Which chambers the word in the rack would spend, so the tanks can read as
@@ -330,13 +351,12 @@ export class Boiler {
     });
 
     const len = chars.length;
-    const jade = picks.filter(p => p.l && MATERIALS[p.l.mat].lengthBonus).length;
+    const jade = picks.filter(p => p.l && MATERIALS[p.l.mat].echo).length;
     const brass = picks.some(p => p.l && p.l.mat === 'brass');
 
     // Length pays superlinearly: twice the length is three times the damage,
     // three times the length six times, measured from a three-letter word.
     let mult = Math.pow(len / MIN_WORD, LENGTH_POWER);
-    for (let i = 0; i < jade; i++) mult += MATERIALS.jade.lengthBonus * len;
     // A word with no blanks in it at all — every letter out of a chamber.
     const pure = taken.size === len && len > 0;
     if (pure) mult *= 2;
@@ -347,26 +367,72 @@ export class Boiler {
     const loaded = this.loaded();
     const overload = loaded > 0 && taken.size === loaded && loaded >= this.open;
 
+    // Every material in the word lends its effect to every letter in it, blanks
+    // included, and different materials stack.
+    // The best letter carrying each material sets how hard that effect works.
+    const best = {};
+    for (const p of picks) {
+      if (!p.l || MATERIALS[p.l.mat].base) continue;
+      best[p.l.mat] = Math.max(best[p.l.mat] || 0, p.l.level);
+    }
+    const present = new Set(Object.keys(best));
+    const spread = { freeze: 0, pierce: 0, splash: 0, chain: 0, chainRange: 0, burn: null };
+    for (const id of present) {
+      const m = MATERIALS[id], lvl = best[id], e = effectScale(lvl);
+      if (m.freeze) spread.freeze = Math.max(spread.freeze, Math.min(9, m.freeze * e));
+      if (m.pierce) spread.pierce = Math.max(spread.pierce, m.pierce + lvl - 1);
+      if (m.splash) spread.splash = Math.max(spread.splash, m.splash * (0.75 + 0.25 * e));
+      if (m.chain) {
+        spread.chain = Math.max(spread.chain, m.chain + lvl - 1);
+        spread.chainRange = Math.max(spread.chainRange, m.chainRange * (0.8 + 0.2 * e));
+      }
+      if (m.burn) {
+        const frac = m.burn.frac * e;
+        if (!spread.burn || frac > spread.burn.frac) spread.burn = { frac, time: m.burn.time };
+      }
+    }
+    if (wotd) spread.splash = Math.max(spread.splash, 70);
+    // Jade on a rarer letter echoes closer to full strength.
+    const echoFrac = jade
+      ? Math.min(1, MATERIALS.jade.echo + (Math.max(1, best.jade || 1) - 1) * 0.075)
+      : 0;
+
     const shots = picks.map((p, i) => {
       const l = p.l;
       const m = l ? MATERIALS[l.mat] : null;
       const dmg = l ? Math.max(1, Math.round(levelDamage(l.level) * m.mul * mult)) : BLANK_DMG;
-      const shot = {
+      return {
         ch: chars[i], mat: l ? l.mat : null, level: l ? l.level : 0, dmg,
-        pierce: m && m.pierce ? m.pierce : 0,
-        freeze: m && m.freeze ? m.freeze : 0,
-        burn: m && m.burn ? { dps: (dmg * m.burn.frac) / m.burn.time, time: m.burn.time } : null,
-        splash: m && m.splash ? m.splash : 0,
-        chain: m && m.chain ? m.chain : 0,
-        chainRange: m && m.chainRange ? m.chainRange : 0,
+        pierce: spread.pierce,
+        freeze: spread.freeze,
+        splash: spread.splash,
+        chain: spread.chain,
+        chainRange: spread.chainRange,
+        burn: null,
       };
-      // Brass arms every Iron letter in the same word. (canon)
-      if (brass && l && l.mat === 'iron') shot.splash = MATERIALS.brass.splash * 0.8;
-      if (wotd) shot.splash = Math.max(shot.splash, 70);
-      return shot;
     });
 
-    return { shots, slots: [...taken], mult, penalty, overload, jade, brass, wotd, pure };
+    // A burn is worth the same wherever it is carried, so it is sized off the
+    // hardest letter in the word rather than the one it rides on.
+    if (spread.burn) {
+      const ref = shots.reduce((n, sh) => Math.max(n, sh.dmg), 0);
+      const dps = (ref * spread.burn.frac) / spread.burn.time;
+      for (const sh of shots) sh.burn = { dps, time: spread.burn.time };
+    }
+
+    // Jade sends the whole word down the barrel again, once per Jade letter,
+    // at a fraction of its damage.
+    const volleys = [...shots];
+    for (let k = 0; k < jade; k++) {
+      for (const sh of shots) {
+        volleys.push({ ...sh, dmg: Math.max(1, Math.round(sh.dmg * echoFrac)),
+          burn: sh.burn ? { ...sh.burn, dps: sh.burn.dps * echoFrac } : null,
+          echo: true });
+      }
+    }
+
+    return { shots: volleys, slots: [...taken], mult, penalty, overload, jade, brass, wotd, pure,
+             effects: [...present].filter(id => !MATERIALS[id].base) };
   }
 
   // Called once the word has been committed to the cannon. One word has to spend

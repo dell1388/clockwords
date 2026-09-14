@@ -23,6 +23,9 @@ for (let i = 1; i <= MAX_LEVEL; i++) for (const ch of LETTER_LEVELS[i].pool) LEV
 export const levelOf = ch => LEVEL_OF[ch] || 1;
 export const levelDamage = lvl => LETTER_LEVELS[lvl].dmg;
 
+// A material on a rarer letter works harder, the way a rarer letter hits harder.
+export const effectScale = lvl => 1 + (Math.max(1, lvl) - 1) * 0.4;   // 1.0 → 2.6
+
 // ── materials ──────────────────────────────────────────────────────────────
 // Only a level-5 letter is rare enough to hold anything but Iron. Materials
 // are read by colour alone — the tanks are never labelled.
@@ -54,9 +57,9 @@ export const MATERIALS = {
     desc: 'Splash damage — and every Iron letter in the same word detonates too.',
   },
   jade: {
-    id: 'jade', name: 'Jade', mul: 0.8, cost: 15, lengthBonus: 0.05,
+    id: 'jade', name: 'Jade', mul: 0.8, cost: 15, echo: 0.7,
     body: '#2f8f6b', edge: '#0c3a2a', ink: '#dcfff0', glow: '#61e6b0', dot: '#b6f5da',
-    desc: 'Every letter in the word hits harder — +5% per letter of the word.',
+    desc: 'The whole word is fired a second time, at 70% damage.',
   },
   aetherium: {
     id: 'aetherium', name: 'Aetherium', mul: 1.2, cost: 20, chain: 3, chainRange: 140,

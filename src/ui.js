@@ -145,8 +145,10 @@ export function renderHow(onBack) {
           <i>not</i> in a chamber is a <b>blank</b> — a flat ${BLANK_DMG} damage that no bonus or
           penalty ever changes.</p>
           <p>The cannon fires <b>one shell per letter, one every 0.2 seconds</b> (${FIRE_RPM} rounds
-          a minute), and every shell finds a target: if its mark dies in flight the charge picks
-          the next one. With nothing in the room the breech simply holds.</p>
+          a minute). It <b>leads</b> its target — works out where the bug will be — and the shell
+          trims that lead gently in flight; it cannot turn sharply enough to circle back, so a
+          shell that really misses is gone. It also counts what is already in the air, and holds
+          the breech rather than spend a shell on something that is as good as dead.</p>
           <p>Length pays, and pays steeply: <b>twice the length is three times the damage,
           three times the length about six</b>. A word made <i>entirely</i> of chamber letters,
           with no blanks in it at all, does <b>double</b>. A word you have already used
@@ -176,11 +178,22 @@ export function renderHow(onBack) {
           way to make a material is to put <b>two level ${MAX_LEVEL} letters</b> in the crucible:
           they burn away and leave a material behind on a fresh level 1 letter, both chosen by
           the crucible. Level that letter up and it keeps its material.</p>
+          <p>A material lends its effect to <b>every letter in the word it is fired with</b>,
+          blanks included, and different materials <b>stack</b>: one Lazurite and one Thermite
+          and the whole word freezes and burns. Each letter still does its own damage.</p>
+          <p>The <b>level of the letter carrying it</b> sets how hard the effect works, the way
+          it sets damage. Lazurite on a level 1 letter freezes for 4 seconds; on a level
+          ${MAX_LEVEL} letter, 9. Amethyst pierces 2 targets, or 6. Jade echoes at 70%, or full
+          strength.</p>
           <ul class="mats">${mats}</ul>
           <h3>The boiler room</h3>
-          <p>The boiler room is reachable without playing: the level card in front of every
-          night has a <b>Boiler room</b> button, so you can rearrange the loadout you are about
-          to walk in with.</p>
+          <p>The boiler room is reachable without playing: the title screen, the level select
+          and the card in front of every night all open it.</p>
+          <p><b>Everything new lands in storage</b> — letters the bugs drop, anything out of the
+          crucible, anything you stoke. The boiler only ever holds what you put there. Set a
+          <b>quota</b> per letter and it looks after itself: the number is drawn out of storage
+          and anything above it is sent back down. A quota of <b>0</b> keeps a letter out of the
+          boiler entirely.</p>
           <p>Between levels the <b>crucible</b> takes any even number of letters of one level and
           works through them in pairs: each pair becomes one letter of the level above in the
           same material, or — for level ${MAX_LEVEL} pairs — a material on a fresh level 1
@@ -240,13 +253,14 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, standalon
   let fLevel = 0, fMat = '';  // rack filters: 0 / '' mean everything
   let quotaView = false;
 
-  // Whatever the bugs dropped tonight goes to the boiler, or to storage if the
-  // boiler is already full.
+  // Whatever the bugs dropped tonight goes to storage. Nothing reaches the
+  // boiler unless you put it there — or a quota draws it in.
   const recovered = game.pending.map(loot => {
-    const r = game.boiler.stow(loot.letter, 'iron', loot.level);
-    return { ...loot, where: r.where };
+    game.boiler.deposit(loot.letter, 'iron', loot.level);
+    return loot;
   });
   game.pending = [];
+  if (recovered.length) game.boiler.applyQuotas();
   const nextLevel = standalone ? game.levelNo : game.levelNo + 1;
 
   function draw() {
@@ -272,13 +286,17 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, standalon
       .sort((a, b) => held[b].level - held[a].level || a.localeCompare(b))
       .map(ch => {
         const q = bo.quotaFor(ch), h = held[ch];
-        return `<div class="qcell ${q ? 'set' : ''}">
+        const cls = q === null ? '' : q === 0 ? 'set zero' : 'set';
+        return `<div class="qcell ${cls}">
           ${chip(ch, 'iron', h.level)}
           <span class="qn">${h.boiler}${h.store ? `<i>+${h.store}</i>` : ''}</span>
           <span class="qstep">
-            <button data-q="${ch}" data-d="-1" ${q ? '' : 'disabled'}>&minus;</button>
-            <b>${q || '∞'}</b>
-            <button data-q="${ch}" data-d="1">+</button>
+            <button data-q="${ch}" data-d="-1" ${q === 0 ? 'disabled' : ''}
+              title="fewer">&minus;</button>
+            <button class="qval" data-qtoggle="${ch}"
+              title="${q === null ? 'click for a quota of none' : 'click to drop the quota'}"
+              >${q === null ? '∞' : q}</button>
+            <button data-q="${ch}" data-d="1" title="more">+</button>
           </span>
         </div>`;
       }).join('') || '<p class="d">No letters yet.</p>';
@@ -295,8 +313,9 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, standalon
 
     const picked = selected.map(id => bo.find(id)).filter(Boolean);
     const evenOk = bo.canCombineMany(picked);
-    const combineStrands = evenOk && bo.strandsMany(picked);
-    const canCombine = evenOk && !combineStrands;
+    const viable = evenOk ? bo.viablePairs(picked) : 0;
+    const combineStrands = evenOk && viable === 0;
+    const canCombine = evenOk && viable > 0;
     const pickedLevel = picked.length ? picked[0].level : 0;
     const sameLevel = picked.length > 0 && picked.every(l => l.level === pickedLevel);
     const one = picked.length === 1 ? picked[0] : null;
@@ -321,6 +340,10 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, standalon
     const gauge = `<span class="gauge ${bo.inventory.length >= MAX_BOILER ? 'full' : short ? 'low' : ''}">
       ${bo.inventory.length} / ${MAX_BOILER}</span>`;
 
+    // a redraw must not throw away where you were looking
+    const scrolls = { screen: s.scrollTop };
+    s.querySelectorAll('[data-scroll]').forEach(n => { scrolls[n.dataset.scroll] = n.scrollTop; });
+
     s.innerHTML = `
       <div class="plate wide boilerroom">
         <div class="brhead">
@@ -339,7 +362,7 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, standalon
              to one when the level starts, and unseal as you spend them.</p>`
           : `<p class="d recap">+${game.levelSecrets} secrets · ${game.levelKills} bugs ·
              ${game.pages}/${START_PAGES} pages intact · the chambers bolt shut again at the next level</p>
-             <p class="recovered"><span class="lbl">Recovered tonight</span> ${recHtml}</p>`}
+             <p class="recovered"><span class="lbl">Recovered tonight &rarr; storage</span> ${recHtml}</p>`}
 
         ${filterBar}
 
@@ -350,9 +373,13 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, standalon
               <button class="tinytab ${quotaView ? 'sel' : ''}" data-view="quotas">quotas</button>
             </h3>
             ${quotaView
-              ? `<p class="d">How many of each letter you want working. Anything over the
-                 number goes to storage — including letters the bugs drop later.</p>
-                 <div class="qgrid">${quotaGrid}</div>
+              ? `<p class="d">How many of each letter you want working. <b>∞</b> leaves a letter
+                 alone; <b>0</b> keeps none of it in the boiler at all. Click the number to
+                 switch between the two.</p>
+                 <div class="qgrid" data-scroll="qgrid">${quotaGrid}</div>
+                 ${bo.overQuota().length && bo.inventory.length <= MIN_BOILER
+                   ? `<p class="d hot">The boiler is at its ${MIN_BOILER}-letter minimum, so the
+                      last few cannot leave until you draw something else in.</p>` : ''}
                  <div class="benchrow">
                    <button id="b-tidy" class="small" ${bo.overQuota().length ? '' : 'disabled'}
                      >Tidy ${bo.overQuota().length} over quota</button>
@@ -361,7 +388,7 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, standalon
                  </div>`
               : `<p class="d">What the chambers draw from. It runs on no fewer than
                  ${MIN_BOILER} letters and holds no more than ${MAX_BOILER}.</p>
-                 <div class="inv">${chips(bo.inventory)}</div>
+                 <div class="inv" data-scroll="inv-boiler">${chips(bo.inventory)}</div>
                  <div class="benchrow">
                    <button id="b-stow" class="small" ${canStow ? '' : 'disabled'}>Move to storage &darr;</button>
                    <button id="b-tidy" class="small" ${bo.overQuota().length ? '' : 'disabled'}
@@ -373,7 +400,7 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, standalon
             <h3>Storage <span class="d">&middot; ${bo.store.length}</span></h3>
             <p class="d">Letters kept out of the mix. Nothing here is ever loaded
             into a chamber.</p>
-            <div class="inv">${chips(bo.store)}</div>
+            <div class="inv" data-scroll="inv-store">${chips(bo.store)}</div>
             <button id="b-draw" class="small" ${canDraw ? '' : 'disabled'}>Move to boiler &uarr;</button>
           </section>
 
@@ -387,20 +414,23 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, standalon
                   data-all="${lv}">${'•'.repeat(+lv)} <sup>${byLevel[lv]}</sup></button>`).join('')}
               ${selected.length ? '<button class="letbtn" data-clear="1">clear</button>' : ''}
             </div>
-            <div class="feed">${picked.length
+            <div class="feed" data-scroll="feed">${picked.length
               ? picked.map(l => chip(l.letter, l.mat, l.level)).join('')
               : '<span class="d">nothing loaded</span>'}</div>
             ${canCombine
               ? (pickedLevel >= MAX_LEVEL
                 ? `<p class="d hot">${picked.length} level ${MAX_LEVEL} letters burn away and
-                   leave <b>${picked.length / 2} material${picked.length > 2 ? 's' : ''}</b>
-                   behind, each on a fresh level 1 letter. This is the only way a material is
-                   ever made — and the crucible chooses both.</p>
+                   leave <b>${viable} material${viable === 1 ? '' : 's'}</b> behind in storage,
+                   each on a fresh level 1 letter. This is the only way a material is ever
+                   made — and the crucible chooses both.</p>
                    <div class="matrow">${SPECIAL_MATERIALS.map(m => swatch(m.id)).join('')}</div>
                    <button id="b-fuse" class="big">Fire the crucible</button>`
                 : `<p class="d">${picked.length} × level ${pickedLevel} &rarr;
-                   <b>${picked.length / 2} × level ${pickedLevel + 1}</b>, same material.
-                   The crucible decides which letters come out.</p>
+                   <b>${viable} × level ${pickedLevel + 1}</b> into storage, same material.
+                   The crucible decides which letters come out.
+                   ${viable < picked.length / 2
+                     ? `<br>${picked.length / 2 - viable} pair(s) skipped — they would take the
+                        boiler under ${MIN_BOILER}.` : ''}</p>
                    <button id="b-fuse" class="big">Combine</button>`)
               : `<p class="d">${combineStrands
                   ? `That would leave the boiler under ${MIN_BOILER} letters. Draw one back out
@@ -444,6 +474,12 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, standalon
       sfx.key(); draw();
     });
 
+    s.querySelectorAll('[data-scroll]').forEach(n => {
+      const v = scrolls[n.dataset.scroll];
+      if (v) n.scrollTop = v;
+    });
+    s.scrollTop = scrolls.screen;
+
     s.querySelectorAll('[data-view]').forEach(n => n.onclick = () => {
       quotaView = n.dataset.view === 'quotas'; sfx.key(); draw();
     });
@@ -457,13 +493,22 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, standalon
     s.querySelectorAll('[data-q]').forEach(n => n.onclick = () => {
       const ch = n.dataset.q, d = +n.dataset.d;
       const now = bo.quotaFor(ch);
-      bo.setQuota(ch, Math.max(0, Math.min(MAX_BOILER, now + d)));
+      // no quota steps into 0 going down and 1 going up
+      bo.setQuota(ch, now === null ? (d < 0 ? 0 : 1) : Math.max(0, now + d));
+      selected = []; sfx.key(); draw();
+    });
+    s.querySelectorAll('[data-qtoggle]').forEach(n => n.onclick = () => {
+      const ch = n.dataset.qtoggle;
+      bo.setQuota(ch, bo.quotaFor(ch) === null ? 0 : null);
       selected = []; sfx.key(); draw();
     });
 
     s.querySelectorAll('[data-all]').forEach(n => n.onclick = () => {
       const lv = +n.dataset.all;
-      const ids = all.filter(l => l.level === lv).map(l => l.id);
+      const ofLevel = all.filter(l => l.level === lv);
+      // storage first: those pairs never threaten the boiler minimum
+      ofLevel.sort((a, b) => (bo.inBoiler(a.id) ? 1 : 0) - (bo.inBoiler(b.id) ? 1 : 0));
+      const ids = ofLevel.map(l => l.id);
       if (ids.length % 2) ids.pop();                    // the crucible works in pairs
       selected = ids;
       sfx.key(); draw();
@@ -481,11 +526,11 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, standalon
       if (made.length === 1) {
         const m = made[0];
         toast({ name: `${m.letter.toUpperCase()} — level ${m.level}`,
-          desc: m.mat === 'iron' ? 'out of the crucible'
-            : `out of the crucible in ${MATERIALS[m.mat].name}`, pts: m.level });
+          desc: m.mat === 'iron' ? 'out of the crucible, into storage'
+            : `${MATERIALS[m.mat].name}, out of the crucible into storage`, pts: m.level });
       } else if (made.length) {
         toast({ name: made.map(m => m.letter.toUpperCase()).join(' '),
-          desc: `${made.length} out of the crucible`, pts: made.length });
+          desc: `${made.length} out of the crucible, into storage`, pts: made.length });
       }
       draw();
     });
@@ -497,7 +542,7 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, standalon
       if (made.length) {
         sfx.overload();
         toast({ name: made.slice(0, 12).map(m => m.letter.toUpperCase()).join(' '),
-          desc: `${made.length} out of the crucible`, pts: made.length });
+          desc: `${made.length} out of the crucible, into storage`, pts: made.length });
       }
       draw();
     });
@@ -507,7 +552,7 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, standalon
       const r = bo.stoke();
       sfx.steam();
       toast({ name: `${r.letter.letter.toUpperCase()} — level 1`,
-        desc: r.where === 'store' ? 'boiler full, sent to storage' : 'straight into the boiler', pts: 1 });
+        desc: 'into storage', pts: 1 });
       draw();
     });
     on('#b-next', () => { if (!bo.short()) { sfx.clank(); onNext(); } });
@@ -549,9 +594,12 @@ function wordLogHtml(game) {
 
   const rows = log.map((e, i) => {
     const tags = [
+      e.pure ? '<b class="tag pure">pure</b>' : '',
       e.wotd ? '<b class="tag wotd">word of the day</b>' : '',
       e.overload ? '<b class="tag over">overload</b>' : '',
       e.repeats ? `<b class="tag rep">repeat ×${e.repeats + 1}</b>` : '',
+      (e.effects || []).map(id => `<span class="tagsw" title="${MATERIALS[id].name}"
+        style="--body:${MATERIALS[id].body};--edge:${MATERIALS[id].edge};--glow:${MATERIALS[id].glow}"></span>`).join(''),
     ].join('');
     return `<li>
       <span class="rk">${i + 1}</span>
