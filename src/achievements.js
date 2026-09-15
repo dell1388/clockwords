@@ -1,15 +1,14 @@
-// achievements.js — three of them, carrying the names the original's Kongregate
-// badges carried.
+// achievements.js — three of them, the Clockwords badges under field names.
 
 const KEY = 'clockwords.badges.v1';
 
 export const BADGES = [
-  { id: 'hurt',  name: 'Words Will Never Hurt Me', pts: 5,
-    desc: 'Survive the first wave with every dossier of the formula intact.' },
+  { id: 'hurt',  name: 'Not A Scratch', pts: 5,
+    desc: 'Clear the first wave with every dossier still in the safe.' },
   { id: 'sesqui', name: 'Sesquipedalian', pts: 15,
     desc: 'Fire a single word of twelve letters or more.' },
-  { id: 'box',   name: 'Professor Dillingham and the Diabolical Box', pts: 30,
-    desc: 'Destroy the Box.' },
+  { id: 'box',   name: 'The Colonel Is Dead', pts: 30,
+    desc: 'Knock out the Iron Colonel.' },
 ];
 
 function read() {

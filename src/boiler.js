@@ -43,10 +43,19 @@ export class Boiler {
     if (!this.bag.length) this.reshuffle();
     if (!this.bag.length) return null;
     const loadedChars = new Set(this.chambers.filter(Boolean).map(c => c.letter));
-    for (let k = this.bag.length - 1; k >= 0; k--) {
-      if (!loadedChars.has(this.bag[k].letter)) return this.bag.splice(k, 1)[0];
-    }
-    return this.bag.pop();
+    // A letter just tipped out of a chamber goes to the back of the queue: the
+    // bag is drawn from the end, so without this it would be handed straight
+    // back and clicking a chamber would do nothing at all.
+    const avoid = this.justDumped;
+    const take = test => {
+      for (let k = this.bag.length - 1; k >= 0; k--) {
+        if (test(this.bag[k])) return this.bag.splice(k, 1)[0];
+      }
+      return null;
+    };
+    return take(l => l.id !== avoid && !loadedChars.has(l.letter))
+      || take(l => l.id !== avoid)
+      || this.bag.pop();
   }
 
   // Fill every open chamber from scratch. Never more of them than there are
@@ -468,7 +477,9 @@ export class Boiler {
     if (!c || i >= this.open) return 0;
     this.chambers[i] = null;
     this.bag.push(c);
+    this.justDumped = c.id;      // anything else in the bag goes first
     this.reload();
+    this.justDumped = null;
     return 0;
   }
 

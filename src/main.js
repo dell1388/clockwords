@@ -27,7 +27,11 @@ function fit() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.imageSmoothingEnabled = true;
   const wrap = document.getElementById('wrap');
-  const sc = Math.min(window.innerWidth / W, window.innerHeight / H);
+  // Fill a small window, but never blow the board up on a full-size desktop
+  // page: past 1:1 it only grows as far as MAX_SCALE, with a gutter around it.
+  const GUTTER = 24, MAX_SCALE = 1.2;
+  const room = Math.min((window.innerWidth - GUTTER) / W, (window.innerHeight - GUTTER) / H);
+  const sc = Math.min(room, MAX_SCALE);
   wrap.style.transform = `scale(${sc})`;
   wrap.style.left = ((window.innerWidth - W * sc) / 2) + 'px';
   wrap.style.top = ((window.innerHeight - H * sc) / 2) + 'px';
