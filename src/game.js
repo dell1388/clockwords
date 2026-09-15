@@ -275,14 +275,10 @@ export class Game {
     for (const s of res.shots) { this.fireQueue.push(s); total += s.dmg; }
     entry.planned = total;
 
-    if (res.overload) {
-      sfx.overload();
-      this.note('FULL SALVO', '#ffc24b');
-      for (let i = 0; i < 6; i++) {
-        this.fireQueue.push({ ch: '*', mat: 'aetherium', dmg: Math.round(60 * res.mult), wid,
-          pierce: 1, freeze: 0, burn: null, splash: 50, chain: 2, chainRange: 120 });
-      }
-    }
+    // The full salvo bonus is off for now: spending every loaded chamber still
+    // unseals the next one and still tags the word in the log, but it no longer
+    // appends six extra shells to the queue.
+    if (res.overload) { sfx.overload(); this.note('FULL HOUSE', '#ffc24b'); }
     if (res.pure) this.note('PURE WORD — DOUBLE', '#9be8ff');
     if (res.jade) this.note(res.jade > 1
       ? `${MATERIALS.jade.name.toUpperCase()} ×${res.jade} — ECHO`
@@ -308,7 +304,7 @@ export class Game {
     this.rackFlash = 1;
   }
 
-  // Several of these can land on the same word — a full salvo, an unsealed
+  // Several of these can land on the same word — a full house, an unsealed
   // chamber, an echo — so each one stacks under the notes already rising
   // rather than printing on top of them.
   note(text, color) {

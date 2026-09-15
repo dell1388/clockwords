@@ -38,7 +38,7 @@ export class Boiler {
   //
   // Chambers refill straight after every word. A new one only unseals when a
   // single word spends every chamber that was loaded — the same full house that
-  // earns a full salvo.
+  // earns a full house.
   draw() {
     if (!this.bag.length) this.reshuffle();
     if (!this.bag.length) return null;

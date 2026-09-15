@@ -101,7 +101,7 @@ export function renderHow(onBack) {
           <p>The magazine has <b>${CHAMBERS} chambers</b>, but every level starts with
           <b>${START_CHAMBERS === 1 ? 'only one unsealed' : `${START_CHAMBERS} unsealed`}</b>.
           A chamber unseals only when <b>a single word spends every chamber that is loaded</b> —
-          the same full house that earns a full salvo. Draining them across several words
+          the same full house that tags the word in the log. Draining them across several words
           does nothing. At the top of the next level they all bolt shut again.</p>
           <p>Stuck with a letter you cannot use? <b>Click the chamber</b> to tip it back into the bag
           and draw another. The magazine never loads the same letter into two chambers at once
@@ -121,8 +121,8 @@ export function renderHow(onBack) {
           three times the length about six</b>. A word made <i>entirely</i> of chamber letters,
           with no blanks in it at all, does <b>double</b>. A word you have already used
           <i>on this level</i> does less each time you repeat it — every level starts the
-          ledger again. Use every loaded chamber in one word for a <b>full salvo</b>. The
-          <b>word of the day</b> doubles everything and explodes.</p>
+          ledger again. Using every loaded chamber in one word is a <b>full house</b> — it unseals
+          the next chamber. The <b>word of the day</b> doubles everything and explodes.</p>
           <h3>The tanks</h3>
           <p>Everything comes through the one arch still standing, and walks the route painted
           on the floor — across, down a lane, back across — to the <b>safe</b> in the corner
