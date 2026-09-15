@@ -1,7 +1,7 @@
 // render.js — all drawing. Olive drab, gunmetal and worklight.
 
 import { W, H, PLAY_H, MACHINE, MUZZLE, PIVOT, SAFE, DOORS, SEALED_DOORS, buildPath } from './game.js';
-import { MATERIALS, CHAMBERS, START_PAGES, MAX_LEVEL } from './content.js';
+import { MATERIALS, CHAMBERS, START_PAGES, MAX_LEVEL, rateText } from './content.js';
 
 const TAU = Math.PI * 2;
 const SHOT_R = 13;          // one radius for every letter fired
@@ -412,6 +412,8 @@ function drawSafe(ctx, g, t) {
   ctx.restore();
 }
 
+// The gun: a T-34 hull dug in at the corner, with the cast hexagonal turret
+// traversing to follow whatever it is shooting at.
 function drawMachine(ctx, g, t) {
   const { x, y } = MACHINE;
   const ang = g.cannonAngle ?? -Math.PI / 2;
@@ -421,88 +423,145 @@ function drawMachine(ctx, g, t) {
   ctx.translate(x, y);
 
   ctx.fillStyle = 'rgba(0,0,0,0.45)';
-  ctx.beginPath(); ctx.ellipse(0, 30, 82, 17, 0, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(0, 30, 86, 18, 0, 0, TAU); ctx.fill();
 
-  // barrel, mounted on a yoke above the magazine
-  ctx.save();
-  ctx.translate(0, PIVOT.y - MACHINE.y);
-  ctx.rotate(ang + Math.PI / 2);
-  ctx.translate(0, rec);
-  const bar = ctx.createLinearGradient(-14, 0, 14, 0);
-  bar.addColorStop(0, '#171a13'); bar.addColorStop(0.35, '#8d9478');
-  bar.addColorStop(0.6, '#5d6650'); bar.addColorStop(1, '#14170f');
-  ctx.fillStyle = bar;
-  roundRect(ctx, -13, -82, 26, 88, 6); ctx.fill();
-  // muzzle brake
-  ctx.fillStyle = '#9aa284';
-  roundRect(ctx, -18, -92, 36, 18, 4); ctx.fill();
-  ctx.fillStyle = 'rgba(0,0,0,0.55)';
-  ctx.fillRect(-18, -88, 7, 9); ctx.fillRect(11, -88, 7, 9);
-  // fume extractor
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
-  roundRect(ctx, -15, -52, 30, 16, 5); ctx.fill();
-  if (g.muzzleFlash > 0) {
-    ctx.globalAlpha = g.muzzleFlash;
-    const fg = ctx.createRadialGradient(0, -90, 2, 0, -90, 34);
-    fg.addColorStop(0, '#fff4c9'); fg.addColorStop(0.4, 'rgba(255,180,70,0.8)');
-    fg.addColorStop(1, 'rgba(255,140,40,0)');
-    ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(0, -90, 34, 0, TAU); ctx.fill();
-    ctx.globalAlpha = 1;
-  }
-  ctx.restore();
-
-  // magazine body
-  const body = ctx.createLinearGradient(-70, 0, 70, 0);
-  body.addColorStop(0, '#242a1c'); body.addColorStop(0.3, '#7b8564');
-  body.addColorStop(0.55, '#586045'); body.addColorStop(1, '#1c2116');
-  ctx.fillStyle = body;
-  roundRect(ctx, -72, -18, 144, 52, 12); ctx.fill();
-  ctx.strokeStyle = '#12150f'; ctx.lineWidth = 3;
-  roundRect(ctx, -72, -18, 144, 52, 12); ctx.stroke();
-
-  // road wheels under the emplacement
+  // ── hull ─────────────────────────────────────────────────────────────────
+  // the running gear: five big Christie road wheels under a track run
   ctx.fillStyle = '#20241c';
-  roundRect(ctx, -70, 22, 140, 16, 7); ctx.fill();
-  for (let i = 0; i < 5; i++) {
-    const wx = -54 + i * 27;
-    ctx.fillStyle = '#7b8564';
-    ctx.beginPath(); ctx.arc(wx, 30, 9, 0, TAU); ctx.fill();
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.beginPath(); ctx.arc(wx, 30, 3.4, 0, TAU); ctx.fill();
-  }
-
-  // trunnion the barrel swings in
-  ctx.fillStyle = '#4c5540';
-  roundRect(ctx, -16, -30, 32, 20, 6); ctx.fill();
+  roundRect(ctx, -78, 16, 156, 26, 9); ctx.fill();
   ctx.strokeStyle = '#12150f'; ctx.lineWidth = 2;
-  roundRect(ctx, -16, -30, 32, 20, 6); ctx.stroke();
-  ctx.fillStyle = '#9aa284';
-  ctx.beginPath(); ctx.arc(0, -20, 4, 0, TAU); ctx.fill();
+  roundRect(ctx, -78, 16, 156, 26, 9); ctx.stroke();
+  ctx.fillStyle = 'rgba(170,178,146,0.35)';
+  for (let k = -76; k < 76; k += 11) ctx.fillRect(k, 16, 5, 26);
+  for (let i = 0; i < 5; i++) {
+    const wx = -56 + i * 28;
+    ctx.fillStyle = '#6d7658';
+    ctx.beginPath(); ctx.arc(wx, 29, 11, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#12150f'; ctx.lineWidth = 1.6; ctx.stroke();
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.beginPath(); ctx.arc(wx, 29, 3.6, 0, TAU); ctx.fill();
+  }
+  // drive sprocket at the back
+  ctx.fillStyle = '#8d9478';
+  ctx.beginPath(); ctx.arc(-70, 29, 8, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#12150f'; ctx.lineWidth = 1.6; ctx.stroke();
 
-  // pressure gauge
-  ctx.save(); ctx.translate(0, -2);
-  ctx.fillStyle = '#12150f'; ctx.beginPath(); ctx.arc(0, 0, 13, 0, TAU); ctx.fill();
-  ctx.fillStyle = '#dfe0cf'; ctx.beginPath(); ctx.arc(0, 0, 11, 0, TAU); ctx.fill();
+  // the sloped glacis and the fenders over the tracks
+  const hull = ctx.createLinearGradient(0, -22, 0, 22);
+  hull.addColorStop(0, '#7b8564'); hull.addColorStop(0.5, '#5b6448'); hull.addColorStop(1, '#2b3223');
+  ctx.fillStyle = hull;
+  ctx.beginPath();
+  ctx.moveTo(-76, 18); ctx.lineTo(-68, -14); ctx.lineTo(64, -14);
+  ctx.lineTo(78, 6); ctx.lineTo(78, 18); ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#12150f'; ctx.lineWidth = 2.5; ctx.stroke();
+  // the driver's hatch and the hull machine gun, out on the glacis
+  ctx.fillStyle = 'rgba(0,0,0,0.38)';
+  roundRect(ctx, 34, -9, 22, 15, 4); ctx.fill();
+  ctx.fillStyle = '#2b3026';
+  roundRect(ctx, 58, -4, 18, 6, 3); ctx.fill();
+  // weld seams and grab handles
+  ctx.strokeStyle = 'rgba(20,24,16,0.5)'; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.moveTo(-60, -6); ctx.lineTo(28, -6); ctx.stroke();
+  ctx.fillStyle = 'rgba(226,232,200,0.35)';
+  for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.arc(-58 + i * 17, -11, 1.8, 0, TAU); ctx.fill(); }
+  // stowage box on the rear fender
+  ctx.fillStyle = '#4c5540';
+  roundRect(ctx, -74, -12, 26, 16, 3); ctx.fill();
+  ctx.strokeStyle = '#12150f'; ctx.lineWidth = 1.6; ctx.stroke();
+
+  // a load gauge let into the deck, so the chamber count reads at a glance
+  ctx.save(); ctx.translate(-30, 2);
+  ctx.fillStyle = '#12150f'; ctx.beginPath(); ctx.arc(0, 0, 11, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#dfe0cf'; ctx.beginPath(); ctx.arc(0, 0, 9, 0, TAU); ctx.fill();
   const load = g.boiler ? g.boiler.loaded() / CHAMBERS : 1;
   const na = -Math.PI * 0.8 + load * Math.PI * 1.6;
   ctx.strokeStyle = '#a32b16'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(na) * 8, Math.sin(na) * 8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(na) * 6.5, Math.sin(na) * 6.5); ctx.stroke();
   ctx.restore();
 
-  // bolt heads
-  ctx.fillStyle = 'rgba(226,232,200,0.5)';
-  for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.arc(-62 + i * 15.5, -13, 1.8, 0, TAU); ctx.fill(); }
+  // ── turret ───────────────────────────────────────────────────────────────
+  ctx.save();
+  ctx.translate(0, PIVOT.y - MACHINE.y);
+  ctx.rotate(ang + Math.PI / 2);
 
-  // spades dug into the ground
-  ctx.fillStyle = '#1d2117';
-  roundRect(ctx, -64, 30, 22, 10, 3); ctx.fill();
-  roundRect(ctx, 42, 30, 22, 10, 3); ctx.fill();
+  // the turret ring it sits in
+  ctx.fillStyle = '#20241c';
+  ctx.beginPath(); ctx.arc(0, 0, 34, 0, TAU); ctx.fill();
+
+  ctx.save();
+  ctx.translate(0, rec);
+
+  // barrel first, so the mantlet covers its root
+  const bar = ctx.createLinearGradient(-11, 0, 11, 0);
+  bar.addColorStop(0, '#171a13'); bar.addColorStop(0.35, '#8d9478');
+  bar.addColorStop(0.62, '#5d6650'); bar.addColorStop(1, '#14170f');
+  ctx.fillStyle = bar;
+  roundRect(ctx, -9, -82, 18, 72, 5); ctx.fill();
+  ctx.fillStyle = '#9aa284';                       // the thickened muzzle
+  roundRect(ctx, -11, -86, 22, 11, 4); ctx.fill();
+  ctx.fillStyle = '#0c0f09';
+  ctx.beginPath(); ctx.ellipse(0, -84, 5, 3, 0, 0, TAU); ctx.fill();
+
+  // the cast hexagonal shell: narrow at the front, wide and overhung at the back
+  ctx.save();
+  ctx.scale(0.84, 0.84);
+  const shell = ctx.createLinearGradient(-38, 0, 38, 0);
+  shell.addColorStop(0, '#2b3223'); shell.addColorStop(0.32, '#8d9677');
+  shell.addColorStop(0.6, '#626b4c'); shell.addColorStop(1, '#222719');
+  ctx.fillStyle = shell;
+  ctx.beginPath();
+  ctx.moveTo(-17, -34);        // front plate, where the mantlet sits
+  ctx.lineTo(17, -34);
+  ctx.lineTo(37, -2);          // sloped cheeks
+  ctx.lineTo(34, 26);
+  ctx.lineTo(-34, 26);         // the rear overhang
+  ctx.lineTo(-37, -2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#12150f'; ctx.lineWidth = 2.5; ctx.stroke();
+  // the cast face, lit from the left
+  const cast = ctx.createLinearGradient(0, -34, 0, 26);
+  cast.addColorStop(0, 'rgba(255,255,230,0.14)');
+  cast.addColorStop(1, 'rgba(0,0,0,0.30)');
+  ctx.fillStyle = cast; ctx.fill();
+
+  // mantlet
+  ctx.fillStyle = '#4c5540';
+  roundRect(ctx, -15, -44, 30, 20, 7); ctx.fill();
+  ctx.strokeStyle = '#12150f'; ctx.lineWidth = 2; ctx.stroke();
+
+  // the commander's hatch on the roof, a vision port and a pistol port
+  ctx.fillStyle = 'rgba(0,0,0,0.34)';
+  ctx.beginPath(); ctx.ellipse(0, 6, 15, 13, 0, 0, TAU); ctx.fill();
+  ctx.strokeStyle = 'rgba(226,232,200,0.30)'; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.ellipse(0, 6, 15, 13, 0, 0, TAU); ctx.stroke();
+  ctx.fillStyle = 'rgba(0,0,0,0.42)';
+  roundRect(ctx, -30, -6, 8, 12, 3); ctx.fill();
+  roundRect(ctx, 22, -6, 8, 12, 3); ctx.fill();
+  // turret number, stencilled on the side
+  ctx.fillStyle = 'rgba(226,232,200,0.45)';
+  ctx.font = "9px 'Black Ops One', Impact, sans-serif";
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('34', 0, 20);
+  ctx.restore();
+
+  if (g.muzzleFlash > 0) {
+    ctx.globalAlpha = g.muzzleFlash;
+    const fg = ctx.createRadialGradient(0, -88, 2, 0, -88, 34);
+    fg.addColorStop(0, '#fff4c9'); fg.addColorStop(0.4, 'rgba(255,180,70,0.8)');
+    fg.addColorStop(1, 'rgba(255,140,40,0)');
+    ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(0, -88, 34, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+  ctx.restore();
 
   ctx.restore();
 
   // exhaust haze off the engine deck
   if (Math.random() < 0.4) {
-    g.particles.push({ x: x + (Math.random() - 0.5) * 50, y: y - 20, vx: (Math.random() - 0.5) * 14,
+    g.particles.push({ x: x - 50 + (Math.random() - 0.5) * 24, y: y - 6, vx: (Math.random() - 0.5) * 14,
       vy: -26 - Math.random() * 20, t: 0.9, r: 4 + Math.random() * 5, c: 'rgba(190,196,176,0.34)', soft: true });
   }
 }
@@ -1042,6 +1101,8 @@ function drawHud(ctx, g, t) {
   ctx.fillText(g.level ? g.level.name : '', 16, top + 47);
   ctx.font = "14px 'Special Elite', 'Courier New', monospace"; ctx.fillStyle = '#ffc24b';
   ctx.fillText(`★ ${g.secrets} intel`, 16, top + 72);
+  ctx.fillStyle = '#b8c49a';
+  ctx.fillText(`rof ${rateText(g.upgrades.rof)}`, 128, top + 72);
   ctx.fillStyle = '#dee2c2'; ctx.font = "13px 'Special Elite', 'Courier New', monospace";
   ctx.fillText(`score ${g.score}`, 16, top + 92);
   ctx.fillStyle = '#d79a7a';

@@ -3,7 +3,8 @@
 
 import { MATERIALS, SPECIAL_MATERIALS, LETTER_LEVELS, MAX_LEVEL, CHAMBERS, START_CHAMBERS,
   effectScale, levelDamage,
-  START_PAGES, MIN_BOILER, MAX_BOILER, FIRE_RPM, STOKE_COST, BLANK_DMG, getLevel } from './content.js';
+  START_PAGES, MIN_BOILER, MAX_BOILER, STOKE_COST, BLANK_DMG, getLevel,
+  rateText, rofCost, MAX_ROF } from './content.js';
 import { dictSize } from './dict.js';
 import { BADGES, earned } from './achievements.js';
 import { sfx, isMuted, setMuted } from './audio.js';
@@ -109,8 +110,10 @@ export function renderHow(onBack) {
           drawn down the moment you type it, then fires and refills from the bag. Any character
           <i>not</i> in a chamber is a <b>blank</b> — a flat ${BLANK_DMG} damage that no bonus or
           penalty ever changes.</p>
-          <p>The cannon fires <b>one shell per letter, one every 0.2 seconds</b> (${FIRE_RPM} rounds
-          a minute). It <b>leads</b> its target — works out where the tank will be — and the shell
+          <p>The gun fires <b>one shell per letter</b>. Out of the box that is
+          <b>one a second</b>, and intel buys it up to <b>ten a second</b> over ten upgrades
+          in the armoury — which is the difference between a long word trickling out and a
+          burst. It <b>leads</b> its target — works out where the tank will be — and the shell
           trims that lead gently in flight; it cannot turn sharply enough to circle back, so a
           shell that really misses is gone. It also counts what is already in the air, and holds
           the breech rather than spend a shell on something that is as good as dead.</p>
@@ -186,6 +189,12 @@ export function renderHow(onBack) {
           same material, or — for level ${MAX_LEVEL} pairs — a material on a fresh level 1
           letter. The foundry picks what comes out, not you. Scrap what you do not want for a
           piece of intel, and spend <b>${STOKE_COST} intel</b> to requisition one fresh level 1 letter.</p>
+          <p><b>Intel ★</b> comes off wrecks and off every wave you clear. It buys a
+          requisition, and it pays the <b>ordnance workshop</b>: rate of fire starts at
+          <b>1 round a second</b> and ten upgrades take it to <b>10 a second</b>, which is
+          what makes a long word land as a burst rather than a trickle.</p>
+          <p>Wrecks give up a letter perhaps <b>one time in ten to one in three</b> depending
+          on what you killed — the Colonel always drops.</p>
           <p>The magazine runs on between <b>${MIN_BOILER}</b> and <b>${MAX_BOILER}</b> letters.
           Anything else lives in <b>storage</b>, out of the mix, until you draw it back.</p>
         </div>
@@ -330,6 +339,7 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, onTest, s
       : '<span class="d">Nothing fell tonight.</span>';
 
     const short = bo.short();
+    const rof = game.upgrades.rof | 0;
     const gauge = `<span class="gauge ${bo.inventory.length >= MAX_BOILER ? 'full' : short ? 'low' : ''}">
       ${bo.inventory.length} / ${MAX_BOILER}</span>`;
 
@@ -449,6 +459,28 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, onTest, s
           </section>
         </div>
 
+        <section class="workshop">
+          <h3>Ordnance workshop</h3>
+          <div class="upgrades">
+            <div class="upg">
+              <div>
+                <b>Rate of fire</b>
+                <span class="d">how fast the shells leave the barrel, one per letter</span>
+                <div class="pips">${Array.from({ length: MAX_ROF }, (_, i) =>
+                  `<s class="${i < rof ? 'on' : ''}"></s>`).join('')}</div>
+              </div>
+              <div class="upgbuy">
+                <span class="num">${rateText(rof)}${rof < MAX_ROF
+                  ? ` &rarr; ${rateText(rof + 1)}` : ''}</span>
+                ${rof >= MAX_ROF
+                  ? '<span class="d">fully worked up</span>'
+                  : `<button id="b-rof" class="small" ${game.secrets >= rofCost(rof) ? '' : 'disabled'}
+                      >Upgrade &mdash; ${rofCost(rof)} ★</button>`}
+              </div>
+            </div>
+          </div>
+        </section>
+
         ${standalone ? '' : `<div class="afteraction">
           <section>
             <h3>The wave in figures</h3>
@@ -545,6 +577,18 @@ export function renderBoiler(game, { onNext, onChange, onMenu, onBack, onTest, s
       }
       draw();
     });
+    on('#b-rof', () => {
+      const cost = rofCost(game.upgrades.rof);
+      if (game.upgrades.rof >= MAX_ROF || game.secrets < cost) return;
+      game.secrets -= cost;
+      game.upgrades.rof++;
+      sfx.overload();
+      toast({ name: `Rate of fire — ${rateText(game.upgrades.rof)}`,
+        desc: `upgrade ${game.upgrades.rof} of ${MAX_ROF}` });
+      onChange && onChange();
+      draw();
+    });
+
     on('#b-stoke', () => {
       if (game.secrets < STOKE_COST) return;
       game.secrets -= STOKE_COST;
@@ -718,7 +762,8 @@ export function setLoading(pct, msg) {
 
 export function toast(b) {
   const box = document.getElementById('toasts');
-  const n = el('div', 'toast', `<b>${b.name}</b><span>${b.desc} &middot; ${b.pts} points</span>`);
+  const n = el('div', 'toast',
+    `<b>${b.name}</b><span>${b.desc}${b.pts == null ? '' : ` &middot; ${b.pts} points`}</span>`);
   box.appendChild(n);
   setTimeout(() => n.remove(), 5200);
 }

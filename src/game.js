@@ -1,6 +1,6 @@
 // game.js — the simulation. Pure state + update(); drawing lives in render.js.
 
-import { SPECIES, MATERIALS, getLevel, START_PAGES, MIN_WORD, rollLoot, FIRE_RPM, CHAMBERS } from './content.js';
+import { SPECIES, MATERIALS, getLevel, START_PAGES, MIN_WORD, rollLoot, fireRate, dropChance, CHAMBERS } from './content.js';
 import { Boiler, startingInventory } from './boiler.js';
 import { isWord, wordOfTheDay } from './dict.js';
 import { sfx } from './audio.js';
@@ -113,7 +113,9 @@ export function buildPath(door) {
   return wps;
 }
 
-const FIRE_GAP = 60 / FIRE_RPM;   // one shell per letter, 200 rounds a minute
+// One shell per letter; how fast they come is whatever the gun has been
+// upgraded to.
+const fireGap = g => 1 / fireRate(g.upgrades.rof);
 const SHOT_SPEED = 1900;
 const TURN_RATE = 5.5;            // rad/s — enough to correct a lead, far too slow to circle
 const TRACK_CONE = Math.PI / 3;   // and it only corrects towards something in front of it
@@ -127,6 +129,7 @@ export class Game {
   constructor(opts = {}) {
     this.boiler = opts.boiler || new Boiler(startingInventory());
     this.secrets = opts.secrets ?? 0;
+    this.upgrades = { rof: 0, ...(opts.upgrades || {}) };   // bought with intel, kept across waves
     this.pending = opts.pending || [];            // letters recovered this wave
     this.score = opts.score ?? 0;
     this.levelNo = opts.levelNo || 1;
@@ -526,7 +529,7 @@ export class Game {
     if (this.fireTimer > 0) return;
 
     const shot = this.fireQueue.shift();
-    this.fireTimer = FIRE_GAP;
+    this.fireTimer = fireGap(this);
     const ang = clampAim(leadAngle(PIVOT, tgt));
     this.cannonAngle = ang;
     const reach = MUZZLE.y - PIVOT.y;            // barrel length, as a radius
@@ -717,7 +720,7 @@ export class Game {
       this.secrets += n;
       this.floaters.push({ text: `+${n} intel`, color: '#ffc24b', x: b.x, y: b.y - 26, vy: -30, t: 1.3 });
     }
-    if (Math.random() < b.sp.drop) {
+    if (Math.random() < dropChance(b.sp)) {
       const tier = b.sp.boss ? 4 : b.sp.hp > 80 ? 3 : b.sp.hp > 30 ? 2 : 1;
       const loot = rollLoot(this.levelNo, tier);
       this.pending.push(loot);

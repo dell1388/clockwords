@@ -37,14 +37,14 @@ window.addEventListener('resize', fit);
 // ── the run, and what survives a bad wave ─────────────────────────────────
 const snapshot = g => ({
   boiler: g.boiler.serialize(), secrets: g.secrets, score: g.score,
-  stats: g.stats, pending: g.pending,
+  stats: g.stats, pending: g.pending, upgrades: g.upgrades,
 });
 
 function gameFrom(snap, levelNo) {
   const g = snap
     ? new Game({
         boiler: Boiler.deserialize(snap.boiler), secrets: snap.secrets, score: snap.score,
-        stats: snap.stats, pending: snap.pending || [],
+        stats: snap.stats, pending: snap.pending || [], upgrades: snap.upgrades,
       })
     : new Game({ boiler: new Boiler(startingInventory()) });
   g.levelNo = levelNo;

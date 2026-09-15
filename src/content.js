@@ -81,7 +81,18 @@ export const LENGTH_POWER = 1.61;
 export const START_PAGES = 5;      // codebooks in the field safe
 export const MIN_BOILER = 15;       // the magazine will not run on less
 export const MAX_BOILER = 50;       // and will not hold more
-export const FIRE_RPM = 300;        // one shell per letter, one every 0.2s
+// The gun starts slow and is bought up with intel: ten upgrades, one round a
+// second at the bottom and ten a second at the top.
+export const FIRE_RATES = [1, 1.5, 2, 3, 4, 5, 6, 7, 8, 9, 10];   // rounds a second, one step per upgrade
+export const MAX_ROF = FIRE_RATES.length - 1;
+export const rofCost = lvl => 6 + lvl * 6;                   // 6, 12 … 60 — 330 all told
+export const fireRate = lvl => FIRE_RATES[Math.max(0, Math.min(MAX_ROF, lvl | 0))];
+export const rateText = lvl => `${fireRate(lvl)}/s`;
+
+// Only about a third of a wreck leaves a letter behind. The Colonel is the one
+// exception: it always drops.
+export const DROP_SCALE = 0.3;
+export const dropChance = sp => (sp.boss ? sp.drop : sp.drop * DROP_SCALE);
 export const STOKE_COST = 3;        // intel for one fresh level-1 Iron letter
 export const HANDMADE = 10;         // ten written waves, then it generates forever
 
