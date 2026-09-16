@@ -682,7 +682,7 @@ function drawOutro(ctx, g) {
   ctx.fillStyle = 'rgba(232,220,189,0.85)';
   ctx.fillText(won
     ? `${g.pages} of ${START_PAGES} dossiers still on the rack`
-    : 'every dossier of the formula is gone', 0, 74);
+    : 'every dossier is gone from the safe', 0, 74);
   ctx.restore();
 }
 

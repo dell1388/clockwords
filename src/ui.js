@@ -28,6 +28,41 @@ const el = (tag, cls, html) => {
 export function show(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id));
   document.body.classList.toggle('modal', id !== 'none');
+  fitPlates();
+}
+
+// No panel is ever allowed to need a scrollbar: whatever the window, the panel
+// on show is scaled down until it fits, and centred in what is left. The one
+// list that still scrolls on its own is the word log after a wave.
+export function fitPlates() {
+  for (const s of document.querySelectorAll('.screen.on')) {
+    const p = s.querySelector('.plate');
+    if (!p) continue;
+    p.style.transform = 'none';
+    p.style.marginTop = '0';
+    const availH = s.clientHeight - 28, availW = s.clientWidth - 28;   // the screen's padding
+    const needH = p.offsetHeight, needW = p.offsetWidth;
+    if (!needH || !needW) continue;
+    const k = Math.min(1, availH / needH, availW / needW);
+    p.style.transform = k < 0.999 ? `scale(${k})` : 'none';
+    p.style.marginTop = `${Math.max(0, (availH - needH * k) / 2)}px`;
+  }
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('resize', fitPlates);
+  // The panels are rebuilt in place (the armoury redraws on every click), so
+  // re-fit whenever one changes rather than from every call site.
+  let queued = false;
+  const observer = new MutationObserver(() => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => { queued = false; fitPlates(); });
+  });
+  const watch = () => document.querySelectorAll('.screen')
+    .forEach(s => observer.observe(s, { childList: true, subtree: true, attributes: true,
+      attributeFilter: ['class'] }));
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watch);
+  else watch();
 }
 
 // A letter reads as its glyph, its level in bands, and its material as colour —
@@ -126,7 +161,7 @@ export function renderHow(onBack) {
           <h3>The tanks</h3>
           <p>Everything comes through the one arch still standing, and walks the route painted
           on the floor — across, down a lane, back across — to the <b>safe</b> in the corner
-          opposite the cannon, takes a dossier of the formula and retraces the whole run to get
+          opposite the cannon, takes a dossier out of the safe and retraces the whole run to get
           out. Kill a carrier and the dossier goes back in the safe. Lose all ${START_PAGES} dossiers
           and the wave is over. Nothing ever comes near the cannon itself.</p>
           <h3>The firing range</h3>
@@ -650,15 +685,15 @@ export function statsBlock(sum, { secrets = true } = {}) {
   const best = sum.best ? `${sum.best.word} (${Math.round(sum.best.dealt).toLocaleString()})` : '—';
   return `<ul class="stats">
     ${row('Score this level', sum.score.toLocaleString())}
-    ${row('Bugs destroyed', sum.kills)}
+    ${row('Tanks destroyed', sum.kills)}
     ${row('Words fired', sum.words)}
     ${row('Damage dealt', Math.round(sum.dealt).toLocaleString())}
     ${row('Letters fired', `${sum.lit} from chambers · ${sum.blanks} blank`)}
     ${row('Hardest word', best)}
     ${row('Longest word', sum.longest ? sum.longest.word : '—')}
-    ${row('Pages', `${sum.pages} intact · ${sum.lost} lost`)}
+    ${row('Dossiers', `${sum.pages} intact · ${sum.lost} lost`)}
     ${secrets ? row('Secrets earned', `★ ${sum.secrets}`) : ''}
-    ${row('Time on the floor', mmss(sum.time))}
+    ${row('Time in contact', mmss(sum.time))}
   </ul>`;
 }
 
@@ -667,7 +702,7 @@ function wordLogHtml(game) {
   const log = [...(game.wordLog || [])].sort((a, b) => b.dealt - a.dealt);
   const total = log.reduce((n, e) => n + e.dealt, 0);
   if (!log.length) {
-    return `<section class="wordlog"><h3>The night's work</h3>
+    return `<section class="wordlog"><h3>The wave's work</h3>
       <p class="d">Not a single word fired.</p></section>`;
   }
 
@@ -675,7 +710,7 @@ function wordLogHtml(game) {
     const tags = [
       e.pure ? '<b class="tag pure">pure</b>' : '',
       e.wotd ? '<b class="tag wotd">word of the day</b>' : '',
-      e.overload ? '<b class="tag over">overload</b>' : '',
+      e.overload ? '<b class="tag over">full house</b>' : '',
       e.repeats ? `<b class="tag rep">repeat ×${e.repeats + 1}</b>` : '',
       (e.effects || []).map(id => `<span class="tagsw" title="${MATERIALS[id].name}"
         style="--body:${MATERIALS[id].body};--edge:${MATERIALS[id].edge};--glow:${MATERIALS[id].glow}"></span>`).join(''),
@@ -687,7 +722,7 @@ function wordLogHtml(game) {
     </li>`;
   }).join('');
   return `<section class="wordlog">
-    <h3>The night's work
+    <h3>The wave's work
       <span class="d">&middot; ${log.length} word${log.length > 1 ? 's' : ''}
       &middot; ${Math.round(total).toLocaleString()} damage</span></h3>
     <ol class="wl">${rows}</ol>
@@ -703,7 +738,7 @@ export function renderOver(game, on) {
         <div class="crest sad">☠</div>
         <div>
           <p class="kicker">Level ${game.levelNo} — ${getLevel(game.levelNo).name}</p>
-          <h2>The formula is gone</h2>
+          <h2>The dossiers are gone</h2>
           <p class="story">All ${START_PAGES} dossiers were carried off into the dark.
           Only this wave is lost — the line holds, and the ${game.lootKept
             ? `${game.lootKept} letter${game.lootKept === 1 ? '' : 's'} that fell this wave
