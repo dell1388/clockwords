@@ -311,7 +311,78 @@ function drawPage(ctx, px, py, alpha, t = 0) {
   ctx.restore();
 }
 
-// A letter's level is read off the dots under its glyph, Scrabble-fashion.
+
+// ── shells ─────────────────────────────────────────────────────────────────
+// Every letter is a shell: same case, same size, whatever it holds. The
+// material is the colour of the case and the level is the number of driving
+// bands around it — one ring for a common letter, five for a rare one.
+export function shellOutline(ctx, w, h) {
+  const hw = w / 2, top = -h / 2, bot = h / 2;
+  const nose = h * 0.40, shoulder = top + nose;
+  ctx.beginPath();
+  ctx.moveTo(0, top);
+  ctx.quadraticCurveTo(hw * 0.92, top + nose * 0.42, hw, shoulder);
+  ctx.lineTo(hw, bot - w * 0.16);
+  ctx.quadraticCurveTo(hw, bot, hw - w * 0.16, bot);
+  ctx.lineTo(-hw + w * 0.16, bot);
+  ctx.quadraticCurveTo(-hw, bot, -hw, bot - w * 0.16);
+  ctx.lineTo(-hw, shoulder);
+  ctx.quadraticCurveTo(-hw * 0.92, top + nose * 0.42, 0, top);
+  ctx.closePath();
+}
+
+// Draws one shell, centred on the current origin and standing on its base.
+export function drawShell(ctx, opts) {
+  const { w, h, mat, letter, level = 0, glow = 0, dim = false } = opts;
+  const m = mat ? MATERIALS[mat] : null;
+  const body = m ? m.body : '#b9ac8d';
+  const edge = m ? m.edge : '#3c4630';
+  const ink = m ? m.ink : '#1a2015';
+  const hw = w / 2, top = -h / 2, bot = h / 2;
+
+  if (glow && m) { ctx.shadowColor = m.glow; ctx.shadowBlur = glow; }
+  ctx.fillStyle = body;
+  shellOutline(ctx, w, h); ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // brass case under a lit nose
+  const sh = ctx.createLinearGradient(-hw, 0, hw, 0);
+  sh.addColorStop(0, 'rgba(255,255,255,0.30)');
+  sh.addColorStop(0.42, 'rgba(255,255,255,0.05)');
+  sh.addColorStop(1, 'rgba(0,0,0,0.32)');
+  ctx.fillStyle = sh;
+  shellOutline(ctx, w, h); ctx.fill();
+
+  // the nose cap, so it reads as a shell and not a pill
+  ctx.save();
+  shellOutline(ctx, w, h); ctx.clip();
+  ctx.fillStyle = 'rgba(0,0,0,0.22)';
+  ctx.fillRect(-hw, top, w, h * 0.40);
+  // driving bands: one per level, wrapped round the base of the case
+  const bands = Math.max(0, level);
+  const bandH = Math.max(1.4, h * 0.055);
+  const gap = bandH * 1.85;
+  for (let i = 0; i < bands; i++) {
+    const y = bot - w * 0.12 - bandH - i * gap;
+    ctx.fillStyle = m ? m.dot : 'rgba(40,48,30,0.8)';
+    ctx.fillRect(-hw, y, w, bandH);
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fillRect(-hw, y + bandH - 0.8, w, 0.8);
+  }
+  ctx.restore();
+
+  ctx.strokeStyle = edge; ctx.lineWidth = Math.max(1.2, w * 0.075);
+  shellOutline(ctx, w, h); ctx.stroke();
+
+  if (letter) {
+    ctx.fillStyle = dim ? (m ? m.glow : '#dee2c2') : ink;
+    ctx.font = `${Math.round(h * 0.34)}px 'Special Elite', 'Courier New', monospace`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(letter.toUpperCase(), 0, -h * 0.06);
+  }
+}
+
+// Older read-outs still show a level as a row of dots.
 export function drawDots(ctx, cx, cy, level, r, color) {
   const gap = r * 2.6;
   const x0 = cx - ((level - 1) * gap) / 2;
@@ -905,30 +976,13 @@ function drawLoot(ctx, d, t) {
   ctx.fillStyle = halo;
   ctx.beginPath(); ctx.arc(0, 0, r * (2.2 + d.level * 0.22), 0, TAU); ctx.fill();
 
-  ctx.shadowColor = '#ffc24b'; ctx.shadowBlur = 16;
-  ctx.fillStyle = MATERIALS.iron.body;
-  ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.fill();
-  ctx.shadowBlur = 0;
-  const sh = ctx.createRadialGradient(-r * 0.35, -r * 0.4, 1, 0, 0, r);
-  sh.addColorStop(0, 'rgba(255,255,255,0.4)');
-  sh.addColorStop(1, 'rgba(0,0,0,0.28)');
-  ctx.fillStyle = sh;
-  ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.fill();
-  ctx.strokeStyle = '#ffe9a8'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.stroke();
-
-  ctx.fillStyle = MATERIALS.iron.ink;
-  ctx.font = `${Math.round(r * 1.15)}px 'Special Elite', 'Courier New', monospace`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(d.letter.toUpperCase(), 0, -r * 0.18);
-  drawDots(ctx, 0, r * 0.55, d.level, 1.7, MATERIALS.iron.dot);
+  drawShell(ctx, { w: r * 1.7, h: r * 2.9, mat: 'iron', letter: d.letter, level: d.level, glow: 16 });
   ctx.restore();
 }
 
 function drawShot(ctx, s) {
   const m = s.shot.mat ? MATERIALS[s.shot.mat] : null;
   const lvl = s.shot.level || 0;
-  const rad = SHOT_R;                     // every letter is the same size
   ctx.save();
   for (let i = 0; i < s.trail.length; i++) {
     const p = s.trail[i];
@@ -938,35 +992,10 @@ function drawShot(ctx, s) {
   }
   ctx.globalAlpha = 1;
   ctx.translate(s.x, s.y);
-  ctx.rotate(Math.sin(s.rot) * 0.16);
-
-  if (m) {
-    ctx.shadowColor = m.glow; ctx.shadowBlur = 16;
-    ctx.fillStyle = m.body;
-    ctx.beginPath(); ctx.arc(0, 0, rad, 0, TAU); ctx.fill();
-    ctx.shadowBlur = 0;
-    const sh = ctx.createRadialGradient(-rad * 0.35, -rad * 0.4, 1, 0, 0, rad);
-    sh.addColorStop(0, 'rgba(255,255,255,0.35)');
-    sh.addColorStop(1, 'rgba(0,0,0,0.28)');
-    ctx.fillStyle = sh;
-    ctx.beginPath(); ctx.arc(0, 0, rad, 0, TAU); ctx.fill();
-    ctx.strokeStyle = m.edge; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(0, 0, rad, 0, TAU); ctx.stroke();
-    ctx.fillStyle = m.ink;
-    ctx.font = "15px 'Special Elite', 'Courier New', monospace";
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(s.shot.ch.toUpperCase(), 0, -3);
-    drawDots(ctx, 0, 8, lvl, 1.5, m.dot);
-  } else {
-    ctx.fillStyle = '#b9ac8d';
-    ctx.beginPath(); ctx.arc(0, 0, rad, 0, TAU); ctx.fill();
-    ctx.strokeStyle = '#3c4630'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.arc(0, 0, rad, 0, TAU); ctx.stroke();
-    ctx.fillStyle = '#1a2015';
-    ctx.font = "14px 'Special Elite', 'Courier New', monospace";
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(s.shot.ch.toUpperCase(), 0, 0);
-  }
+  // a shell flies nose-first
+  ctx.rotate(Math.atan2(s.vy, s.vx) + Math.PI / 2 + Math.sin(s.rot) * 0.05);
+  drawShell(ctx, { w: SHOT_R * 1.7, h: SHOT_R * 2.9, mat: s.shot.mat,
+    letter: s.shot.ch, level: lvl, glow: m ? 16 : 0 });
   ctx.restore();
 }
 
@@ -981,8 +1010,8 @@ function drawHud(ctx, g, t) {
   ctx.fillStyle = '#a8b060'; ctx.fillRect(0, top, W, 4);
   ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, top + 4, W, 3);
 
-  // chambers — circular tanks, every one the same size; colour is the only
-  // mark of material and the dots are the level
+  // chambers — one shell each, every one the same size; the colour of the case
+  // is the material and the driving bands are the level
   const n = CHAMBERS, gap = CHAMBER_GAP;
   const total = (n - 1) * gap + CHAMBER_R * 2;
   const cy = top + 20 + CHAMBER_R;
@@ -996,7 +1025,7 @@ function drawHud(ctx, g, t) {
     ctx.save();
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
-    // the tank itself
+    // the chamber the shell sits in
     ctx.fillStyle = open ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.72)';
     ctx.beginPath(); ctx.arc(cx, cy, CHAMBER_R, 0, TAU); ctx.fill();
     ctx.strokeStyle = open ? '#59623a' : '#333b25'; ctx.lineWidth = 2;
@@ -1012,33 +1041,21 @@ function drawHud(ctx, g, t) {
       }
     } else if (letter) {
       const m = MATERIALS[letter.mat];
-      const r = CHAMBER_R - 5;
+      ctx.save();
+      ctx.translate(cx, cy);
       if (spent) {
-        // typed, not yet fired: the tank already reads as drawn down
+        // typed, not yet fired: the chamber already reads as drawn down
         ctx.save();
         ctx.setLineDash([5, 4]);
         ctx.strokeStyle = m.glow; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.stroke();
+        shellOutline(ctx, CHAMBER_R * 1.42, CHAMBER_R * 2.3); ctx.stroke();
         ctx.restore();
         ctx.globalAlpha = 0.26;
-      } else {
-        ctx.shadowColor = m.glow; ctx.shadowBlur = 11;
-        ctx.fillStyle = m.body;
-        ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.fill();
-        ctx.shadowBlur = 0;
-        const sh = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.4, 1, cx, cy, r);
-        sh.addColorStop(0, 'rgba(255,255,255,0.3)');
-        sh.addColorStop(1, 'rgba(0,0,0,0.3)');
-        ctx.fillStyle = sh;
-        ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.fill();
-        ctx.strokeStyle = m.edge; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.stroke();
       }
-      ctx.fillStyle = spent ? m.glow : m.ink;
-      ctx.font = "23px 'Special Elite', 'Courier New', monospace";
-      ctx.fillText(letter.letter.toUpperCase(), cx, cy - 5);
-      drawDots(ctx, cx, cy + 13, letter.level, 2.3, spent ? m.glow : m.dot);
+      drawShell(ctx, { w: CHAMBER_R * 1.28, h: CHAMBER_R * 2.1, mat: letter.mat,
+        letter: letter.letter, level: letter.level, glow: spent ? 0 : 11, dim: spent });
       ctx.globalAlpha = 1;
+      ctx.restore();
       if (spent) { ctx.fillStyle = m.glow; ctx.beginPath(); ctx.arc(cx + 19, cy - 19, 3, 0, TAU); ctx.fill(); }
     } else {
       ctx.strokeStyle = 'rgba(170,186,120,0.22)'; ctx.lineWidth = 2;

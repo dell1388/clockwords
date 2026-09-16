@@ -75,14 +75,22 @@ section{background:rgba(20,14,8,.35);border:1px solid #3c4630;border-radius:8px;
 .mats{list-style:none;margin:0;padding:0}
 .mats li{margin-bottom:9px;line-height:1.4}
 
-/* every letter is the same circle, whatever it holds */
-.chip{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;
-  width:22px;height:22px;flex:0 0 22px;border-radius:50%;padding:0;
-  background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.26),rgba(0,0,0,.3)),var(--body);
-  border:1px solid var(--edge);color:var(--ink);box-shadow:0 0 6px -2px var(--glow)}
-.chip b{font-size:12px;font-family:var(--type);line-height:1;margin-top:-2px}
-.chip i{display:flex;gap:1.4px;align-items:center;height:2.4px;margin-top:1.5px}
-.chip i s{display:block;width:2.4px;height:2.4px;border-radius:50%;background:var(--dot);text-decoration:none}
+/* every letter is the same shell, whatever it holds: the case is the material
+   and the driving bands round its base are the level */
+.chip{position:relative;display:inline-block;width:22px;height:32px;flex:0 0 22px;
+  padding:0;border:0;border-radius:1px 1px 3px 3px;vertical-align:middle;
+  clip-path:polygon(50% 0,86% 15%,100% 33%,100% 100%,0 100%,0 33%,14% 15%);
+  background:linear-gradient(100deg,rgba(255,255,255,.30),rgba(255,255,255,.04) 45%,rgba(0,0,0,.34)),
+    var(--body);
+  color:var(--ink);filter:drop-shadow(0 0 3px rgba(0,0,0,.5))}
+/* the nose, darker than the case */
+.chip::before{content:'';position:absolute;inset:0 0 67% 0;background:rgba(0,0,0,.24)}
+.chip b{position:absolute;left:0;right:0;top:10px;text-align:center;
+  font-size:11px;font-family:var(--type);line-height:1}
+.chip i{position:absolute;left:0;right:0;bottom:2px;display:flex;flex-direction:column-reverse;
+  gap:.9px;height:auto;margin:0}
+.chip i s{display:block;width:100%;height:1.3px;border-radius:0;background:var(--dot);
+  text-decoration:none;box-shadow:0 1px 0 rgba(0,0,0,.25)}
 .swatch{display:inline-block;width:14px;height:14px;border-radius:50%;flex:none;
   background:var(--body);border:2px solid var(--edge);box-shadow:0 0 8px -1px var(--glow)}
 .num{font-family:var(--type);color:var(--glow)}
@@ -96,8 +104,8 @@ section{background:rgba(20,14,8,.35);border:1px solid #3c4630;border-radius:8px;
   overflow:auto;align-content:flex-start}
 .chipbtn{padding:0;background:none;border:0;box-shadow:none;border-radius:50%;line-height:0}
 .chipbtn:hover:not(:disabled){background:none}
-.chipbtn:hover .chip{box-shadow:0 0 0 2px #63703f}
-.chipbtn.sel .chip{box-shadow:0 0 0 1px rgba(0,0,0,.75),0 0 0 3px var(--glow),0 0 9px 0 var(--glow)}
+.chipbtn:hover .chip{filter:drop-shadow(0 0 3px var(--glow)) brightness(1.15)}
+.chipbtn.sel .chip{filter:drop-shadow(0 0 2px var(--glow)) drop-shadow(0 0 5px var(--glow)) brightness(1.2)}
 
 
 .slots{display:flex;align-items:center;gap:10px;justify-content:center;margin:10px 0}
@@ -164,7 +172,7 @@ section h3 .d{white-space:nowrap;font-size:11px}
   border:1px solid var(--brass-d);border-radius:5px;padding:1px 6px;margin-left:6px}
 .gauge.low{color:#e88a5c;border-color:#8d4a2c}
 .gauge.full{color:#9fd2a0;border-color:#4d7a4f}
-.chip.stowed{opacity:.55;filter:saturate(.6)}
+.chip.stowed{opacity:.55;filter:saturate(.6) drop-shadow(0 0 3px rgba(0,0,0,.5))}
 .warn{margin:12px 0 0;text-align:center;color:#e88a5c;font-style:italic;font-size:14px}
 section h4{font-family:var(--display);margin:14px 0 4px;font-size:13px;letter-spacing:1.5px;color:var(--brass)}
 .inv{max-height:clamp(200px,34vh,460px)}

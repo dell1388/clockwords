@@ -54,6 +54,24 @@ function noise(t, dur, filterFreq, peak = 0.3, type = 'bandpass', q = 1) {
   s.start(t); s.stop(t + dur + 0.05);
 }
 
+// A gun report: a hard transient, the crack of the muzzle blast, and a low
+// thump that rolls away after it. Everything martial in here is built from it.
+function report(t, { crack = 1700, body = 300, dur = 0.22, peak = 0.3, q = 1.1 } = {}) {
+  noise(t, 0.035, crack * 1.6, peak * 0.85, 'highpass', 0.7);     // the transient
+  noise(t + 0.004, dur * 0.4, crack, peak, 'bandpass', q);        // the crack
+  noise(t + 0.02, dur, body, peak * 0.7, 'lowpass');              // the roll
+  const o = ctx.createOscillator();
+  o.type = 'triangle';
+  o.frequency.setValueAtTime(body * 0.9, t);
+  o.frequency.exponentialRampToValueAtTime(Math.max(28, body * 0.14), t + dur * 0.6);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(peak, t + 0.003);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.8);
+  o.connect(g); g.connect(master);
+  o.start(t); o.stop(t + dur + 0.05);
+}
+
 // A sound that throws would otherwise just go quiet, which is hard to notice.
 const guard = fn => (...a) => {
   if (muted) return;
@@ -72,27 +90,24 @@ export const sfx = {
     tone(150, t, 0.01, 0.16, 'sawtooth', 0.18, 90);
     noise(t, 0.14, 320, 0.12, 'lowpass');
   }),
-  // one gun report per letter: a crack off the muzzle brake over a low thump
+  // one gun report per letter, pitched a little by what is in the shell
   fire: guard((pitch = 1) => {
     const t = ctx.currentTime;
-    const o = ctx.createOscillator();
-    o.type = 'triangle';
-    o.frequency.setValueAtTime(320 * pitch, t);
-    o.frequency.exponentialRampToValueAtTime(58 * pitch, t + 0.09);
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.26, t + 0.003);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
-    o.connect(g); g.connect(master);
-    o.start(t); o.stop(t + 0.13);
-    noise(t, 0.05, 1800, 0.16, 'bandpass', 1.1);      // the crack
-    noise(t + 0.02, 0.18, 260, 0.10, 'lowpass');       // the roll off the walls
+    report(t, { crack: 1700 * pitch, body: 300 * pitch, dur: 0.26, peak: 0.3 });
   }),
-  hit: guard(() => { const t = ctx.currentTime; noise(t, 0.05, 3200, 0.14, 'bandpass', 4); tone(820, t, 0.002, 0.04, 'triangle', 0.08); }),
+  // a shell striking plate: a hard metallic clang, and a ricochet off it
+  hit: guard(() => {
+    const t = ctx.currentTime;
+    noise(t, 0.04, 3600, 0.15, 'bandpass', 6);
+    tone(1150, t, 0.001, 0.05, 'square', 0.07, 700);
+    tone(430, t + 0.005, 0.002, 0.09, 'triangle', 0.09, 210);
+  }),
+  // a high-explosive burst: the crack, then a long low boom rolling off the walls
   boom: guard(() => {
     const t = ctx.currentTime;
-    noise(t, 0.42, 420, 0.42, 'lowpass');
-    tone(90, t, 0.005, 0.35, 'sawtooth', 0.22, 40);
+    report(t, { crack: 1100, body: 200, dur: 0.5, peak: 0.34, q: 0.7 });
+    noise(t + 0.05, 0.75, 180, 0.34, 'lowpass');
+    tone(64, t + 0.02, 0.01, 0.7, 'sawtooth', 0.22, 28);
   }),
   freeze: guard(() => {
     const t = ctx.currentTime;
@@ -113,7 +128,7 @@ export const sfx = {
     s2.start(t); s2.stop(t + 0.26);
     tone(150, t, 0.005, 0.22, 'sawtooth', 0.16, 40);
     noise(t + 0.03, 0.14, 1600, 0.12, 'bandpass', 1.6);   // torn steel
-    noise(t + 0.09, 0.22, 380, 0.14, 'lowpass');          // the cook-off
+    report(t + 0.07, { crack: 900, body: 150, dur: 0.55, peak: 0.28, q: 0.6 });  // the cook-off
   }),
 
   // the word has been used already this wave
@@ -149,14 +164,16 @@ export const sfx = {
     tone(1568, t + 0.075, 0.004, 0.13, 'square', 0.06);
     noise(t, 0.05, 4200, 0.02, 'highpass', 0.8);
   }),
+  // the alarm: something has the dossier and is running
   steal: guard(() => {
     const t = ctx.currentTime;
-    tone(600, t, 0.01, 0.12, 'square', 0.16, 300);
-    tone(400, t + 0.13, 0.01, 0.14, 'square', 0.16, 200);
+    for (let i = 0; i < 3; i++) tone(760, t + i * 0.16, 0.02, 0.11, 'square', 0.12, 540);
   }),
+  // a klaxon over the position: the line is gone
   lost: guard(() => {
     const t = ctx.currentTime;
-    [440, 330, 247].forEach((f, i) => tone(f, t + i * 0.14, 0.01, 0.22, 'sawtooth', 0.18));
+    [330, 247, 165].forEach((f, i) => tone(f, t + i * 0.24, 0.03, 0.4, 'sawtooth', 0.2, f * 0.78));
+    noise(t + 0.5, 0.8, 200, 0.16, 'lowpass');
   }),
   // a bugle call over the position
   win: guard(() => {
@@ -166,15 +183,24 @@ export const sfx = {
   }),
   // a breech block running back: the chamber opens
   steam: guard(() => { const t = ctx.currentTime; noise(t, 0.22, 1400, 0.16, 'bandpass', 1.4); tone(240, t, 0.004, 0.14, 'square', 0.09, 120); }),
-  clank: guard(() => { const t = ctx.currentTime; tone(160, t, 0.003, 0.16, 'square', 0.12, 90); noise(t, 0.1, 700, 0.16, 'bandpass', 2); }),
+  // metal on metal: a breech, a hatch, a button
+  clank: guard(() => {
+    const t = ctx.currentTime;
+    tone(150, t, 0.002, 0.14, 'square', 0.12, 80);
+    noise(t, 0.07, 1300, 0.16, 'bandpass', 3);
+  }),
+  // a ripple of guns going off down the line
   overload: guard(() => {
     const t = ctx.currentTime;
-    [392, 523, 659, 784, 988].forEach((f, i) => tone(f, t + i * 0.05, 0.008, 0.2, 'square', 0.12));
-    noise(t, 0.3, 3000, 0.14, 'highpass');
+    for (let i = 0; i < 4; i++) {
+      report(t + i * 0.075, { crack: 1500 + i * 220, body: 260, dur: 0.3, peak: 0.2 });
+    }
   }),
+  // something very heavy coming up the road
   boss: guard(() => {
     const t = ctx.currentTime;
-    tone(70, t, 0.05, 1.1, 'sawtooth', 0.3, 45);
-    noise(t, 1.2, 300, 0.3, 'lowpass');
+    tone(52, t, 0.05, 1.4, 'sawtooth', 0.3, 34);
+    noise(t, 1.4, 220, 0.3, 'lowpass');
+    report(t + 0.25, { crack: 800, body: 130, dur: 0.7, peak: 0.26, q: 0.6 });
   }),
 };

@@ -30,14 +30,14 @@ export function show(id) {
   document.body.classList.toggle('modal', id !== 'none');
 }
 
-// A letter reads as its glyph, its level in dots, and its material as colour —
+// A letter reads as its glyph, its level in bands, and its material as colour —
 // never as a written label.
 export function chip(letter, mat, level, extra = '') {
   const m = MATERIALS[mat];
-  const dots = `<i>${'<s></s>'.repeat(level)}</i>`;
+  const bands = `<i>${'<s></s>'.repeat(level)}</i>`;
   return `<span class="chip ${extra}" title="level ${level} · ${m.name}"
     style="--body:${m.body};--edge:${m.edge};--ink:${m.ink};--glow:${m.glow};--dot:${m.dot}">
-    <b>${letter.toUpperCase()}</b>${dots}</span>`;
+    <b>${letter.toUpperCase()}</b>${bands}</span>`;
 }
 const swatch = mat => {
   const m = MATERIALS[mat];
@@ -149,8 +149,9 @@ export function renderHow(onBack) {
         </div>
         <div>
           <h3>Letter levels</h3>
-          <p>Letters are graded the way Scrabble grades them, and the grade is drawn as dots
-          under the glyph. The level is what sets the damage — a rare letter is worth a great
+          <p>Letters are graded the way Scrabble grades them, and the grade is drawn as
+          <b>driving bands</b> round the base of the shell — one for a common letter, five
+          for a rare one. The level is what sets the damage — a rare letter is worth a great
           many common ones.</p>
           <ul class="mats">${levels}</ul>
 

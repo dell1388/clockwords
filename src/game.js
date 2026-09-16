@@ -121,6 +121,32 @@ const TURN_RATE = 5.5;            // rad/s — enough to correct a lead, far too
 const TRACK_CONE = Math.PI / 3;   // and it only corrects towards something in front of it
 const WP_RADIUS = 13;
 
+// How far along its route a tank actually is, in pixels rather than waypoint
+// counts — so two tanks on the same leg rank by which one is in front.
+function cumulative(path) {
+  if (path.cum) return path.cum;
+  const cum = [0];
+  for (let i = 1; i < path.length; i++) {
+    cum[i] = cum[i - 1] + Math.hypot(path[i].x - path[i - 1].x, path[i].y - path[i - 1].y);
+  }
+  Object.defineProperty(path, 'cum', { value: cum, enumerable: false });
+  return cum;
+}
+
+// What the gun shoots at: a tank carrying a dossier always outranks one that is
+// not, and within each group the one furthest along wins — furthest towards the
+// safe on the way in, closest to the door on the way out.
+export function threatScore(b) {
+  const cum = cumulative(b.path);
+  const wi = Math.max(0, Math.min(b.path.length - 1, b.wi));
+  const toWp = dist(b, b.path[wi]);
+  if (b.carrying) {
+    const home = cum[wi] + toWp;         // how much road is left before it escapes
+    return 1e6 - home;
+  }
+  return cum[wi] - toWp;                 // how much road it has already covered
+}
+
 const rand = (a, b) => a + Math.random() * (b - a);
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
@@ -490,10 +516,9 @@ export class Game {
     let best = null, bestScore = -Infinity;
     for (const b of this.bugs) {
       if (b.spawnT < 0.15) continue;
-      // prefer whatever is closest to stealing, then carriers on their way out
-      const prog = b.carrying ? 10000 - b.wi * 10 : b.wi * 10 - dist(b, b.path[b.wi]) / 100;
       // Already dead, it just does not know yet: do not waste a shell on it.
       if (b.hp - (b.incoming || 0) <= 0) continue;
+      const prog = threatScore(b);
       if (prog > bestScore) { bestScore = prog; best = b; }
     }
     return best;
