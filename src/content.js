@@ -37,7 +37,7 @@ export const MATERIALS = {
     desc: 'Plain steel shot. No special effect.',
   },
   thermite: {
-    id: 'thermite', name: 'Incendiary', mul: 0.5, cost: 6, burn: { frac: 0.8, time: 4 },
+    id: 'thermite', name: 'Incendiary', mul: 2.5, cost: 6, burn: { frac: 0.8, time: 4 },
     body: '#b8471f', edge: '#4a1607', ink: '#ffe6c2', glow: '#ff8a3c', dot: '#ffd9a8',
     desc: 'Sets armour burning for four seconds.',
   },
@@ -47,7 +47,7 @@ export const MATERIALS = {
     desc: 'A dart that punches clean through two hulls.',
   },
   lazurite: {
-    id: 'lazurite', name: 'Pulse', mul: 0.4, cost: 10, freeze: 4,
+    id: 'lazurite', name: 'Pulse', mul: 1, cost: 10, freeze: 4,
     body: '#2f63b5', edge: '#0d2148', ink: '#dcecff', glow: '#7fc4ff', dot: '#cfe6ff',
     desc: 'Kills the engines — nothing moves for four seconds.',
   },
