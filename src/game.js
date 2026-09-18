@@ -646,22 +646,19 @@ export class Game {
     s.aimed.incoming = Math.max(0, (s.aimed.incoming || 0) - this.effective(s.shot, s.aimed));
   }
 
+  // Everything one shell touches, in the order it touches it: the tank it
+  // struck (and anything it pierced, which arrives here as its own impact),
+  // then the blast, then the arc. Burn and freeze are laid on at the end, over
+  // every tank the shell reached — if the word carries fire, everything the
+  // shell caught is burning, however it was caught.
   impact(s, b) {
     this.release(s);
     const sh = s.shot;
+    const touched = [b];
     let dealt = this.damage(b, sh.dmg);
     sfx.hit();
     this.sparks(s.x, s.y, sh.mat ? MATERIALS[sh.mat].glow : '#d9cdb4');
 
-    if (sh.freeze) {
-      b.freeze = Math.max(b.freeze, sh.freeze);
-      sfx.freeze();
-      this.puff(b.x, b.y, 10, MATERIALS.lazurite.glow);
-    }
-    if (sh.burn) {
-      b.burn = { t: sh.burn.time, dps: sh.burn.dps, wid: sh.wid };
-      sfx.burn();
-    }
     if (sh.splash) {
       sfx.boom();
       this.shake = Math.max(this.shake, 0.4);
@@ -669,7 +666,10 @@ export class Game {
       for (const o of this.bugs) {
         if (o === b) continue;
         const d = dist(o, s);
-        if (d < sh.splash) dealt += this.damage(o, sh.dmg * 0.6 * (1 - d / sh.splash));
+        if (d < sh.splash) {
+          dealt += this.damage(o, sh.dmg * 0.6 * (1 - d / sh.splash));
+          touched.push(o);
+        }
       }
     }
     if (sh.chain) {
@@ -685,8 +685,24 @@ export class Game {
         if (!near) break;
         this.arc(src, near);
         dealt += this.damage(near, sh.dmg * 0.5);
+        touched.push(near);
         done.add(near); src = near;
       }
+    }
+
+    if (sh.freeze || sh.burn) {
+      let any = false;
+      for (const o of touched) {
+        if (o.dead) continue;
+        any = true;
+        if (sh.freeze) {
+          o.freeze = Math.max(o.freeze, sh.freeze);
+          this.puff(o.x, o.y, 10, MATERIALS.lazurite.glow);
+        }
+        if (sh.burn) o.burn = { t: sh.burn.time, dps: sh.burn.dps, wid: sh.wid };
+      }
+      if (any && sh.freeze) sfx.freeze();
+      if (any && sh.burn) sfx.burn();
     }
     this.credit(sh.wid, dealt);
   }

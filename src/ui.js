@@ -192,9 +192,9 @@ export function renderHow(onBack) {
 
           <h3>Materials</h3>
           <p>Materials are read by <b>colour</b> alone. Tanks only ever drop plain Iron. The one
-          way to make a material is to put <b>two level ${MAX_LEVEL} letters</b> in the crucible:
+          way to make a material is to put <b>two level ${MAX_LEVEL} letters</b> in the foundry:
           they burn away and leave a material behind on a fresh level 1 letter, both chosen by
-          the crucible.</p>
+          the foundry.</p>
           <p>A material lends its effect to <b>every letter in the word it is fired with</b>,
           blanks included, and different materials <b>stack</b>: one Lazurite and one Thermite
           and the whole word freezes and burns. Each letter still does its own damage.</p>
@@ -208,6 +208,11 @@ export function renderHow(onBack) {
           radius. <b>Arcs</b> is how many further tanks the charge jumps to, and over what
           distance. <b>Burn</b> is the total fire damage over 4 seconds, as a percentage of the
           hardest letter in the word. <b>Echo</b> is the damage the repeated volley does.</p>
+          <p class="d">The effects land in the order the shell does its work, and they land on
+          <b>everything the shell reaches</b>: it strikes a tank, punches on through the next one
+          if it pierces, bursts if it carries a charge, then jumps to whatever is in arc range —
+          and every tank on that list takes the burn and the freeze the word is carrying, whether
+          it was struck, caught in the blast or reached by the arc.</p>
 
           <h3>The armoury</h3>
           <p>The armoury is reachable without playing: the title screen, the level select

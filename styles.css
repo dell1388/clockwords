@@ -177,7 +177,13 @@ section h4{font-family:var(--display);margin:14px 0 4px;font-size:13px;letter-sp
 .cols3 section .inv{flex:1}
 
 .matrow{display:flex;gap:7px;justify-content:center;margin:10px 0}
-.benchrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:10px}
+/* A fixed grid, not a wrapping row: the labels carry counts that change as you
+   work ("Fuse 0 extra pairs" -> "Fuse 16 extra pairs"), and a flex row reflowed
+   under them, so a button moved out from under the pointer between clicks. */
+.benchrow{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start;
+  margin-top:auto;padding-top:10px}
+.benchrow button{margin-top:0;min-height:30px;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;padding-left:6px;padding-right:6px}
 .d.hot{color:#e8c98d}
 section .fine{margin:6px 0 0;font-size:11px}
 
