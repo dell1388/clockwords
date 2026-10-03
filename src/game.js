@@ -359,14 +359,15 @@ export class Game {
     this.rackFlash = 1;
   }
 
-  // Several of these can land on the same word — a full house, an unsealed
-  // chamber, an echo — so each one stacks under the notes already rising
-  // rather than printing on top of them.
+  // Several of these can land on one word \u2014 a full house, an unsealed
+  // chamber, a rare word, an echo, a trick or three \u2014 and more can land
+  // before the last lot has faded. They are drawn as one stack, newest at the
+  // bottom, so nothing is ever printed over anything else; all this records is
+  // the order they arrived in.
   note(text, color) {
-    const live = this.floaters.filter(f => f.note);
-    const row = live.length;
-    this.floaters.push({ text, color, note: true, x: W / 2, y: 400 - row * 26,
-      vy: -26, t: 1.6 + row * 0.25, big: true });
+    this.noteSeq = (this.noteSeq || 0) + 1;
+    this.floaters.push({ text, color, note: true, seq: this.noteSeq,
+      x: W / 2, y: 0, vy: 0, t: 1.9, big: true });
   }
 
   // ── simulation ───────────────────────────────────────────────────────────

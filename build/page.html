@@ -153,8 +153,10 @@ section{background:rgba(20,14,8,.35);border:1px solid #3c4630;border-radius:8px;
 
 #kb{font-family:var(--type);position:absolute;opacity:0;pointer-events:none;left:0;top:600px;width:1px;height:1px;border:0}
 body.touch #kb{pointer-events:auto;width:940px;height:56px;left:10px;top:566px;opacity:0;z-index:25}
-#toasts{position:fixed;right:14px;bottom:14px;z-index:45;max-width:330px;
-  display:flex;flex-direction:column-reverse;gap:8px;align-items:flex-end;pointer-events:none}
+/* In play the HUD owns the bottom of the screen, so toasts stack down from
+   the top right, clear of the sound button. */
+#toasts{position:fixed;right:14px;top:56px;z-index:45;max-width:330px;
+  display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:none}
 .toast{background:linear-gradient(#454f31,#2b3320);border:2px solid var(--brass);
   border-radius:9px;padding:9px 16px;box-shadow:0 8px 28px rgba(0,0,0,.65),0 0 26px rgba(255,186,70,.2);
   animation:pop .4s ease-out, fade .6s ease-in 4.2s forwards;text-align:center;max-width:520px}

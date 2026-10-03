@@ -32,10 +32,11 @@ Rules for whoever picks this up:
       landed tricks are marked and the rest read as still to find. The first
       time a trick ever lands it explains itself in a toast. Recorded in the
       save under `tricks`.
-- [ ] **Make the firing range a vocabulary trainer.** Live fire already shows
-      damage; show the tier badge and trick chips for anything typed, with no
-      combat pressure, plus a running list of the best words found there.
-      *Done when:* a player can learn what the game values in two minutes.
+- [x] **Make the firing range a vocabulary trainer.** The word log now carries
+      a tier numeral and a dot per trick; a Range Record panel tracks words
+      tried, never fired before, hardest, longest and rarest; and a strip
+      lights each of the six tricks as it is landed. Banner notes are drawn as
+      one stack so several landing together never print over each other.
 - [ ] **A distinct sound per trick.** Six short, recognisable hits built on the
       existing `report()` family in `audio.js`, so tricks become audible and
       the player stops reading the badge.

@@ -256,7 +256,8 @@ export function draw(ctx, g, t) {
   for (const sh of g.shots) drawShot(x, sh);
   for (const p of g.particles) if (!p.soft) drawParticle(x, p);
   drawMuzzleLight(x, g);
-  for (const f of g.floaters) drawFloater(x, f);
+  for (const f of g.floaters) if (!f.note) drawFloater(x, f);
+  drawNotes(x, g);
   if (g.aim) drawReticle(x, g.aim, t);
   drawBossBar(x, g);
   if (g.sandbox) drawProving(x, g);
@@ -382,6 +383,26 @@ function drawParticle(ctx, p) {
   } else {
     ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, TAU); ctx.fill();
   }
+  ctx.restore();
+}
+
+// The banner stack: whatever a word earned, newest at the bottom, rising
+// together as the oldest fades off the top.
+function drawNotes(ctx, g) {
+  const notes = g.floaters.filter(f => f.note).sort((a, b) => a.seq - b.seq).slice(-6);
+  if (!notes.length) return;
+  ctx.save();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = "20px 'Special Elite', 'Courier New', monospace";
+  const base = 404;
+  notes.forEach((f, i) => {
+    const y = base - (notes.length - 1 - i) * 26 - (1.9 - f.t) * 10;
+    ctx.globalAlpha = Math.min(1, f.t * 1.6);
+    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+    ctx.strokeText(f.text, f.x, y);
+    ctx.fillStyle = f.color;
+    ctx.fillText(f.text, f.x, y);
+  });
   ctx.restore();
 }
 
@@ -791,51 +812,112 @@ function drawOutro(ctx, g) {
 function drawProving(ctx, g) {
   ctx.save();
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = 'rgba(11,8,5,0.72)';
-  roundRect(ctx, 12, 10, 250, 26, 6); ctx.fill();
-  ctx.strokeStyle = '#59623a'; ctx.lineWidth = 2;
-  roundRect(ctx, 12, 10, 250, 26, 6); ctx.stroke();
+  const panel = (x, y, w, h) => {
+    ctx.fillStyle = 'rgba(11,8,5,0.74)';
+    roundRect(ctx, x, y, w, h, 6); ctx.fill();
+    ctx.strokeStyle = '#59623a'; ctx.lineWidth = 1.5;
+    roundRect(ctx, x, y, w, h, 6); ctx.stroke();
+  };
+
+  panel(12, 10, 286, 26);
   ctx.fillStyle = '#ffc24b'; ctx.font = "14px 'Black Ops One', Impact, sans-serif";
   ctx.fillText('THE FIRING RANGE', 24, 28);
   ctx.textAlign = 'right';
   ctx.fillStyle = 'rgba(214,222,186,0.5)'; ctx.font = "italic 12px 'Roboto Condensed', Arial, sans-serif";
-  ctx.fillText('Esc to leave', 250, 28);
+  ctx.fillText('Esc to leave', 286, 28);
   ctx.textAlign = 'left';
 
-  const log = (g.wordLog || []).slice(-9).reverse();
+  const log = (g.wordLog || []);
   if (!log.length) {
-    ctx.fillStyle = 'rgba(214,222,186,0.45)';
+    ctx.fillStyle = 'rgba(214,222,186,0.5)';
     ctx.font = "italic 14px 'Roboto Condensed', Arial, sans-serif";
-    ctx.fillText('type anything — the damage it does is listed here', 24, 56);
+    ctx.fillText('type anything \u2014 nothing here shoots back', 24, 58);
+    ctx.font = "13px 'Roboto Condensed', Arial, sans-serif";
+    ctx.fillStyle = 'rgba(214,222,186,0.38)';
+    ctx.fillText('the rack reads the tier and the tricks as you type', 24, 78);
     ctx.restore();
     return;
   }
-  const h = 20 * log.length + 34;
-  ctx.fillStyle = 'rgba(11,8,5,0.72)';
-  roundRect(ctx, 12, 44, 250, h, 6); ctx.fill();
-  ctx.strokeStyle = '#55401f'; ctx.lineWidth = 1.5;
-  roundRect(ctx, 12, 44, 250, h, 6); ctx.stroke();
+
+  // ── what you have fired, newest first ───────────────────────────────────
+  const recent = log.slice(-9).reverse();
+  const h = 20 * recent.length + 34;
+  panel(12, 44, 286, h);
   ctx.fillStyle = 'rgba(200,178,132,0.75)';
   ctx.font = "11px 'Black Ops One', Impact, sans-serif";
   ctx.fillText('WORD', 24, 62);
+  ctx.fillText('TIER', 196, 62);
   ctx.textAlign = 'right';
-  ctx.fillText('DEALT', 250, 62);
+  ctx.fillText('DEALT', 286, 62);
 
-  log.forEach((e, i) => {
+  recent.forEach((e, i) => {
     const y = 82 + i * 20;
     ctx.textAlign = 'left';
     let x = 24;
     ctx.font = "13px 'Special Elite', 'Courier New', monospace";
-    for (let k = 0; k < e.word.length && x < 190; k++) {
+    for (let k = 0; k < e.word.length && x < 165; k++) {
       const m = e.marks[k] ? MATERIALS[e.marks[k]] : null;
       ctx.fillStyle = m ? m.glow : 'rgba(214,218,182,0.45)';
       const ch = e.word[k].toUpperCase();
       ctx.fillText(ch, x, y);
       x += ctx.measureText(ch).width + 0.5;
     }
+    // the tier it came out at, and a dot per trick it landed
+    const tier = e.tier || 2;
+    ctx.font = "12px 'Black Ops One', Impact, sans-serif";
+    ctx.fillStyle = TIER_INK[Math.min(4, tier - 1)];
+    ctx.fillText(['I', 'II', 'III', 'IV', 'V'][tier - 1], 196, y);
+    (e.tricks || []).forEach((id, k2) => {
+      ctx.fillStyle = TRICKS[id].colour;
+      ctx.beginPath(); ctx.arc(216 + k2 * 7, y - 4, 2.4, 0, TAU); ctx.fill();
+    });
     ctx.textAlign = 'right';
     ctx.fillStyle = i === 0 ? '#ffc24b' : '#dee2c2';
-    ctx.fillText(Math.round(e.dealt).toLocaleString(), 250, y);
+    ctx.font = "13px 'Special Elite', 'Courier New', monospace";
+    ctx.fillText(Math.round(e.dealt).toLocaleString(), 286, y);
+  });
+
+  // ── the record: what this session has turned up ─────────────────────────
+  const best = log.reduce((a2, e) => (e.dealt > (a2 ? a2.dealt : -1) ? e : a2), null);
+  const rarest = log.reduce((a2, e) => ((e.tier || 2) > (a2 ? (a2.tier || 2) : 0) ? e : a2), null);
+  const longest = log.reduce((a2, e) => (e.word.length > (a2 ? a2.word.length : 0) ? e : a2), null);
+  const landed = new Set();
+  for (const e of log) for (const id of e.tricks || []) landed.add(id);
+  const fresh = log.filter(e => e.fresh).length;
+
+  const rx = W - 298, rh = 150;
+  panel(rx, 10, 286, rh);
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#ffc24b'; ctx.font = "13px 'Black Ops One', Impact, sans-serif";
+  ctx.fillText('RANGE RECORD', rx + 12, 30);
+  const row = (label, value, y, ink = '#dee2c2') => {
+    ctx.font = "12px 'Roboto Condensed', Arial, sans-serif";
+    ctx.fillStyle = 'rgba(186,192,150,0.7)';
+    ctx.textAlign = 'left'; ctx.fillText(label, rx + 12, y);
+    ctx.font = "13px 'Special Elite', 'Courier New', monospace";
+    ctx.fillStyle = ink;
+    ctx.textAlign = 'right'; ctx.fillText(value, rx + 274, y);
+  };
+  row('words tried', String(log.length), 52);
+  row('never fired before', String(fresh), 72, '#9be8ff');
+  if (best) row('hardest', `${best.word.toUpperCase()} \u00b7 ${Math.round(best.dealt).toLocaleString()}`, 92);
+  if (longest) row('longest', longest.word.toUpperCase(), 112);
+  if (rarest) row('rarest', `${rarest.word.toUpperCase()} \u00b7 ${['I', 'II', 'III', 'IV', 'V'][(rarest.tier || 2) - 1]}`,
+    132, TIER_INK[Math.min(4, (rarest.tier || 2) - 1)]);
+
+  // the six tricks, lit as you land them
+  const ty = 10 + rh + 8;
+  const ids = Object.keys(TRICKS);
+  panel(rx, ty, 286, 44);
+  ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(186,192,150,0.7)'; ctx.font = "11px 'Black Ops One', Impact, sans-serif";
+  ctx.fillText('TRICKS LANDED HERE', rx + 12, ty + 18);
+  ids.forEach((id, i) => {
+    const bx = rx + 12 + i * 45, by = ty + 26, on = landed.has(id);
+    ctx.globalAlpha = on ? 1 : 0.3;
+    ctx.fillStyle = TRICKS[id].colour;
+    roundRect(ctx, bx, by, 40, 9, 3); ctx.fill();
+    ctx.globalAlpha = 1;
   });
   ctx.restore();
 }
