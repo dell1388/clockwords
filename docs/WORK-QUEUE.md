@@ -51,11 +51,11 @@ Rules for whoever picks this up:
 Each item is playable on its own. Do them in order; do not start the map
 before the RNG exists, or the draft before the map does.
 
-- [ ] **`src/rng.js`** — a seeded xorshift32, and a `pick(array)` /
-      `weighted(entries)` helper on top. Everything a run generates uses it;
-      `Math.random()` stays for cosmetics only.
-      *Done when:* the same seed produces an identical route twice, asserted in
-      `test/rng.test.mjs`.
+- [x] **`src/rng.js`** — seeded xorshift32 with `int`, `pick`, `weighted`,
+      `some`, `shuffle` and `fork`, plus five-character shareable seed strings
+      and `dailySeed()` from the UTC date. 24 assertions in
+      `test/rng.test.mjs`, including a frozen sample so the generator cannot
+      drift silently. `Math.random()` stays for cosmetics only.
 - [ ] **`src/run.js`** — run state and nothing else: seed, route, current node,
       drafted mods, doctrines, the run's lexicon, intel. Serialises to
       `wordwar.run.v1`. The campaign never imports it.

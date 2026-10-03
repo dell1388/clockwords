@@ -17,6 +17,7 @@ python3 -m http.server 8099      # must be served; ES modules + fetched assets
 
 ```sh
 node test/wordcraft.test.mjs     # pure logic: tiers, tricks, the multiplier curve
+node test/rng.test.mjs           # the seeded stream runs are generated from
 ```
 
 Everything else is verified by driving the real game in a real browser with
