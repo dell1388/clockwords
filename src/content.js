@@ -215,16 +215,29 @@ export function proceduralLevel(n) {                       // n is 1-based
   const boss = k % 10 === 0;
   const waves = [];
   const bands = 4 + Math.min(2, Math.floor(k / 5));
+  // Which species a wave draws was a plain modulo, so a wave whose number
+  // happened to land on armour and repair rigs together was a wall while its
+  // neighbours were a stroll — wave 17 was unwinnable while 19 was easy.
+  // No more than two heavy bands; the rest are swapped down to light ones.
+  const HEAVY = new Set(['beetle', 'weaver', 'centipede']);
+  const LIGHT = ['spider', 'roach', 'moth', 'tick'];
+  const types = [];
+  let heavy = 0;
   for (let i = 0; i < bands; i++) {
-    const type = LATE[(i * 3 + k) % LATE.length];
-    const n2 = Math.min(12, 3 + Math.floor(k / 2) + (type === 'tick' ? 6 : 0));
+    let type = LATE[(i * 3 + k) % LATE.length];
+    if (HEAVY.has(type) && ++heavy > 2) type = LIGHT[(i + k) % LIGHT.length];
+    types.push(type);
+  }
+  for (let i = 0; i < bands; i++) {
+    const type = types[i];
+    const n2 = Math.min(11, 3 + Math.floor(k / 3) + (type === 'tick' ? 5 : 0));
     waves.push(W(1 + i * 11, type, n2, Math.max(0.45, 1.4 - k * 0.05), i % 3));
   }
   if (boss) waves.push(W(8, 'box', 1, 1, 1));
   return {
     name: boss ? `The Colonel Returns (${k / 10 + 1})` : `Wave ${n}`,
     flavour: boss ? 'Rebuilt, up-armoured, and angrier.' : 'They keep coming.',
-    waves, boss, scale: 1 + k * 0.18,
+    waves, boss, scale: 1 + k * 0.11,
   };
 }
 

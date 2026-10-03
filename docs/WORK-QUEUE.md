@@ -37,15 +37,17 @@ Rules for whoever picks this up:
       tried, never fired before, hardest, longest and rarest; and a strip
       lights each of the six tricks as it is landed. Banner notes are drawn as
       one stack so several landing together never print over each other.
-- [ ] **A distinct sound per trick.** Six short, recognisable hits built on the
-      existing `report()` family in `audio.js`, so tricks become audible and
-      the player stops reading the badge.
-      *Done when:* tricks are identifiable with the screen ignored.
-- [ ] **Balance pass on waves 5–20.** Only wave 1 has been measured. Drive each
-      wave headless with a fixed word list, record clear time, dossiers lost
-      and shells fired; tune `scale` and the procedural curve from the numbers.
-      *Done when:* a table of clear times per wave lives in this repo and no
-      wave is under 30s or over 4 minutes at a competent pace.
+- [x] **A distinct sound per trick.** Six hits off the same `report()` family
+      as the gun: the palindrome goes out and back, doubles strike twice, the
+      ladder steps up a tone, the cluster punches through.
+- [x] **Balance pass on waves 1–20.** `tools/bench.mjs` plays every wave
+      headless as a competent player does — 160-word vocabulary, picks words
+      that use the open chambers, avoids its own repeats, with the rate of
+      fire it would plausibly have bought. Results in `docs/BALANCE.md`:
+      all 20 clear, 45–113s, every one 5/5 dossiers. Two real faults found and
+      fixed: the procedural HP ramp was too steep (wave 13 unwinnable), and
+      species were drawn by plain modulo so wave 17 landed armour and repair
+      rigs together while 19 was a stroll.
 
 ## Phase 2 — Runs
 

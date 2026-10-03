@@ -283,7 +283,19 @@ function syncMute() {
 muteBtn.onclick = () => { unlock(); setMuted(!isMuted()); syncMute(); };
 
 // exposed for debugging and for the automated smoke tests
-window.CLOCKWORDS = { get game() { return game; }, get state() { return state; }, sfx };
+window.CLOCKWORDS = {
+  get game() { return game; }, get state() { return state; }, sfx,
+  // a door for the benchmark in tools/: start any wave with a plausible rack
+  dev: {
+    startWave(n, rof = 0) {
+      progress.setLoadout(outfitFor(n));
+      enterLevel(n);
+      game.upgrades.rof = rof;
+      game.skipLeader();
+      return { wave: n, rof: game.upgrades.rof, letters: game.boiler.inventory.length };
+    },
+  },
+};
 
 // ── loop ───────────────────────────────────────────────────────────────────
 function frame(ts) {

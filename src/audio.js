@@ -175,6 +175,41 @@ export const sfx = {
     [330, 247, 165].forEach((f, i) => tone(f, t + i * 0.24, 0.03, 0.4, 'sawtooth', 0.2, f * 0.78));
     noise(t + 0.5, 0.8, 200, 0.16, 'lowpass');
   }),
+  // Each trick has its own hit, so after a while they are known by ear and
+  // the badge on the rack stops being read at all. All six are built from the
+  // same report() family as the gun, so none of them sounds like a menu.
+  trick: guard(id => {
+    const t = ctx.currentTime;
+    switch (id) {
+      case 'palindrome':      // out and back: a figure that returns to where it began
+        [880, 1174, 880].forEach((f, i) => tone(f, t + i * 0.07, 0.006, 0.16, 'triangle', 0.08));
+        noise(t, 0.06, 2600, 0.06, 'bandpass', 2);
+        break;
+      case 'doubles':         // two of everything, struck twice
+        for (const d of [0, 0.075]) {
+          tone(1046, t + d, 0.003, 0.09, 'square', 0.07);
+          noise(t + d, 0.04, 3200, 0.1, 'bandpass', 5);
+        }
+        break;
+      case 'alliterate':      // a chain: three links, each a step up
+        [523, 659, 784].forEach((f, i) => tone(f, t + i * 0.06, 0.005, 0.2, 'triangle', 0.07));
+        break;
+      case 'anagram':         // the same notes in another order, handed back
+        [784, 587, 880, 659].forEach((f, i) => tone(f, t + i * 0.05, 0.004, 0.14, 'sine', 0.07));
+        break;
+      case 'ladder':          // one rung up
+        tone(659, t, 0.004, 0.12, 'triangle', 0.08);
+        tone(740, t + 0.08, 0.004, 0.18, 'triangle', 0.08);
+        break;
+      case 'cluster':         // something hard going through something hard
+        report(t, { crack: 2400, body: 420, dur: 0.22, peak: 0.2, q: 3 });
+        tone(196, t, 0.004, 0.2, 'sawtooth', 0.1, 120);
+        break;
+      default:
+        tone(880, t, 0.005, 0.12, 'triangle', 0.07);
+    }
+  }),
+
   // a word nobody expected: a rising sting over the gun report, higher and
   // longer the rarer the word
   rare: guard((tier = 4) => {
