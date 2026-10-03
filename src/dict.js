@@ -10,34 +10,71 @@ gear steam brass cog piston valve boiler lever rivet copper iron jade amethyst
 lazurite thermite aetherium spider roach beetle moth tick weaver formula secret
 quartz jazzy zephyr quixotic oxide exile vex zeal quill quiver`.split(/\s+/);
 
+// Nothing here may hang. A fetch that never settles used to leave the loading
+// screen up forever with no way to tell what had gone wrong. An abort signal
+// is not enough on its own — a request that is never answered at all cannot
+// always be aborted — so the whole attempt races a deadline and the game goes
+// on without it.
+const TIMEOUT = 9000;          // one attempt
+const BUDGET = 12000;          // all attempts together: past this the game starts regardless
+
+function withDeadline(promise, ms, what) {
+  let t;
+  return Promise.race([
+    promise.finally(() => clearTimeout(t)),
+    new Promise((_, rej) => { t = setTimeout(() => rej(new Error(`${what} timed out after ${ms / 1000}s`)), ms); }),
+  ]);
+}
+
+function fetchWithDeadline(url, ms = TIMEOUT) {
+  if (typeof AbortController !== 'function') return withDeadline(fetch(url), ms, url);
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), ms);
+  return withDeadline(fetch(url, { signal: ac.signal }).finally(() => clearTimeout(t)), ms + 500, url);
+}
+
+export const loadProblems = [];
+
 export async function loadDictionary(onProgress) {
   const urls = ['assets/enable1.txt', './assets/enable1.txt'];
+  const deadline = Date.now() + BUDGET;
   for (const url of urls) {
+    const left = deadline - Date.now();
+    if (left < 500) { loadProblems.push('out of time waiting for the lexicon'); break; }
     try {
-      const res = await fetch(url);
-      if (!res.ok) continue;
-      const total = +(res.headers.get('content-length') || 0);
-      let text;
-      if (res.body && total) {
-        const reader = res.body.getReader();
-        const chunks = []; let got = 0;
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          chunks.push(value); got += value.length;
-          onProgress && onProgress(Math.min(1, got / total));
-        }
-        text = new TextDecoder().decode(concat(chunks, got));
-      } else {
-        text = await res.text();
-      }
-      WORDS = new Set(text.split('\n').filter(Boolean));
-      await loadRanks();
-      onProgress && onProgress(1);
-      return WORDS.size;
-    } catch (_) { /* try the next url */ }
+      const size = await withDeadline(readList(url, onProgress), Math.min(TIMEOUT, left), url);
+      if (size) return size;
+    } catch (e) {
+      loadProblems.push(`${url}: ${(e && e.message) || e}`);
+    }
   }
+  // The lexicon is gone, but the game still has to start: a tiny word list is
+  // a crippled game, a frozen loading screen is no game at all.
   WORDS = new Set(FALLBACK);
+  onProgress && onProgress(1);
+  return WORDS.size;
+}
+
+async function readList(url, onProgress) {
+  const res = await fetchWithDeadline(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const total = +(res.headers.get('content-length') || 0);
+  let text;
+  if (res.body && total) {
+    const reader = res.body.getReader();
+    const chunks = []; let got = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value); got += value.length;
+      onProgress && onProgress(Math.min(1, got / total));
+    }
+    text = new TextDecoder().decode(concat(chunks, got));
+  } else {
+    text = await res.text();
+  }
+  WORDS = new Set(text.split('\n').filter(Boolean));
+  await loadRanks();
   onProgress && onProgress(1);
   return WORDS.size;
 }
@@ -47,10 +84,12 @@ export async function loadDictionary(onProgress) {
 async function loadRanks() {
   for (const url of ['assets/freq20k.txt', './assets/freq20k.txt']) {
     try {
-      const res = await fetch(url);
+      const res = await fetchWithDeadline(url, 8000);
       if (!res.ok) continue;
-      return loadFrequency(await res.text());
-    } catch (_) { /* try the next url */ }
+      return loadFrequency(await withDeadline(res.text(), 8000, url));
+    } catch (e) {
+      loadProblems.push(`${url}: ${(e && e.message) || e}`);
+    }
   }
   return 0;
 }

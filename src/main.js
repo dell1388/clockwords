@@ -4,7 +4,7 @@ import { Game, W, H, PLAY_H } from './game.js';
 import { Boiler, startingInventory } from './boiler.js';
 import { rollLoot } from './content.js';
 import * as progress from './progress.js';
-import { loadDictionary, dictSize } from './dict.js';
+import { loadDictionary, dictSize, loadProblems } from './dict.js';
 import { draw, makeBackground, chamberAt } from './render.js';
 import * as ui from './ui.js';
 import { sfx, unlock, setMuted, isMuted } from './audio.js';
@@ -326,18 +326,40 @@ function frame(ts) {
 }
 
 // ── go ─────────────────────────────────────────────────────────────────────
+// A game that will not start must at least say why. Anything thrown before the
+// title screen is up lands on the loading plate instead of leaving it spinning.
+function bootFailed(what, err) {
+  const msg = (err && (err.message || err.reason || err)) || 'unknown';
+  console.error('boot failed:', what, err);
+  ui.setLoading(1, `${what}: ${msg}`.slice(0, 140));
+  const txt = document.getElementById('loadtxt');
+  if (txt) txt.style.color = '#e8845c';
+}
+window.addEventListener('error', e => {
+  if (state === 'loading') bootFailed('failed to start', e.error || e.message);
+});
+window.addEventListener('unhandledrejection', e => {
+  if (state === 'loading') bootFailed('failed to start', e.reason);
+});
+
 (async function boot() {
-  fit();
-  syncMute();
-  ui.show('loading');
-  ui.setLoading(0, 'Opening the field manual…');
-  // Wait for the period faces, but never let a slow font host hold up the game.
-  try { await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 2500))]); } catch (_) {}
-  const n = await loadDictionary(p => ui.setLoading(p, `Opening the field manual… ${Math.round(p * 100)}%`));
-  ui.setLoading(1, `${n.toLocaleString()} words ready`);
-  makeBackground();
-  game = gameFrom(null, 1);
-  game.startLevel(1);
-  requestAnimationFrame(frame);
-  setTimeout(toTitle, 250);
+  try {
+    fit();
+    syncMute();
+    ui.show('loading');
+    ui.setLoading(0, 'Opening the field manual…');
+    // Wait for the period faces, but never let a slow font host hold up the game.
+    try { await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 2500))]); } catch (_) {}
+    const n = await loadDictionary(p => ui.setLoading(p, `Opening the field manual… ${Math.round(p * 100)}%`));
+    if (loadProblems.length) console.warn('lexicon:', loadProblems.join(' · '));
+    ui.setLoading(1, n > 1000 ? `${n.toLocaleString()} words ready`
+      : `only ${n} words — the lexicon did not load (${loadProblems[0] || 'no reason given'})`);
+    makeBackground();
+    game = gameFrom(null, 1);
+    game.startLevel(1);
+    requestAnimationFrame(frame);
+    setTimeout(toTitle, 250);
+  } catch (e) {
+    bootFailed('failed to start', e);
+  }
 })();
