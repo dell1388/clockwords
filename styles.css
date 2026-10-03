@@ -215,6 +215,10 @@ body.modal .toast{text-align:center;max-width:300px}
 .tag.over{color:#ffc24b}
 .tag.rep{color:#c8a27a}
 .tag.pure{color:#9be8ff}
+.tag.tier4{color:#ffc24b}
+.tag.tier5{color:#fff4c9}
+.tag.new{color:#9be8ff}
+.tag.trick{color:#c8a2ff}
 .tagsw{display:inline-block;width:9px;height:9px;border-radius:50%;margin-left:4px;
   vertical-align:middle;background:var(--body);border:1px solid var(--edge);
   box-shadow:0 0 5px -1px var(--glow)}

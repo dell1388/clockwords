@@ -358,7 +358,7 @@ export class Boiler {
    * character the chamber fires — damage from the letter's level, effect from
    * its material — and then empties. Any other character is a blank worth 1.
    */
-  resolve(word, { repeats = 0, wotd = false } = {}) {
+  resolve(word, { repeats = 0, wotd = false, read = null } = {}) {
     const chars = word.toLowerCase().split('');
     const taken = new Set();
     const picks = chars.map(ch => {
@@ -380,8 +380,15 @@ export class Boiler {
     const pure = taken.size === len && len > 0;
     if (pure) mult *= 2;
     if (wotd) mult *= 2;                                         // word of the day
-    const penalty = repeats > 0 ? Math.max(0.2, Math.pow(0.5, repeats)) : 1;
+    // A word you have used before is worth less — unless it is one letter off
+    // the last word, which is a ladder and pays in full.
+    const penalty = repeats > 0 && !(read && read.noDecay)
+      ? Math.max(0.2, Math.pow(0.5, repeats)) : 1;
     mult *= penalty;
+    // What the word itself is worth: how rare it is, and whether you have ever
+    // fired it before.
+    const craft = read ? read.mult : 1;
+    mult *= craft;
 
     const loaded = this.loaded();
     const overload = loaded > 0 && taken.size === loaded && loaded >= this.open;
@@ -411,6 +418,12 @@ export class Boiler {
       }
     }
     if (wotd) spread.splash = Math.max(spread.splash, 70);
+    // The shape of the word, over the top of whatever its materials give it.
+    if (read) {
+      if (read.piercing) spread.pierce = Math.max(spread.pierce, 99);     // a palindrome goes through everything
+      if (read.ricochet) spread.chain = Math.max(spread.chain, read.ricochet)
+        , spread.chainRange = Math.max(spread.chainRange, 150);
+    }
     // Jade on a rarer letter echoes closer to full strength.
     const echoFrac = jade
       ? Math.min(1, MATERIALS.jade.echo + (Math.max(1, best.jade || 1) - 1) * 0.075)
@@ -428,6 +441,7 @@ export class Boiler {
         chain: spread.chain,
         chainRange: spread.chainRange,
         burn: null,
+        noArmour: !!(read && read.armourPiercing),
       };
     });
 
@@ -451,6 +465,7 @@ export class Boiler {
     }
 
     return { shots: volleys, slots: [...taken], mult, penalty, overload, jade, brass, wotd, pure,
+             craft, read,
              effects: [...present].filter(id => !MATERIALS[id].base) };
   }
 
@@ -468,6 +483,22 @@ export class Boiler {
     }
     this.reload();
     return unsealed;
+  }
+
+  // An anagram of the last word hands its letters straight back: the chambers
+  // it spent are loaded with exactly what they held, and whatever the reload
+  // drew in their place goes back into the bag.
+  restore(slots, letters) {
+    for (let k = 0; k < slots.length; k++) {
+      const i = slots[k], l = letters[k];
+      if (!l || i >= this.open) continue;
+      const now = this.chambers[i];
+      if (now && now.id !== l.id) this.bag.push(now);
+      const at = this.bag.findIndex(x => x.id === l.id);
+      if (at >= 0) this.bag.splice(at, 1);
+      this.chambers[i] = l;
+    }
+    this.reload();
   }
 
   // A letter you cannot use is not a dead end: tip it back into the bag and the

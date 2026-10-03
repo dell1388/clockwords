@@ -2,6 +2,9 @@
 
 import { W, H, PLAY_H, MACHINE, MUZZLE, PIVOT, SAFE, DOORS, SEALED_DOORS, buildPath } from './game.js';
 import { MATERIALS, CHAMBERS, START_PAGES, MAX_LEVEL, rateText } from './content.js';
+import { project, drawLeader } from './film.js';
+import { readWord, TRICKS } from './wordcraft.js';
+import { isWord } from './dict.js';
 
 const TAU = Math.PI * 2;
 const SHOT_R = 13;          // one radius for every letter fired
@@ -215,34 +218,123 @@ function drawTracks(x) {
   x.restore();
 }
 
+// The battlefield is drawn to its own frame and then run through the
+// projector; the HUD goes on after, clean, over the top.
+let scene = null, sctx = null;
+function sceneCtx() {
+  if (!scene) {
+    scene = document.createElement('canvas');
+    scene.width = W; scene.height = PLAY_H;
+    sctx = scene.getContext('2d');
+  }
+  return sctx;
+}
+
 export function draw(ctx, g, t) {
   if (!bg) makeBackground();
+  const x = sceneCtx();
+  const dt = Math.min(0.05, Math.max(0.001, t - (draw.last || t - 0.016)));
+  draw.last = t;
 
-  ctx.save();
-  if (g.shake > 0) ctx.translate((Math.random() - 0.5) * g.shake * 14, (Math.random() - 0.5) * g.shake * 14);
-  ctx.drawImage(bg, 0, 0);
-  drawDust(ctx, t);
+  x.save();
+  x.clearRect(0, 0, W, PLAY_H);
+  if (g.shake > 0) x.translate((Math.random() - 0.5) * g.shake * 16, (Math.random() - 0.5) * g.shake * 16);
+  x.drawImage(bg, 0, 0);
+  drawDust(x, t);
 
-  ctx.save();
-  ctx.beginPath(); ctx.rect(0, 0, W, PLAY_H); ctx.clip();
-  for (const p of g.particles) if (p.soft) drawParticle(ctx, p);
+  x.save();
+  x.beginPath(); x.rect(0, 0, W, PLAY_H); x.clip();
+  for (const s of g.scorch || []) drawScorch(x, s);
+  for (const w of g.wrecks || []) drawWreck(x, w, t);
+  for (const p of g.particles) if (p.soft) drawParticle(x, p);
   const order = [...g.bugs].sort((a, b) => a.y - b.y);
-  for (const b of order) drawBug(ctx, b, t);
-  drawMachine(ctx, g, t);
-  for (const p of g.pageDrops) { ctx.save(); ctx.translate(p.x, p.y); drawPage(ctx, 0, 0, 1, t); ctx.restore(); }
-  drawSafe(ctx, g, t);
-  for (const d of g.lootDrops) drawLoot(ctx, d, t);
-  for (const sh of g.shots) drawShot(ctx, sh);
-  for (const p of g.particles) if (!p.soft) drawParticle(ctx, p);
-  for (const f of g.floaters) drawFloater(ctx, f);
-  if (g.aim) drawReticle(ctx, g.aim, t);
-  drawBossBar(ctx, g);
-  if (g.sandbox) drawProving(ctx, g);
-  drawOutro(ctx, g);
-  ctx.restore();
-  ctx.restore();
+  for (const b of order) drawBug(x, b, t);
+  drawMachine(x, g, t);
+  for (const p of g.pageDrops) { x.save(); x.translate(p.x, p.y); drawPage(x, 0, 0, 1, t); x.restore(); }
+  drawSafe(x, g, t);
+  for (const d of g.lootDrops) drawLoot(x, d, t);
+  for (const sh of g.shots) drawShot(x, sh);
+  for (const p of g.particles) if (!p.soft) drawParticle(x, p);
+  drawMuzzleLight(x, g);
+  for (const f of g.floaters) drawFloater(x, f);
+  if (g.aim) drawReticle(x, g.aim, t);
+  drawBossBar(x, g);
+  if (g.sandbox) drawProving(x, g);
+  drawOutro(x, g);
+  if (g.leader > 0) {
+    const n = Math.max(1, Math.ceil(g.leader / 0.85));
+    const k = (g.leader / 0.85) % 1;
+    drawLeader(x, k, n, W, PLAY_H);
+    x.save();
+    x.textAlign = 'center'; x.fillStyle = 'rgba(232,224,196,0.85)';
+    x.font = "17px 'Black Ops One', Impact, sans-serif";
+    x.fillText(g.sandbox ? 'THE FIRING RANGE' : `WAVE ${g.levelNo} \u2014 ${(g.level && g.level.name || '').toUpperCase()}`,
+      W / 2, PLAY_H - 54);
+    x.font = "italic 13px 'Roboto Condensed', Arial, sans-serif";
+    x.fillStyle = 'rgba(200,196,170,0.7)';
+    x.fillText(g.level ? g.level.flavour : '', W / 2, PLAY_H - 32);
+    x.restore();
+  }
+  x.restore();
+  x.restore();
+
+  project(ctx, scene, t, dt, { flash: Math.min(1, (g.flash || 0) + g.muzzleFlash * 0.4),
+    w: W, h: PLAY_H });
 
   drawHud(ctx, g, t);
+}
+
+// What a burning wreck leaves on the ground, and the hull itself going dark.
+function drawScorch(ctx, s) {
+  ctx.save();
+  ctx.globalAlpha = Math.min(0.55, s.a);
+  const gr = ctx.createRadialGradient(s.x, s.y, 1, s.x, s.y, s.r);
+  gr.addColorStop(0, 'rgba(10,8,5,0.95)');
+  gr.addColorStop(0.6, 'rgba(18,15,9,0.55)');
+  gr.addColorStop(1, 'rgba(18,15,9,0)');
+  ctx.fillStyle = gr;
+  ctx.beginPath(); ctx.ellipse(s.x, s.y, s.r, s.r * 0.42, 0, 0, TAU); ctx.fill();
+  ctx.restore();
+}
+
+function drawWreck(ctx, w, t) {
+  const burning = w.t < w.burn;
+  const cool = Math.min(1, w.t / (w.burn + 3));
+  ctx.save();
+  ctx.translate(w.x, w.y);
+  ctx.rotate(w.tilt + Math.sin(w.seed) * 0.25);
+  ctx.globalAlpha = 0.85;
+  // a blackened hull, roughly the shape it died in
+  ctx.fillStyle = `rgb(${34 - cool * 14 | 0},${34 - cool * 14 | 0},${28 - cool * 12 | 0})`;
+  roundRect(ctx, -w.r * 0.8, -w.r * 0.75, w.r * 1.6, w.r * 1.5, w.r * 0.2); ctx.fill();
+  ctx.strokeStyle = 'rgba(8,8,6,0.9)'; ctx.lineWidth = 2; ctx.stroke();
+  // the hull glows while it burns
+  if (burning) {
+    const k = 0.45 + Math.sin(t * 9 + w.seed) * 0.2;
+    ctx.globalCompositeOperation = 'lighter';
+    const gr = ctx.createRadialGradient(0, 0, 1, 0, 0, w.r * 1.5);
+    gr.addColorStop(0, `rgba(255,150,60,${0.5 * k})`);
+    gr.addColorStop(1, 'rgba(255,90,20,0)');
+    ctx.fillStyle = gr;
+    ctx.beginPath(); ctx.arc(0, 0, w.r * 1.5, 0, TAU); ctx.fill();
+  }
+  ctx.restore();
+}
+
+// Firing throws light across the whole room for an instant.
+function drawMuzzleLight(ctx, g) {
+  const k = g.muzzleFlash;
+  if (k <= 0.01) return;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = Math.min(0.5, k * 0.5);
+  const gr = ctx.createRadialGradient(MUZZLE.x, MUZZLE.y, 8, MUZZLE.x, MUZZLE.y, 620);
+  gr.addColorStop(0, 'rgba(255,236,186,0.85)');
+  gr.addColorStop(0.35, 'rgba(255,170,70,0.28)');
+  gr.addColorStop(1, 'rgba(255,140,40,0)');
+  ctx.fillStyle = gr;
+  ctx.fillRect(0, 0, W, PLAY_H);
+  ctx.restore();
 }
 
 function drawDust(ctx, t) {
@@ -265,6 +357,14 @@ function drawParticle(ctx, p) {
     ctx.quadraticCurveTo((p.x + p.x2) / 2 + (Math.random() - 0.5) * 26,
                          (p.y + p.y2) / 2 + (Math.random() - 0.5) * 26, p.x2, p.y2);
     ctx.stroke(); ctx.restore(); return;
+  }
+  if (p.shock) {                       // the pressure wave, thin and fast
+    const k = 1 - p.t / 0.5;
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = Math.max(0, (1 - k) * 0.5);
+    ctx.strokeStyle = p.c; ctx.lineWidth = 3 * (1 - k) + 0.6;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (0.2 + k * 1.1), 0, TAU); ctx.stroke();
+    ctx.restore(); return;
   }
   if (p.ring) {
     const k = 1 - p.t / 0.34;
@@ -637,7 +737,7 @@ function drawMachine(ctx, g, t) {
   }
 }
 
-// A beat over the battlefield before the panel comes up.
+// A newsreel title card over the battlefield before the panel comes up.
 function drawOutro(ctx, g) {
   const o = g.outro;
   if (!o) return;
@@ -648,41 +748,42 @@ function drawOutro(ctx, g) {
   if (a <= 0) return;
 
   ctx.save();
-  ctx.globalAlpha = 0.6 * a;
-  ctx.fillStyle = '#0b0805';
+  ctx.globalAlpha = 0.86 * a;
+  ctx.fillStyle = '#0b0906';
   ctx.fillRect(0, 0, W, PLAY_H);
 
   const cx = W / 2, cy = PLAY_H * 0.44;
   const grow = 1 - Math.pow(1 - inK, 3);
   ctx.globalAlpha = a;
   ctx.translate(cx, cy);
-  ctx.scale(0.88 + 0.12 * grow, 0.88 + 0.12 * grow);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
-  const glow = won ? '#ffc24b' : '#e2563a';
-  const rule = won ? 'rgba(255,194,75,0.55)' : 'rgba(226,86,58,0.5)';
-  const w = 270;
-  ctx.strokeStyle = rule; ctx.lineWidth = 2;
-  for (const dy of [-46, 46]) {
-    ctx.beginPath(); ctx.moveTo(-w, dy); ctx.lineTo(-26, dy); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(26, dy); ctx.lineTo(w, dy); ctx.stroke();
-  }
-  ctx.fillStyle = rule;
-  for (const dy of [-46, 46]) { ctx.beginPath(); ctx.arc(0, dy, 4, 0, TAU); ctx.fill(); }
+  // the card: a plate with ruled borders, the way a newsreel announces a thing
+  const cw = 560, ch = 168;
+  ctx.save();
+  ctx.scale(0.94 + 0.06 * grow, 0.94 + 0.06 * grow);
+  ctx.fillStyle = 'rgba(16,14,9,0.9)';
+  roundRect(ctx, -cw / 2, -ch / 2, cw, ch, 4); ctx.fill();
+  const ink = won ? '#e8e0c4' : '#e2a08c';
+  ctx.strokeStyle = ink; ctx.lineWidth = 3;
+  roundRect(ctx, -cw / 2, -ch / 2, cw, ch, 4); ctx.stroke();
+  ctx.strokeStyle = 'rgba(232,224,196,0.35)'; ctx.lineWidth = 1;
+  roundRect(ctx, -cw / 2 + 9, -ch / 2 + 9, cw - 18, ch - 18, 2); ctx.stroke();
 
-  ctx.font = "56px 'Black Ops One', Impact, sans-serif";
-  ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(0,0,0,0.8)';
-  ctx.strokeText(won ? 'LEVEL CLEARED' : 'LEVEL FAILED', 0, 0);
-  ctx.shadowColor = glow; ctx.shadowBlur = 26;
-  ctx.fillStyle = won ? '#ffe9a8' : '#ff8a6b';
-  ctx.fillText(won ? 'LEVEL CLEARED' : 'LEVEL FAILED', 0, 0);
-  ctx.shadowBlur = 0;
+  ctx.fillStyle = 'rgba(232,224,196,0.6)';
+  ctx.font = "13px 'Black Ops One', Impact, sans-serif";
+  ctx.fillText(won ? 'FROM THE FRONT' : 'DISPATCH', 0, -ch / 2 + 30);
 
-  ctx.font = "italic 19px 'Roboto Condensed', Arial, sans-serif";
-  ctx.fillStyle = 'rgba(232,220,189,0.85)';
+  ctx.font = "44px 'Black Ops One', Impact, sans-serif";
+  ctx.fillStyle = ink;
+  ctx.fillText(won ? 'POSITION HELD' : 'POSITION LOST', 0, -2);
+
+  ctx.font = "italic 16px 'Roboto Condensed', Arial, sans-serif";
+  ctx.fillStyle = 'rgba(214,208,180,0.8)';
   ctx.fillText(won
-    ? `${g.pages} of ${START_PAGES} dossiers still on the rack`
-    : 'every dossier is gone from the safe', 0, 74);
+    ? `${g.pages} of ${START_PAGES} dossiers still in the safe`
+    : 'every dossier is gone from the safe', 0, ch / 2 - 34);
+  ctx.restore();
   ctx.restore();
 }
 
@@ -819,6 +920,13 @@ function drawBug(ctx, b, t) {
   }
 
   // ── hull ─────────────────────────────────────────────────────────────────
+  // a rim of light off the gun's side, so a hull reads against the floor
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = 0.16;
+  ctx.fillStyle = '#ffe3a8';
+  ctx.beginPath(); ctx.ellipse(-r * 0.25, 0, r * 0.95, r * 1.15, 0, 0, TAU); ctx.fill();
+  ctx.restore();
   ctx.fillStyle = body;
   ctx.beginPath();
   ctx.moveTo(-r * 0.62, -r * 0.72);
@@ -990,12 +1098,70 @@ function drawShot(ctx, s) {
     ctx.fillStyle = m ? m.glow : '#cdbf9f';
     ctx.beginPath(); ctx.arc(p.x, p.y, 2.5 + i * 0.55, 0, TAU); ctx.fill();
   }
+  // a tracer burning down the line of flight
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const tr = Math.hypot(s.vx, s.vy) * 0.02;
+  const gl = ctx.createLinearGradient(s.x, s.y, s.x - s.vx * 0.022, s.y - s.vy * 0.022);
+  gl.addColorStop(0, m ? m.glow : 'rgba(255,226,150,0.9)');
+  gl.addColorStop(1, 'rgba(255,170,60,0)');
+  ctx.strokeStyle = gl; ctx.lineWidth = 5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x - s.vx * 0.022, s.y - s.vy * 0.022); ctx.stroke();
+  ctx.restore();
+
   ctx.globalAlpha = 1;
   ctx.translate(s.x, s.y);
   // a shell flies nose-first
   ctx.rotate(Math.atan2(s.vy, s.vx) + Math.PI / 2 + Math.sin(s.rot) * 0.05);
   drawShell(ctx, { w: SHOT_R * 1.7, h: SHOT_R * 2.9, mat: s.shot.mat,
     letter: s.shot.ch, level: lvl, glow: m ? 16 : 0 });
+  ctx.restore();
+}
+
+// What the word in the breech is worth, read live as it is typed: the rarity
+// tier, whether it has ever been fired, and any shape the gun can use. You
+// should be able to feel a word getting better as you add letters.
+const TIER_INK = ['#8d9478', '#b4b894', '#dee2c2', '#ffc24b', '#fff4c9'];
+function drawRead(ctx, g, rightX, ry) {
+  const word = g.typed || '';
+  if (word.length < 2) return;
+  const read = readWord(word, { prev: g.lastWord ? g.lastWord.word : '', seen: g.lexicon });
+  const known = isWord(word);
+  const ink = TIER_INK[Math.min(4, read.tier - 1)];
+  ctx.save();
+  ctx.textBaseline = 'middle';
+
+  // the tier badge, hard against the right of the rack
+  const bw = 62, bx = rightX - bw - 10, by = ry + 6;
+  ctx.globalAlpha = known ? 1 : 0.35;
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  roundRect(ctx, bx, by, bw, 34, 6); ctx.fill();
+  ctx.strokeStyle = ink; ctx.lineWidth = read.tier >= 4 ? 2 : 1.2;
+  roundRect(ctx, bx, by, bw, 34, 6); ctx.stroke();
+  ctx.fillStyle = ink;
+  ctx.textAlign = 'center';
+  ctx.font = "15px 'Black Ops One', Impact, sans-serif";
+  ctx.fillText(['I', 'II', 'III', 'IV', 'V'][read.tier - 1], bx + bw / 2, by + 13);
+  ctx.font = "9px 'Roboto Condensed', Arial, sans-serif";
+  ctx.fillText(known ? `\u00d7${read.mult.toFixed(2)}` : 'no such word', bx + bw / 2, by + 26);
+
+  // the tricks it already satisfies, stacked to the left of the badge
+  let cx2 = bx - 8;
+  const chip = (label, colour) => {
+    ctx.font = "10px 'Roboto Condensed', Arial, sans-serif";
+    const w2 = ctx.measureText(label).width + 14;
+    cx2 -= w2 + 5;
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    roundRect(ctx, cx2, by + 7, w2, 20, 5); ctx.fill();
+    ctx.strokeStyle = colour; ctx.lineWidth = 1;
+    roundRect(ctx, cx2, by + 7, w2, 20, 5); ctx.stroke();
+    ctx.fillStyle = colour; ctx.textAlign = 'center';
+    ctx.fillText(label, cx2 + w2 / 2, by + 18);
+  };
+  if (read.fresh && known) chip('never fired', '#9be8ff');
+  for (const id of read.tricks.slice().reverse()) {
+    chip(TRICKS[id].name, TRICKS[id].colour);
+  }
   ctx.restore();
 }
 
@@ -1101,6 +1267,7 @@ function drawHud(ctx, g, t) {
     }
     ctx.fillStyle = (t * 2) % 1 > 0.5 ? '#ffc24b' : 'transparent';
     ctx.fillRect(tx + 2, ry + 10, 12, 26);
+    drawRead(ctx, g, rx + total, ry);
   } else if (g.message) {
     ctx.fillStyle = '#e39a78'; ctx.font = "italic 17px 'Roboto Condensed', Arial, sans-serif"; ctx.textAlign = 'center';
     ctx.fillText(g.message.text, W / 2, ry + 23);

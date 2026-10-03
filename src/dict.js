@@ -1,6 +1,8 @@
 // dict.js — the lexicon. ENABLE1 (public domain), filtered to 3-24 letters,
 // which is the same no-proper-nouns body of words the original leaned on.
 
+import { loadFrequency } from './wordcraft.js';
+
 let WORDS = null;
 
 const FALLBACK = `the and for you are with that have this from they will been
@@ -30,6 +32,7 @@ export async function loadDictionary(onProgress) {
         text = await res.text();
       }
       WORDS = new Set(text.split('\n').filter(Boolean));
+      await loadRanks();
       onProgress && onProgress(1);
       return WORDS.size;
     } catch (_) { /* try the next url */ }
@@ -37,6 +40,19 @@ export async function loadDictionary(onProgress) {
   WORDS = new Set(FALLBACK);
   onProgress && onProgress(1);
   return WORDS.size;
+}
+
+// The frequency list rides alongside the lexicon: it is what tells a rare word
+// from a common one. Missing, the game still runs — every word reads as plain.
+async function loadRanks() {
+  for (const url of ['assets/freq20k.txt', './assets/freq20k.txt']) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      return loadFrequency(await res.text());
+    } catch (_) { /* try the next url */ }
+  }
+  return 0;
 }
 
 function concat(chunks, len) {

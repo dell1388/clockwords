@@ -25,6 +25,17 @@ carries across. Only theme, palette, typography, art and copy differ.
 | Iron, Thermite, Amethyst, Lazurite, Brass, Jade, Aetherium | Ball, Incendiary, Sabot, Pulse, High Explosive, Double Feed, Arc |
 | spiders, beetles, moths, the Diabolical Box | light tanks, heavies, gunships, the Iron Colonel |
 
+The gun reads the **word**, not only its letters: a rarity tier from a
+frequency list multiplies everything, and six structural tricks (palindrome,
+doubled letters, alliteration, anagram, ladder, consonant cluster) each do
+something particular. The battlefield is shot on **vintage film** — olive-graded
+stock, gate weave, grain, scratches, halation, an academy leader before every
+wave.
+
+Rarity data: the top 30,000 English words by frequency (Google Web Trillion
+Word Corpus, via `arstgit/high-frequency-vocabulary`), filtered to the 20,972
+that ENABLE1 also holds, in `assets/freq20k.txt`.
+
 No build step, no dependencies, no binary assets — the art and the sound are
 both generated at runtime.
 

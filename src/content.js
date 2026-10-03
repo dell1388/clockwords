@@ -120,47 +120,47 @@ export function rollLoot(nightNo, bugTier = 1) {
 
 export const SPECIES = {
   spider: {
-    id: 'spider', name: 'Light Tank', hp: 30, speed: 96, r: 13,
+    id: 'spider', name: 'Light Tank', hp: 30, speed: 96, r: 18,
     legs: 8, gait: 'crawl', bounty: 1, secret: 0.10, drop: 0.16,
     body: '#5a6242', trim: '#97a271',
   },
   roach: {
-    id: 'roach', name: 'Scout Car', hp: 22, speed: 154, r: 11,
+    id: 'roach', name: 'Scout Car', hp: 22, speed: 154, r: 15,
     legs: 6, gait: 'scurry', bounty: 1, secret: 0.10, drop: 0.14,
     body: '#6d6b3c', trim: '#b9b467',
   },
   tick: {
-    id: 'tick', name: 'Sapper Drone', hp: 10, speed: 130, r: 8,
+    id: 'tick', name: 'Sapper Drone', hp: 10, speed: 130, r: 11,
     legs: 6, gait: 'scurry', bounty: 0, secret: 0.04, drop: 0.05,
     body: '#54584b', trim: '#9aa08c',
   },
   beetle: {
-    id: 'beetle', name: 'Heavy Tank', hp: 130, speed: 61, r: 19,
+    id: 'beetle', name: 'Heavy Tank', hp: 130, speed: 61, r: 26,
     legs: 6, gait: 'lumber', armor: 0.5, bounty: 3, secret: 0.35, drop: 0.34,
     body: '#454b50', trim: '#8d99a3',
   },
   moth: {
-    id: 'moth', name: 'Gunship', hp: 40, speed: 191, r: 13,
+    id: 'moth', name: 'Gunship', hp: 40, speed: 191, r: 18,
     legs: 6, gait: 'flit', flying: true, bounty: 2, secret: 0.22, drop: 0.24,
     body: '#4b5a5e', trim: '#9dc0c6',
   },
   centipede: {
-    id: 'centipede', name: 'Troop Column', hp: 95, speed: 113, r: 14,
+    id: 'centipede', name: 'Troop Column', hp: 95, speed: 113, r: 19,
     legs: 12, gait: 'crawl', splitOnDeath: ['tick', 'tick'], bounty: 3,
     secret: 0.30, drop: 0.30, body: '#6b5a38', trim: '#c2a969',
   },
   weaver: {
-    id: 'weaver', name: 'Repair Rig', hp: 70, speed: 90, r: 15,
+    id: 'weaver', name: 'Repair Rig', hp: 70, speed: 90, r: 20,
     legs: 8, gait: 'crawl', heals: { rate: 9, range: 120 }, bounty: 3,
     secret: 0.32, drop: 0.30, body: '#3f5b46', trim: '#82c095',
   },
   dummy: {
-    id: 'dummy', name: 'Range Target', hp: 5000, speed: 0, r: 22,
+    id: 'dummy', name: 'Range Target', hp: 5000, speed: 0, r: 26,
     legs: 6, gait: 'lumber', bounty: 0, secret: 0, drop: 0,
     body: '#5e6154', trim: '#c2c4b0',
   },
   box: {
-    id: 'box', name: 'The Iron Colonel', hp: 2600, speed: 34, r: 46,
+    id: 'box', name: 'The Iron Colonel', hp: 2600, speed: 34, r: 54,
     legs: 8, gait: 'lumber', armor: 0.25, boss: true, spawns: 'tick',
     bounty: 25, secret: 6, drop: 1, body: '#33362f', trim: '#c2a03e',
   },

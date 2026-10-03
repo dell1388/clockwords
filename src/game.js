@@ -3,6 +3,7 @@
 import { SPECIES, MATERIALS, getLevel, START_PAGES, MIN_WORD, rollLoot, fireRate, dropChance, CHAMBERS } from './content.js';
 import { Boiler, startingInventory } from './boiler.js';
 import { isWord, wordOfTheDay } from './dict.js';
+import { readWord, TRICKS } from './wordcraft.js';
 import { sfx } from './audio.js';
 import * as badges from './achievements.js';
 
@@ -62,7 +63,7 @@ export const DOORS = [{ x: 812, y: 168 }];
 export const SEALED_DOORS = [{ x: 200, y: 168 }, { x: 506, y: 168 }];
 
 // Things further up the room are further away.
-export const depthAt = y => 0.5 + 0.5 * Math.max(0, Math.min(1, (y - HORIZON) / (FLOOR_Y - HORIZON)));
+export const depthAt = y => 0.72 + 0.28 * Math.max(0, Math.min(1, (y - HORIZON) / (FLOOR_Y - HORIZON)));
 // The tanks do not walk straight at you. They sweep the room: across, down a
 // lane, back across, down again — and the same way in reverse on the way out.
 // Where the proving hulks stand.
@@ -160,6 +161,7 @@ export class Game {
     this.score = opts.score ?? 0;
     this.levelNo = opts.levelNo || 1;
     this.usedWords = opts.usedWords || new Map();
+    this.lexicon = opts.lexicon || new Set();   // every word ever fired, for the discovery bonus
     this.stats = opts.stats || { kills: 0, words: 0, damage: 0, best: '', bestDmg: 0, longest: '' };
     this.wotd = wordOfTheDay();
     this.reset();
@@ -172,6 +174,8 @@ export class Game {
     this.floaters = [];
     this.pageDrops = [];
     this.lootDrops = [];
+    this.wrecks = [];             // hulls that stay on the field, burning
+    this.scorch = [];             // blast marks burned into the floor
     this.respawns = [];
     this.fireQueue = [];
     this.fireTimer = 0;
@@ -185,6 +189,8 @@ export class Game {
     this.over = false;
     this.won = false;
     this.muzzleFlash = 0;
+    this.flash = 0;               // exposure lift on the film: fire, blasts, kills
+    this.slowmo = 0;              // a beat of slow motion on a heavy kill
     this.recoil = 0;
     this.rackFlash = 0;
     this.cannonAngle = -Math.PI / 2;
@@ -254,6 +260,7 @@ export class Game {
     this.wordLog = [];
     this.usedWords = new Map();   // the repeat penalty is per level, not per run
     this.levelStartScore = this.score;
+    this.leader = 2.6;            // academy leader: the count before the wave runs
     this.boiler.reseal();
   }
 
@@ -276,6 +283,7 @@ export class Game {
     if (this.boiler.dump(i)) { this.note('CHAMBER UNSEALED', '#9be8ff'); sfx.steam(); }
   }
   clear() { if (this.typed) { this.typed = ''; sfx.back(); } }
+  skipLeader() { if (this.leader > 0) { this.leader = 0; return true; } return false; }
 
   submit() {
     const word = this.typed.toLowerCase();
@@ -286,13 +294,16 @@ export class Game {
 
     const repeats = this.usedWords.get(word) || 0;
     const wotd = word === this.wotd;
-    const res = this.boiler.resolve(word, { repeats, wotd });
+    const read = readWord(word, { prev: this.lastWord ? this.lastWord.word : '', seen: this.lexicon });
+    const res = this.boiler.resolve(word, { repeats, wotd, read });
     const entry = {
       word, marks: res.shots.map(sh => sh.mat), planned: 0, dealt: 0,
       wotd, overload: res.overload, pure: res.pure, effects: res.effects, repeats, at: this.time,
+      tier: read.tier, fresh: read.fresh, tricks: read.tricks,
     };
     const wid = this.wordLog.push(entry) - 1;
     for (const sh of res.shots) sh.wid = wid;
+    const spent = res.slots.map(i => this.boiler.chambers[i]);
     const unsealed = this.boiler.spend(res.slots);
     if (unsealed) { this.note('CHAMBER UNSEALED', '#9be8ff'); sfx.steam(); }
     this.usedWords.set(word, repeats + 1);
@@ -305,6 +316,19 @@ export class Game {
     // unseals the next one and still tags the word in the log, but it no longer
     // appends six extra shells to the queue.
     if (res.overload) { sfx.overload(); this.note('FULL HOUSE', '#ffc24b'); }
+    if (read.tier >= 4) {
+      this.note(`${read.tierName.toUpperCase()} — ×${read.tierMul}`, read.tier >= 5 ? '#fff4c9' : '#ffc24b');
+      this.shake = Math.max(this.shake, read.tier >= 5 ? 0.7 : 0.4);
+      sfx.rare(read.tier);
+    }
+    if (read.fresh) this.note('FIRST TIME FIRED', '#9be8ff');
+    for (const t of read.tricks) this.note(TRICKS[t].name.toUpperCase(), TRICKS[t].colour);
+    // An anagram of the last word hands its chamber letters straight back.
+    if (read.refunds && res.slots.length) {
+      this.boiler.restore(res.slots, spent);
+      sfx.ding();
+    }
+    this.lexicon.add(word);
     if (res.pure) this.note('PURE WORD — DOUBLE', '#9be8ff');
     if (res.jade) this.note(res.jade > 1
       ? `${MATERIALS.jade.name.toUpperCase()} ×${res.jade} — ECHO`
@@ -342,11 +366,19 @@ export class Game {
 
   // ── simulation ───────────────────────────────────────────────────────────
   update(dt) {
+    // The countdown holds the wave: nothing moves until the leader runs out.
+    if (this.leader > 0) {
+      this.leader -= dt;
+      this.decay(dt);
+      return;
+    }
     if (this.outro) this.outro.t += dt;
     if (this.over) { this.decay(dt); return; }
     this.time += dt;
     this.shake = Math.max(0, this.shake - dt * 3.2);
     this.muzzleFlash = Math.max(0, this.muzzleFlash - dt * 6);
+    this.flash = Math.max(0, this.flash - dt * 3.4);
+    this.slowmo = Math.max(0, this.slowmo - dt * 1.6);
     this.recoil = Math.max(0, this.recoil - dt * 5);
     this.rackFlash = Math.max(0, this.rackFlash - dt * 3);
     if (this.message) { this.message.t -= dt; if (this.message.t <= 0) this.message = null; }
@@ -363,6 +395,7 @@ export class Game {
       for (const r of this.respawns.filter(r => r.t <= 0)) this.spawnDummy(r.anchor);
       this.respawns = this.respawns.filter(r => r.t > 0);
     }
+    this.wreckStep(dt);
     this.decay(dt);
 
     if (!this.sandbox && !this.won && this.spawnIdx >= this.spawns.length
@@ -384,6 +417,12 @@ export class Game {
     for (const p of this.particles) {
       p.x += p.vx * dt; p.y += p.vy * dt;
       p.vy += (p.g || 0) * dt; p.vx *= 0.99; p.vy *= 0.99;
+      if (p.grow) p.r += p.grow * dt;
+      if (p.floor && p.y > p.floor && p.vy > 0) {       // a chunk hits the ground and skips
+        p.y = p.floor; p.vy = -p.vy * p.bounce; p.vx *= 0.6;
+        if (Math.abs(p.vy) < 24) { p.vy = 0; p.g = 0; p.floor = 0; }
+      }
+      if (p.drift) p.vx += Math.sin((this.time + p.drift * 7) * 1.7) * 14 * dt;
       p.t -= dt;
     }
     this.particles = this.particles.filter(p => p.t > 0);
@@ -480,6 +519,14 @@ export class Game {
       b.x = Math.max(14, Math.min(W - 14, b.x));
       b.depth = b.sp.boss ? Math.max(0.82, depthAt(b.y)) : depthAt(b.y);
       b.r = b.sp.r * b.depth;
+      if (!b.sp.flying && Math.random() < dt * 7 * (b.freeze > 0 ? 0 : 1)) {
+        this.dust(b.x, b.y + b.r * 0.7, 1);
+      }
+      if (b.freeze <= 0 && Math.random() < dt * 2.5) {       // engine exhaust
+        this.particles.push({ x: b.x - Math.cos(b.tilt) * b.r * 0.2, y: b.y + b.r * 0.5,
+          vx: rand(-6, 6), vy: rand(-22, -10), t: rand(0.5, 1.2), r: rand(2, 4), grow: 7,
+          c: 'rgba(60,58,50,0.4)', soft: true });
+      }
 
       if (d < WP_RADIUS + b.r * 0.3) {
         b.wi += b.step;
@@ -551,6 +598,7 @@ export class Game {
 
     const shot = this.fireQueue.shift();
     this.fireTimer = fireGap(this);
+    this.flash = Math.min(1, this.flash + 0.35);
     const ang = clampAim(leadAngle(PIVOT, tgt));
     this.cannonAngle = ang;
     const reach = MUZZLE.y - PIVOT.y;            // barrel length, as a radius
@@ -582,7 +630,7 @@ export class Game {
   }
 
   // What a shell is actually worth against this tank, armour included.
-  effective(shot, b) { return shot.dmg * (1 - (b.armor || 0)); }
+  effective(shot, b) { return shot.dmg * (shot.noArmour ? 1 : 1 - (b.armor || 0)); }
 
   nearest(p, except = null) {
     let best = null, bd = Infinity;
@@ -655,7 +703,7 @@ export class Game {
     this.release(s);
     const sh = s.shot;
     const touched = [b];
-    let dealt = this.damage(b, sh.dmg);
+    let dealt = this.damage(b, sh.dmg, { noArmour: sh.noArmour });
     sfx.hit();
     this.sparks(s.x, s.y, sh.mat ? MATERIALS[sh.mat].glow : '#d9cdb4');
 
@@ -714,7 +762,7 @@ export class Game {
 
   damage(b, amount, opts = {}) {
     if (b.dead) return 0;
-    const dealt = amount * (1 - (b.armor || 0));
+    const dealt = amount * (opts.noArmour ? 1 : 1 - (b.armor || 0));
     b.hp -= dealt;
     this.stats.damage += dealt;
     if (!opts.dot) { b.flash = 1; }
@@ -734,6 +782,18 @@ export class Game {
     this.score += (b.sp.bounty + 1) * 10;
     sfx.die();
     this.debris(b);
+    this.flash = Math.min(1, this.flash + (b.sp.boss ? 1 : 0.35 + b.r / 90));
+    this.shake = Math.max(this.shake, b.sp.boss ? 1.2 : 0.25 + b.r / 70);
+    // Something big going up is worth a beat of slow motion.
+    if (b.sp.boss || b.maxHp >= 90) this.slowmo = Math.max(this.slowmo, b.sp.boss ? 1 : 0.55);
+    if (!b.dummy) {
+      this.wrecks.push({ x: b.x, y: b.y, r: b.r, tilt: b.tilt, sp: b.sp,
+        t: 0, burn: 4 + Math.random() * 5, seed: Math.random() * 6.28 });
+      this.scorch.push({ x: b.x, y: b.y + b.r * 0.3, r: b.r * (1.6 + Math.random() * 0.5),
+        a: 0.5, seed: Math.random() * 6.28 });
+      if (this.wrecks.length > 14) this.wrecks.shift();
+      if (this.scorch.length > 26) this.scorch.shift();
+    }
     if (b.carrying) {
       this.pageDrops.push({ x: b.x, y: b.y, t: 0, vx: rand(-20, 20), vy: -40 });
       this.floaters.push({ text: 'page recovered', color: '#9be88b', x: b.x, y: b.y - 16, vy: -28, t: 1.4 });
@@ -853,19 +913,67 @@ export class Game {
     });
   }
   blast(x, y, r, c) {
+    this.flash = Math.min(1, this.flash + 0.5);
     this.particles.push({ x, y, vx: 0, vy: 0, t: 0.34, r, c, ring: true });
+    this.particles.push({ x, y, vx: 0, vy: 0, t: 0.5, r: r * 1.5, c: '#fff1c4', ring: true, shock: true });
+    for (let i = 0; i < 5; i++) this.smoke(x + rand(-r / 3, r / 3), y + rand(-r / 4, r / 4), 1.2);
     for (let i = 0; i < 22; i++) this.particles.push({
       x, y, vx: rand(-1, 1) * r * 3, vy: rand(-1, 1) * r * 3, t: rand(0.2, 0.55), r: rand(2, 5), c, g: 180,
     });
   }
   debris(b) {
-    for (let i = 0; i < 14; i++) this.particles.push({
-      x: b.x, y: b.y, vx: rand(-160, 160), vy: rand(-190, 40), t: rand(0.4, 0.9),
-      r: rand(1.5, 3.6), c: Math.random() < 0.5 ? b.sp.body : b.sp.trim, g: 420, gear: Math.random() < 0.4,
+    const n = 18 + Math.round(b.r);
+    for (let i = 0; i < n; i++) this.particles.push({
+      x: b.x, y: b.y, vx: rand(-230, 230), vy: rand(-280, 40), t: rand(0.5, 1.4),
+      r: rand(1.5, 4.2), c: Math.random() < 0.5 ? b.sp.body : b.sp.trim, g: 520,
+      gear: Math.random() < 0.35, floor: PLAY_H - 6, bounce: 0.35,
     });
-    this.puff(b.x, b.y, 6, '#b9ac93');
+    for (let i = 0; i < 10; i++) this.particles.push({
+      x: b.x, y: b.y, vx: rand(-90, 90), vy: rand(-140, -20), t: rand(0.2, 0.5),
+      r: rand(2, 5), c: Math.random() < 0.5 ? '#ffd27a' : '#ff7a3a', g: 160,
+    });
+    this.puff(b.x, b.y, 8, '#b9ac93');
+    for (let i = 0; i < 4; i++) this.smoke(b.x + rand(-8, 8), b.y, 1.1);
   }
   arc(a, b) {
     this.particles.push({ arc: true, x: a.x, y: a.y, x2: b.x, y2: b.y, t: 0.18, c: '#fff6c9', r: 2 });
+  }
+
+  // Wrecks burn down over a few seconds and keep smoking after the flame is
+  // out; scorch marks fade into the floor but outlast them.
+  wreckStep(dt) {
+    for (const w of this.wrecks) {
+      w.t += dt;
+      const flame = w.t < w.burn;
+      if (flame && Math.random() < dt * 34) {
+        this.particles.push({ x: w.x + rand(-w.r * 0.5, w.r * 0.5), y: w.y + rand(-4, 4),
+          vx: rand(-14, 14), vy: rand(-70, -34), t: rand(0.25, 0.6), r: rand(2, 5.5),
+          c: Math.random() < 0.5 ? '#ffb347' : '#ff6a2e', g: -40 });
+      }
+      if (Math.random() < dt * (flame ? 16 : 5)) {
+        this.smoke(w.x + rand(-6, 6), w.y - 6, flame ? 1 : 0.55);
+      }
+    }
+    this.wrecks = this.wrecks.filter(w => w.t < w.burn + 14);
+    for (const s of this.scorch) s.a = Math.max(0, s.a - dt * 0.012);
+    this.scorch = this.scorch.filter(s => s.a > 0.02);
+  }
+
+  // Smoke drifts, swells and thins. Everything on fire makes it.
+  smoke(x, y, strength = 1) {
+    this.particles.push({
+      x, y, vx: rand(-10, 16), vy: rand(-26, -12) * strength,
+      t: rand(1.6, 3.4) * strength, r: rand(5, 11) * strength, grow: rand(9, 22),
+      c: `rgba(${40 + Math.random() * 30 | 0},${38 + Math.random() * 26 | 0},${32 + Math.random() * 20 | 0},0.5)`,
+      soft: true, drift: rand(-0.6, 0.9),
+    });
+  }
+
+  // Tracks throw dust on anything moving over dry ground.
+  dust(x, y, n = 1) {
+    for (let i = 0; i < n; i++) this.particles.push({
+      x: x + rand(-5, 5), y: y + rand(-2, 3), vx: rand(-14, 14), vy: rand(-18, -4),
+      t: rand(0.4, 1.1), r: rand(2, 5), grow: 6, c: 'rgba(150,146,118,0.34)', soft: true,
+    });
   }
 }

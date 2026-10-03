@@ -5,6 +5,7 @@ import { MATERIALS, SPECIAL_MATERIALS, LETTER_LEVELS, MAX_LEVEL, CHAMBERS, START
   effectScale, levelDamage,
   START_PAGES, MIN_BOILER, MAX_BOILER, STOKE_COST, BLANK_DMG, getLevel,
   rateText, rofCost, MAX_ROF } from './content.js';
+import { TIERS, TRICKS, DISCOVERY_BONUS } from './wordcraft.js';
 import { dictSize } from './dict.js';
 import { BADGES, earned } from './achievements.js';
 import { sfx, isMuted, setMuted } from './audio.js';
@@ -158,6 +159,22 @@ export function renderHow(onBack) {
           <i>on this level</i> does less each time you repeat it — every level starts the
           ledger again. Using every loaded chamber in one word is a <b>full house</b> — it unseals
           the next chamber. The <b>word of the day</b> doubles everything and explodes.</p>
+          <h3>What a word is worth</h3>
+          <p>The gun reads the word, not just its letters. Two things on top of everything
+          else:</p>
+          <p><b>How rare it is.</b> Every word carries a tier from I to V, read off a list of
+          the 20,972 commonest English words. The tier multiplies the whole word, and anything
+          the list has never heard of is tier V. A word you have <i>never fired before</i> is
+          worth another <b>×${DISCOVERY_BONUS}</b> the first time, so reaching for an unfamiliar
+          word pays even when it turns out to be a common one.</p>
+          <ul class="mats">${TIERS.map(t => `<li><b>${['I', 'II', 'III', 'IV', 'V'][t.tier - 1]}
+            — ${t.name}</b> <span class="num">×${t.mul}</span>
+            <span class="d">${t.tell}</span></li>`).join('')}</ul>
+          <p><b>What shape it is.</b> Six things the gun can see in the letters themselves.
+          Every one of them shows on the rack as you type, before you commit.</p>
+          <ul class="mats">${Object.values(TRICKS).map(tk => `
+            <li><b>${tk.name}</b> <span class="d">${tk.note}</span></li>`).join('')}</ul>
+
           <h3>The tanks</h3>
           <p>Everything comes through the one arch still standing, and walks the route painted
           on the floor — across, down a lane, back across — to the <b>safe</b> in the corner
@@ -716,6 +733,9 @@ function wordLogHtml(game) {
       e.pure ? '<b class="tag pure">pure</b>' : '',
       e.wotd ? '<b class="tag wotd">word of the day</b>' : '',
       e.overload ? '<b class="tag over">full house</b>' : '',
+      e.tier >= 4 ? `<b class="tag tier${e.tier}">tier ${['I', 'II', 'III', 'IV', 'V'][e.tier - 1]}</b>` : '',
+      e.fresh ? '<b class="tag new">new word</b>' : '',
+      (e.tricks || []).map(id => `<b class="tag trick">${TRICKS[id].name}</b>`).join(''),
       e.repeats ? `<b class="tag rep">repeat ×${e.repeats + 1}</b>` : '',
       (e.effects || []).map(id => `<span class="tagsw" title="${MATERIALS[id].name}"
         style="--body:${MATERIALS[id].body};--edge:${MATERIALS[id].edge};--glow:${MATERIALS[id].glow}"></span>`).join(''),
@@ -748,7 +768,7 @@ export function renderOver(game, on) {
           Only this wave is lost — the line holds, and the ${game.lootKept
             ? `${game.lootKept} letter${game.lootKept === 1 ? '' : 's'} that fell this wave
                ${game.lootKept === 1 ? 'is' : 'are'} in storage`
-            : 'boiler is as you carried it in'}.</p>
+            : 'magazine is as you carried it in'}.</p>
         </div>
       </div>
       <div class="afteraction">

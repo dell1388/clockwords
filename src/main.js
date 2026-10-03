@@ -229,6 +229,8 @@ window.addEventListener('keydown', e => {
     else togglePause();
     return;
   }
+  // any key cuts the leader short
+  if (game.skipLeader() && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); return; }
   if (e.key === 'Delete') { game.clear(); kb.value = ''; e.preventDefault(); return; }
   if (e.key === 'Enter') { game.submit(); kb.value = ''; e.preventDefault(); return; }
   if (e.key === 'Backspace') { game.backspace(); e.preventDefault(); return; }
@@ -276,7 +278,8 @@ function frame(ts) {
   clock += dt;
   if (!game) return;
   if (state === 'play') {
-    game.update(dt);
+    // A heavy kill drops the world into slow motion for a beat.
+    game.update(dt * (game.slowmo > 0 ? 0.35 + 0.65 * (1 - game.slowmo) : 1));
     if (game.outroDone()) {
       if (game.over) toOver();
       else if (game.won) toBoiler();

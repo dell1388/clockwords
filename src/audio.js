@@ -175,6 +175,21 @@ export const sfx = {
     [330, 247, 165].forEach((f, i) => tone(f, t + i * 0.24, 0.03, 0.4, 'sawtooth', 0.2, f * 0.78));
     noise(t + 0.5, 0.8, 200, 0.16, 'lowpass');
   }),
+  // a word nobody expected: a rising sting over the gun report, higher and
+  // longer the rarer the word
+  rare: guard((tier = 4) => {
+    const t = ctx.currentTime;
+    const n = tier >= 5 ? 4 : 3;
+    const base = tier >= 5 ? 392 : 330;
+    for (let i = 0; i < n; i++) {
+      tone(base * Math.pow(1.26, i), t + i * 0.055, 0.008, 0.3 + i * 0.05, 'triangle', 0.09);
+    }
+    if (tier >= 5) {
+      report(t + 0.04, { crack: 1300, body: 190, dur: 0.6, peak: 0.3, q: 0.7 });
+      noise(t + 0.1, 0.7, 240, 0.2, 'lowpass');
+    }
+  }),
+
   // a bugle call over the position
   win: guard(() => {
     const t = ctx.currentTime;
