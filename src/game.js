@@ -1,6 +1,7 @@
 // game.js — the simulation. Pure state + update(); drawing lives in render.js.
 
-import { SPECIES, MATERIALS, getLevel, START_PAGES, MIN_WORD, rollLoot, fireRate, dropChance, CHAMBERS } from './content.js';
+import { SPECIES, MATERIALS, getLevel, START_PAGES, MIN_WORD, rollLoot, fireRate, dropChance, CHAMBERS,
+  OVERKILL_CARRY, OVERKILL_HOPS, OVERKILL_RANGE } from './content.js';
 import { Boiler, startingInventory } from './boiler.js';
 import { isWord, wordOfTheDay } from './dict.js';
 import { readWord, TRICKS } from './wordcraft.js';
@@ -763,6 +764,7 @@ export class Game {
   damage(b, amount, opts = {}) {
     if (b.dead) return 0;
     const dealt = amount * (opts.noArmour ? 1 : 1 - (b.armor || 0));
+    const spare = Math.max(0, dealt - b.hp);        // what this shell has left over
     b.hp -= dealt;
     this.stats.damage += dealt;
     if (!opts.dot) { b.flash = 1; }
@@ -770,7 +772,25 @@ export class Game {
       this.floaters.push({ text: String(Math.round(dealt)), color: '#ffe9bd',
         x: b.x + rand(-6, 6), y: b.y - b.r - 4, vy: -34, t: 0.7 });
     }
-    if (b.hp <= 0) this.kill(b);
+    if (b.hp <= 0) {
+      this.kill(b);
+      // A kill with damage to spare passes it on: the shell tears through the
+      // column rather than stopping at the first thing it was bigger than.
+      const hops = opts.hops == null ? OVERKILL_HOPS : opts.hops;
+      if (spare > 1 && hops > 0) {
+        let near = null, nd = OVERKILL_RANGE;
+        for (const o of this.bugs) {
+          if (o === b || o.dead) continue;
+          const d = dist(o, b);
+          if (d < nd) { nd = d; near = o; }
+        }
+        if (near) {
+          this.carry(b, near);
+          return dealt + this.damage(near, spare * OVERKILL_CARRY,
+            { ...opts, hops: hops - 1, silent: false });
+        }
+      }
+    }
     return dealt;
   }
 
@@ -935,6 +955,15 @@ export class Game {
     this.puff(b.x, b.y, 8, '#b9ac93');
     for (let i = 0; i < 4; i++) this.smoke(b.x + rand(-8, 8), b.y, 1.1);
   }
+  // the line a shell tears from one wreck into the next
+  carry(a, b) {
+    this.particles.push({ arc: true, x: a.x, y: a.y, x2: b.x, y2: b.y, t: 0.16, c: '#ffd89b', r: 2 });
+    for (let i = 0; i < 5; i++) this.particles.push({
+      x: a.x, y: a.y, vx: (b.x - a.x) * rand(0.8, 1.6), vy: (b.y - a.y) * rand(0.8, 1.6),
+      t: rand(0.1, 0.22), r: rand(1.4, 2.8), c: '#ffe3a8',
+    });
+  }
+
   arc(a, b) {
     this.particles.push({ arc: true, x: a.x, y: a.y, x2: b.x, y2: b.y, t: 0.18, c: '#fff6c9', r: 2 });
   }

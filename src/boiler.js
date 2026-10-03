@@ -5,6 +5,7 @@
 import {
   MATERIALS, SPECIAL_MATERIALS, BLANK_DMG, CHAMBERS, START_CHAMBERS, MIN_WORD,
   MIN_BOILER, MAX_BOILER, LENGTH_POWER, LETTER_LEVELS, MAX_LEVEL, levelOf, levelDamage, effectScale,
+  softCap,
 } from './content.js';
 
 let nextId = 1;
@@ -389,6 +390,7 @@ export class Boiler {
     // fired it before.
     const craft = read ? read.mult : 1;
     mult *= craft;
+    mult = softCap(mult);        // the tail of the stack is pulled back to a curve
 
     const loaded = this.loaded();
     const overload = loaded > 0 && taken.size === loaded && loaded >= this.open;
