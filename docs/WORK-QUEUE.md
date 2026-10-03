@@ -27,11 +27,11 @@ Rules for whoever picks this up:
 
 ## Phase 1.5 — teach it, then feel it
 
-- [ ] **Teach the tricks.** Nothing tells the player a palindrome pierces until
-      they happen to type one. Add a one-screen field manual of the six tricks
-      reachable from the title and from pause, and a first-time toast the first
-      time each trick fires in a run.
-      *Done when:* every trick is discoverable without reading the help page.
+- [x] **Teach the tricks.** Field manual screen (title and pause), one card per
+      trick with a worked example, what it does and a hint of words to try;
+      landed tricks are marked and the rest read as still to find. The first
+      time a trick ever lands it explains itself in a toast. Recorded in the
+      save under `tricks`.
 - [ ] **Make the firing range a vocabulary trainer.** Live fire already shows
       damage; show the tier badge and trick chips for anything typed, with no
       combat pressure, plus a running list of the best words found there.

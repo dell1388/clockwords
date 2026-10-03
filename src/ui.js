@@ -5,7 +5,8 @@ import { MATERIALS, SPECIAL_MATERIALS, LETTER_LEVELS, MAX_LEVEL, CHAMBERS, START
   effectScale, levelDamage,
   START_PAGES, MIN_BOILER, MAX_BOILER, STOKE_COST, BLANK_DMG, getLevel,
   rateText, rofCost, MAX_ROF } from './content.js';
-import { TIERS, TRICKS, DISCOVERY_BONUS } from './wordcraft.js';
+import { TIERS, TRICKS, DISCOVERY_BONUS, readShape } from './wordcraft.js';
+import { tricksFound } from './progress.js';
 import { dictSize } from './dict.js';
 import { BADGES, earned } from './achievements.js';
 import { sfx, isMuted, setMuted } from './audio.js';
@@ -98,6 +99,7 @@ export function renderTitle(progress, on) {
         <button id="b-boiler">Armoury</button>
         <button id="b-test">Live fire</button>
         <button id="b-how">How to play</button>
+        <button id="b-tricks">Field manual</button>
         <button id="b-sound">Sound: ${isMuted() ? 'off' : 'on'}</button>
       </div>
       <ul class="badges">${BADGES.map(b => {
@@ -113,6 +115,7 @@ export function renderTitle(progress, on) {
   wire('#b-boiler', on.boiler);
   wire('#b-test', on.test);
   wire('#b-how', on.how);
+  wire('#b-tricks', on.tricks);
   wire('#b-sound', () => { setMuted(!isMuted()); on.sound && on.sound(); renderTitle(progress, on); });
 }
 
@@ -265,6 +268,58 @@ export function renderHow(onBack) {
 }
 
 // ── level card ─────────────────────────────────────────────────────────────
+// The six things the gun can see in the shape of a word. Each one is shown
+// with a worked example, because a rule you have to imagine is a rule you do
+// not use. What you have already landed is marked; the rest read as things
+// still out there to find.
+const TRICK_LESSON = {
+  palindrome: { how: 'The word reads the same backwards.',
+    example: ['ROTATOR'], hint: 'Try: LEVEL, KAYAK, DEIFIED, ROTATOR' },
+  doubles: { how: 'Two of the same letter side by side. Each pair is one ricochet.',
+    example: ['BALLOON'], hint: 'Try: ASSESS, COFFEE, BALLOON, SUCCESS' },
+  alliterate: { how: 'Starts with the same letter as the word you fired last.',
+    example: ['SIEGE', 'SALVO'], hint: 'Chain them: SIEGE \u2192 SALVO \u2192 SHELL' },
+  anagram: { how: 'The same letters as your last word, in another order.',
+    example: ['LISTEN', 'SILENT'], hint: 'Try: EARTH \u2192 HEART, SPARE \u2192 PEARS' },
+  ladder: { how: 'One letter different from your last word, same length.',
+    example: ['STONE', 'STORE'], hint: 'Walk it: STONE \u2192 STORE \u2192 STORM' },
+  cluster: { how: 'Four or more consonants in a row \u2014 Y does not count.',
+    example: ['STRENGTHS'], hint: 'Try: ANGSTS, TWELFTHS, STRENGTHS' },
+};
+
+export function renderTricks(onBack) {
+  const t = $('#tricks');
+  const found = tricksFound();
+  const cards = Object.entries(TRICKS).map(([id, tk]) => {
+    const l = TRICK_LESSON[id];
+    const got = !!found[id];
+    const shown = l.example.map((w, i) => `<span class="exw"${i === l.example.length - 1
+      ? ` style="color:${tk.colour}"` : ''}>${w}</span>`).join('<span class="exar">\u2192</span>');
+    return `<section class="trick ${got ? 'got' : ''}" style="--tc:${tk.colour}">
+      <h4>${tk.name} <span class="tfound">${got ? 'landed' : 'not yet landed'}</span></h4>
+      <p class="example">${shown}</p>
+      <p class="d">${l.how}</p>
+      <p class="does"><b>Does:</b> ${tk.note}</p>
+      <p class="fine">${l.hint}</p>
+    </section>`;
+  }).join('');
+  t.innerHTML = `
+    <div class="plate wide">
+      <p class="kicker">Field manual</p>
+      <h2>What the gun sees in a word</h2>
+      <p class="d">Beyond the letters it spends, the gun reads the <b>shape</b> of what you
+      type. These stack with each other, with the word's rarity and with everything the
+      materials give it \u2014 and the rack tells you which ones you have landed
+      <i>before</i> you press Enter.</p>
+      <div class="tricks">${cards}</div>
+      <p class="fine">Rarity is the other half: a word the frequency list has never heard of
+      hits five times as hard as a common one, and any word you have never fired carries
+      another \u00d7${DISCOVERY_BONUS} the first time.</p>
+      <div class="btns"><button id="b-back" class="big">Back</button></div>
+    </div>`;
+  wireIn(t)('#b-back', onBack);
+}
+
 export function renderIntro(n, { onGo, onBoiler, onBack }) {
   const def = getLevel(n);
   const t = $('#intro');
@@ -804,6 +859,7 @@ export function renderPause(game, on) {
       </ul>
       <div class="btns">
         <button id="b-res" class="big">Resume</button>
+        <button id="b-tricks">Field manual</button>
         <button id="b-restart">Restart wave</button>
         <button id="b-title">Main menu</button>
       </div>
@@ -811,6 +867,7 @@ export function renderPause(game, on) {
     </div>`;
   const wire = wireIn(t);
   wire('#b-res', on.resume);
+  wire('#b-tricks', on.tricks);
   wire('#b-restart', on.restart);
   wire('#b-title', on.title);
 }

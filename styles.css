@@ -300,3 +300,20 @@ body.modal .toast{text-align:center;max-width:300px}
   background:rgba(0,0,0,.45);border:1px solid #3c4630}
 .pips s.on{background:var(--glow);border-color:var(--glow);box-shadow:0 0 7px -1px var(--glow)}
 @media (max-width:640px){ .upg{flex-direction:column;align-items:flex-start} }
+
+/* the field manual: one card per trick */
+.tricks{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin:12px 0 4px}
+.trick{border:1px solid #3c4630;border-left:3px solid var(--tc);border-radius:8px;
+  padding:10px 12px;background:rgba(0,0,0,.22);opacity:.72}
+.trick.got{opacity:1;background:rgba(0,0,0,.3)}
+.trick h4{margin:0 0 6px;font-family:var(--display);font-size:13px;letter-spacing:1px;color:var(--tc)}
+.tfound{font-family:var(--body);font-size:10px;letter-spacing:1px;color:#7d8468;
+  text-transform:none;margin-left:6px}
+.trick.got .tfound{color:#9fd2a0}
+.example{margin:0 0 6px;font-family:var(--type);font-size:15px;letter-spacing:2px;color:#dee2c2}
+.exar{color:#7d8468;margin:0 7px;letter-spacing:0}
+.trick .d{margin:0 0 4px}
+.does{margin:0;font-size:12px;color:#c6cbaa}
+.does b{color:var(--tc);font-family:var(--display);font-size:11px;letter-spacing:1px}
+.trick .fine{margin:6px 0 0;font-size:11px;color:#7d8468}
+@media (max-width:640px){ .tricks{grid-template-columns:1fr} }

@@ -9,6 +9,7 @@ import { draw, makeBackground, chamberAt } from './render.js';
 import * as ui from './ui.js';
 import { sfx, unlock, setMuted, isMuted } from './audio.js';
 import { onBadge } from './achievements.js';
+import { TRICKS } from './wordcraft.js';
 
 const canvas = document.getElementById('stage');
 const ctx = canvas.getContext('2d');
@@ -76,8 +77,18 @@ function toTitle() {
     boiler: () => toWorkshop(progress.furthest(), toTitle),
     test: () => toProving(toTitle),
     how: () => { state = 'howto'; ui.show('howto'); howBack = ui.renderHow(toTitle); },
+    tricks: () => toTricks(toTitle),
     sound: syncMute,
   });
+}
+
+// The field manual, reachable from the title and from pause.
+function toTricks(back) {
+  const was = state;
+  state = 'tricks';
+  ui.show('tricks');
+  ui.renderTricks(() => { if (was === 'pause') { state = 'pause'; ui.show('pause'); } else back(); });
+  howBack = () => { if (was === 'pause') { state = 'pause'; ui.show('pause'); } else back(); };
 }
 
 function newGame() {
@@ -177,6 +188,7 @@ function togglePause() {
     ui.show('pause');
     ui.renderPause(game, {
       resume: () => { state = 'play'; ui.show('none'); if (touch) focusKb(); else canvas.focus(); },
+      tricks: () => toTricks(toTitle),
       restart: () => enterLevel(game.levelNo),
       title: toTitle,
     });
@@ -216,6 +228,9 @@ window.addEventListener('keydown', e => {
   }
   if (state === 'boiler' && e.key === 'Escape') { e.preventDefault();
     const back = document.querySelector('#boiler #b-back'); if (back) back.click(); return; }
+  if (state === 'tricks' && (e.key === 'Escape' || e.key === 'Enter' || e.key === 'Backspace')) {
+    e.preventDefault(); howBack ? howBack() : toTitle(); return;
+  }
   if (state === 'howto' && (e.key === 'Escape' || e.key === 'Enter' || e.key === 'Backspace')) {
     e.preventDefault(); howBack ? howBack() : toTitle(); return;
   }
@@ -280,6 +295,14 @@ function frame(ts) {
   if (state === 'play') {
     // A heavy kill drops the world into slow motion for a beat.
     game.update(dt * (game.slowmo > 0 ? 0.35 + 0.65 * (1 - game.slowmo) : 1));
+    // The first time a trick ever lands, say what it just did.
+    while (game.newTricks.length) {
+      const id = game.newTricks.shift();
+      if (!progress.markTrick(id)) continue;
+      const tk = TRICKS[id];
+      ui.toast({ name: `${tk.name} \u2014 a new trick`, desc: tk.note });
+      sfx.ding();
+    }
     if (game.outroDone()) {
       if (game.over) toOver();
       else if (game.won) toBoiler();

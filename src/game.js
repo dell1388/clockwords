@@ -163,6 +163,7 @@ export class Game {
     this.levelNo = opts.levelNo || 1;
     this.usedWords = opts.usedWords || new Map();
     this.lexicon = opts.lexicon || new Set();   // every word ever fired, for the discovery bonus
+    this.newTricks = [];            // tricks landed this frame, for the first-time explanation
     this.stats = opts.stats || { kills: 0, words: 0, damage: 0, best: '', bestDmg: 0, longest: '' };
     this.wotd = wordOfTheDay();
     this.reset();
@@ -323,7 +324,10 @@ export class Game {
       sfx.rare(read.tier);
     }
     if (read.fresh) this.note('FIRST TIME FIRED', '#9be8ff');
-    for (const t of read.tricks) this.note(TRICKS[t].name.toUpperCase(), TRICKS[t].colour);
+    for (const t of read.tricks) {
+      this.note(TRICKS[t].name.toUpperCase(), TRICKS[t].colour);
+      this.newTricks.push(t);        // main explains any the player has not seen before
+    }
     // An anagram of the last word hands its chamber letters straight back.
     if (read.refunds && res.slots.length) {
       this.boiler.restore(res.slots, spent);

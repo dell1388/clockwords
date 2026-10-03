@@ -5,7 +5,7 @@
 
 const KEY = 'clockwords.progress.v1';
 
-const blank = () => ({ reached: 1, best: {}, loadout: null });
+const blank = () => ({ reached: 1, best: {}, loadout: null, tricks: {} });
 
 export function load() {
   try {
@@ -41,6 +41,18 @@ export function cleared(level, score) {
   p.reached = Math.max(p.reached, level + 1);
   save(p);
   return p;
+}
+
+// Which structure tricks this player has ever landed. The first time one
+// fires it is explained, and the field manual shows the rest as still to find.
+export const tricksFound = () => load().tricks || {};
+export function markTrick(id) {
+  const p = load();
+  p.tricks = p.tricks || {};
+  if (p.tricks[id]) return false;
+  p.tricks[id] = Date.now();
+  save(p);
+  return true;
 }
 
 export const loadout = () => load().loadout;
